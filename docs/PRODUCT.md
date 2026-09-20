@@ -13,6 +13,7 @@ you need to triage, save and cite it — all local, free, no account, no AI call
 | "I found one good paper — what else should I read?" | Analyzes the open paper and returns the 18 most related papers, ranked by SPECTER2 embedding similarity, from its references, its citing papers, title search and Semantic Scholar recommendations. |
 | "Where do I even start?" | **Empieza por aquí**: a classic (most cited older prior work), the most relevant review, and the most recent work. |
 | "Is this worth my time?" | One-sentence tl;dr (from Semantic Scholar), abstract on demand, citation count (tooltip: influential citations), `% similar`, tags *Referencia* / *Lo cita* / *Revisión*, free-PDF button, and **"Coincide en"**: the distinctive words the result shares with the paper you are reading, to justify why it appears. |
+| "What kind of study is this?" | Each card shows the **study design** (e.g. *Ensayo aleatorizado*, *Transversal / encuesta*, *Metaanálisis*) and the **sample size** (`n = 245`, or `24 estudios` for reviews), read from the title and abstract with plain rules. A **Diseño** filter narrows the list to one design (it only offers designs actually present, with counts). Shown only when detected — never guessed — so it is absent on roughly a third of papers. |
 | "There are too many results" | Automatic subtopic groups (k-means, k by silhouette) with labels; filters (Referencias, Lo citan, Revisiones, PDF libre); sort by relevance / most cited / most recent; **Ver cronología**: one lane per subtopic with the papers placed by year (size = citations, dashed line = the paper you are reading; click a dot to jump to its card) — shows which lines of work are classic vs recent and where the heavily cited papers sit. |
 | "I want to follow the trail" | **Explorar** on any card runs the same analysis on that paper (snowballing) with a breadcrumb and instant *Volver*. |
 | "I don't have a seed paper yet" | Topic search box: up to 100 results grouped into subtopics. |
@@ -52,6 +53,7 @@ you need to triage, save and cite it — all local, free, no account, no AI call
   heuristically (family name = last word), which is wrong for compound surnames.
 - **Import:** DOIs are resolved in bulk; entries with only a title are searched one by one (max
   25 per file) and accepted only when the found title is nearly identical.
+- **Study design and sample size** are rule-based on the abstract (measured on ~170 real abstracts: design found in ~65%, sample in ~41%). They favor precision over coverage, but can still be wrong (e.g. a sample counted from a sub-study); the chips say so in their tooltip. Sample is never read from a paper without an abstract. Rules are English plus some Spanish.
 - **Cluster labels** are word-frequency based and sometimes uninformative.
 - **Timeline and "Coincide en":** the timeline needs publication years (papers without one are omitted; it is hidden with fewer than 4 dated papers), and shared terms are word-level, so they can be sparse or generic for very short abstracts. Topic searches have the timeline but not "Coincide en".
 - **Language:** UI in Spanish only; abstracts and tl;dr in English.

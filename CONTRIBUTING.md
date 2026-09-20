@@ -21,8 +21,8 @@ npm install
 npm run dev                # then load build/chrome-mv3-dev via chrome://extensions
 npx tsc --noEmit           # typecheck (Parcel does NOT typecheck; run this every change)
 npx plasmo build           # production build -> build/chrome-mv3-prod
-npm test                   # vitest (132 tests): pure modules — citation, import/backup, kmeans, view,
-                           # keywords, terms, projection, timeline, rate limiter/retry, API client (mocked fetch), pipeline (assemble/dedupe/picks), extractPaperRef (jsdom)
+npm test                   # vitest (155 tests): pure modules — citation, import/backup, kmeans, view,
+                           # keywords, terms, projection, timeline, study (design/sample), rate limiter/retry, API client (mocked fetch), pipeline (assemble/dedupe/picks), extractPaperRef (jsdom)
 ```
 
 Setup: create `.env.local` with `PLASMO_PUBLIC_S2_API_KEY=<free Semantic Scholar key>`
@@ -119,7 +119,8 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
   `scripting`).
 - Node 22 / Windows / Git Bash. When writing files from a shell, avoid heredocs with
   quotes or backticks — they silently break the whole command. Use the editor tools.
-- The project is **not under git yet**. Suggest `git init` before large refactors.
+- The project is under git (branch `main`, no remote yet); CI in `.github/workflows/ci.yml` runs
+  `tsc`, `npm test` and `plasmo build`. Commit small, working steps.
 
 ## Where things are
 
@@ -133,6 +134,7 @@ lib/semantic-scholar.ts   API client (seed, candidates, batch papers, search, re
 lib/s2-fetch.ts, rate-limit.ts, api-key.ts   HTTP discipline (see rule 1-2)
 lib/kmeans.ts, vector-math.ts, keywords.ts   from-scratch ML (k-means++, silhouette, labels)
 lib/terms.ts, timeline.ts                    shared distinctive terms; timeline-by-subtopic data
+lib/study.ts                                 study design + sample size from the abstract (pure, derived at render time, not stored)
 lib/projection.ts                            2-D PCA — tested but UNUSED (see docs/ARCHITECTURE.md decision log)
 lib/citation.ts, cite.ts, crossref.ts        9 styles + in-text (pure, tested); async Crossref enrichment; Crossref client/cache
 lib/backup.ts, import.ts, export.ts          backup/merge (pure, tested), BibTeX/RIS/DOI import (pure parsers, tested), file download

@@ -113,6 +113,7 @@ the message and a *Reintentar* button; nothing is cached.
 | `lib/projection.ts` | `project2D(vectors)`: PCA to 2-D via the Gram matrix. **Currently unused** by the product (the scatter map built on it was removed, see decision log); kept with its tests as a building block for a future full-window view (ROADMAP F3.4). |
 | `lib/timeline.ts` | `buildTimeline(groups, seedYear?)`: per-subtopic lanes with year span/median, axis domain widened to include the open paper, round ticks, count of undated papers; `null` with fewer than 4 dated papers. |
 | `lib/terms.ts` | `sharedTerms(reference, docs, maxTerms, referenceTitle?)`: IDF-weighted distinctive terms shared with the reference; naive singularization; generic-word list. |
+| `lib/study.ts` | **Pure** study-card heuristics: `extractStudy` → `{design, sample}` from title + abstract + `publicationTypes`; `studyOf` memoizes per paper object (WeakMap); `DESIGNS` is an ordered list (first match wins, e.g. systematic review before RCT). Sample: `n =`, "N participants", "sample of N" (largest plausible count, ≥10); for reviews only the studies *kept* ("included 24 studies", `k = 12`), never the records screened. **Derived at render time, not stored** — like the timeline — so it needs no cache bump and also works on old saved papers. Precision over recall: tuned on ~170 real abstracts, regressions in `tests/study.test.ts`. |
 | `lib/citation.ts` | **Pure** formatter (`formatCitation(paper, style, meta?)`, `inTextCitation`): APA 7, MLA 9, Chicago author-date, Harvard (Cite Them Right), IEEE, Vancouver, AMA, BibTeX, RIS. `toRef` normalizes Semantic Scholar + optional Crossref data (Crossref wins); without Crossref, author names are parsed heuristically (last word = family). `citationKey` = author+year+first title word. Unit-tested (`tests/citation.test.ts`). |
 | `lib/crossref.ts` | Crossref client: `getCrossref(doi)` → structured authors, issue, article number, month, ISO/NLM journal abbreviation. Own 300 ms queue; cache `nextpaper_crossref_v1_<doi>` (30 d hit / 7 d miss, ≤500 entries). Optional `PLASMO_PUBLIC_CROSSREF_MAILTO` for the polite pool (never set by default). |
 | `lib/cite.ts` | Async layer: `citeOne`, `inTextOne`, `citeMany` (sequential, progress callback) = Crossref lookup + formatter. |
@@ -121,10 +122,10 @@ the message and a *Reintentar* button; nothing is cached.
 | `lib/import.ts` | Import from BibTeX / RIS / plain DOI-or-title lists: pure `parseReferences`, `similarTitles`, and `resolveReferences` (DOIs via one aligned batch; ≤25 titles via search + title-similarity check). |
 | `lib/library.ts` | Saved papers with `status`, `note`, `collections`; serialized writes (`toggleSaved`, `updateSaved`, `deleteCollection`, `addPapers`, `restoreItems`); `collectionCounts`. |
 | `lib/updates.ts` | Daily alerts: for the 8 latest saves, `recent`-pool recommendation ids (≤5 new each) → one batch for metadata; `seen` set prevents repeats; badge = unseen count. |
-| `lib/view.ts` | Filters (`reference`, `citation`, `review`, `open`) and sorts (`relevance` keeps groups; `citations`/`year` flatten). |
+| `lib/view.ts` | Filters (`reference`, `citation`, `review`, `open`), an independent design filter (`DesignFilter`, `designOptions` = designs present with counts) and sorts (`relevance` keeps groups; `citations`/`year` flatten). |
 | `lib/paper-utils.ts` | `isReview` (S2 `publicationTypes` Review/MetaAnalysis, else title regex). |
 | `lib/extract-ref.ts` | Self-contained page extractor (see Rules in `CONTRIBUTING.md`). |
-| `lib/cache.ts` | Compressed result cache (`v6`, 24 h TTL), `pruneStorage` (expiry, 40-entry cap, legacy keys, orphan jobs; runs after each analysis and at worker start) and a clear-and-retry on write failure. |
+| `lib/cache.ts` | Compressed result cache (`v8`, 7-day TTL), `pruneStorage` (expiry, 40-entry cap, legacy keys, orphan jobs; runs after each analysis and at worker start) and a clear-and-retry on write failure. |
 | `lib/compress.ts` | `compressJson` / `decompressJson`: native gzip (`CompressionStream`) + base64. |
 | `lib/job.ts` | `JobState` (`loading` \| `done` \| `error`; **no result inside**), `JOB_PREFIX`, `jobKey`. |
 
@@ -205,8 +206,8 @@ deleted.
 ## 7. Known technical debt
 
 1. ~~Storage growth with no eviction~~ — fixed 2026-09-19 (see §4).
-2. Unit tests (106) cover the pure modules and `assemble`; `analyzePaper`/`analyzeQuery` themselves, `s2-fetch` retries and `updates` are covered only by the e2e scripts.
-3. Not under version control.
+2. Unit tests (155) cover the pure modules, `assemble`, the API client and the rate limiter (mocked fetch); `analyzePaper`/`analyzeQuery` themselves and `updates` are covered only by the e2e scripts.
+3. ~~Not under version control~~ — git + CI since 2026-09-20 (no remote yet).
 4. `checkForUpdates` failures are swallowed in `background.ts` (`.catch(() => {})`); the
    UI cannot show that a daily check failed.
 5. `popup.tsx` is large and mixes several concerns (tabs, search, filters, library).

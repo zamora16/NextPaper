@@ -15,8 +15,8 @@ export type DesignId =
   | "cohort"
   | "psychometric"
   | "cross-sectional"
-  | "qualitative"
   | "experimental"
+  | "qualitative"
   | "case"
   | "method"
 
@@ -24,11 +24,16 @@ export type DesignId =
 // review that mentions randomized trials is a review, and a psychometric
 // validation that mentions "cross-sectional" is a validation.
 export const DESIGNS: { id: DesignId; label: string; pattern: RegExp }[] = [
-  { id: "meta", label: "Metaanálisis", pattern: /meta-?analy|metaan[aá]lisis/i },
+  {
+    id: "meta",
+    label: "Metaanálisis",
+    pattern: /meta-?analy|metaan[aá]lisis/i
+  },
   {
     id: "systematic",
     label: "Revisión sistemática",
-    pattern: /systematic(ally)? review|revisi[oó]n sistem[aá]tica|umbrella review/i
+    pattern:
+      /systematic(ally)? review|revisi[oó]n sistem[aá]tica|umbrella review/i
   },
   {
     id: "rct",
@@ -39,12 +44,15 @@ export const DESIGNS: { id: DesignId; label: string; pattern: RegExp }[] = [
   {
     id: "trial",
     label: "Ensayo clínico",
-    pattern: /clinical trial|\bphase (I{1,3}|[123])\b|ensayo cl[ií]nico/i
+    // Singular only: "clinical trials" is usually background, not the design.
+    pattern:
+      /clinical trial\b(?! (screening|matching|design|eligib|registr|data|enrol))|\bphase (I{1,3}|[123]) (clinical )?(trial|study)\b|non-?randomi[sz]ed|controlled (trial|evaluation)|(feasibility|acceptability) (and \w+ )?trial|ensayo cl[ií]nico/i
   },
   {
     id: "protocol",
     label: "Protocolo de estudio",
-    pattern: /study protocol|protocol (for|of) (a|an|the) |protocolo de (estudio|investigaci[oó]n)/i
+    pattern:
+      /(study|trial) protocol|protocol for a (randomi[sz]ed|clinical|trial|study|pilot)|protocolo de (estudio|investigaci[oó]n)/i
   },
   {
     id: "review",
@@ -52,7 +60,11 @@ export const DESIGNS: { id: DesignId; label: string; pattern: RegExp }[] = [
     pattern:
       /scoping review|narrative review|literature review|integrative review|critical review|\bthis review\b|revisi[oó]n (narrativa|bibliogr[aá]fica|de la literatura)/i
   },
-  { id: "case-control", label: "Casos y controles", pattern: /case[- ]control|casos y controles/i },
+  {
+    id: "case-control",
+    label: "Casos y controles",
+    pattern: /case[- ]control|casos y controles/i
+  },
   {
     id: "cohort",
     label: "Cohortes / longitudinal",
@@ -68,25 +80,32 @@ export const DESIGNS: { id: DesignId; label: string; pattern: RegExp }[] = [
   {
     id: "cross-sectional",
     label: "Transversal / encuesta",
-    pattern: /cross-?sectional|online survey|questionnaire survey|survey study|estudio transversal|encuesta/i
-  },
-  {
-    id: "qualitative",
-    label: "Cualitativo",
     pattern:
-      /qualitative|semi-?structured interviews?|focus groups?|thematic analysis|grounded theory|phenomenolog|entrevistas? (en profundidad|semiestructuradas)|cualitativ/i
+      /cross-?sectional|online survey|questionnaire survey|survey study|estudio transversal|encuesta/i
   },
   {
     id: "experimental",
     label: "Experimental / piloto",
-    pattern: /quasi-?experiment|experimental (study|design|paradigm)|pilot (study|trial|randomi)|estudio piloto|estudio experimental/i
+    pattern:
+      /quasi-?experiment|experimental (study|design|paradigm)|pilot (study|trial|randomi)|estudio piloto|estudio experimental/i
   },
-  { id: "case", label: "Caso clínico", pattern: /case (report|series|study)|caso cl[ií]nico/i },
+  {
+    id: "qualitative",
+    label: "Cualitativo",
+    // Needs a research-method cue: "qualitative agreement" is not a design.
+    pattern:
+      /qualitative (study|research|analysis|interviews?|design|methods?|data|findings|content)|semi-?structured interviews?|focus groups?|thematic analysis|grounded theory|phenomenolog|entrevistas? (en profundidad|semiestructuradas)|estudio cualitativo|an[aá]lisis cualitativo/i
+  },
+  {
+    id: "case",
+    label: "Caso clínico",
+    pattern: /case (report|series|study)|caso cl[ií]nico/i
+  },
   {
     id: "method",
     label: "Método propuesto",
     pattern:
-      /we (propose|present|introduce|develop) (a |an |the )?(new|novel)|(a |an )?novel (method|approach|architecture|framework|algorithm|model)\b|state-of-the-art (results|performance)|outperform/i
+      /we (propose|present|introduce|develop) (a |an |the )?(new|novel)|(a |an )?novel (method|approach|architecture|framework|algorithm|model)\b|state-of-the-art (results|performance)/i
   }
 ]
 
@@ -125,30 +144,39 @@ const STUDY_UNIT = "studies|trials|articles|papers|estudios|ensayos|artículos"
 // A count directly after "to", "-", "aged"... is an age or a range end, not a
 // sample ("aged 12 to 18 adolescents").
 const isRangeOrAge = (text: string, index: number) =>
-  /(\bto|\band|[-–]|\baged?|\bover|\bunder|\bthan|\bde|\ba)\s*$/i.test(
+  /(\bto|\band|[-–]|\baged?|\bover|\bunder|\bthan|\ba)\s*$/i.test(
     text.slice(Math.max(0, index - 10), index)
   )
 
-const MIN_SAMPLE = 5
+// Smaller counts are usually schools, clinics or groups, not the sample.
+const MIN_SAMPLE = 10
 
 function findParticipants(text: string): number | null {
   const counts: number[] = []
 
   // n = 245, N=1,234
-  for (const match of text.matchAll(new RegExp(String.raw`\b[nN]\s*=\s*${NUMBER}`, "g"))) {
+  for (const match of text.matchAll(
+    new RegExp(String.raw`\b[nN]\s*=\s*${NUMBER}`, "g")
+  )) {
     counts.push(parseCount(match[1]))
   }
 
   // "245 participants", "1,234 healthy adults"
   for (const match of text.matchAll(
-    new RegExp(String.raw`${NUMBER}\s+(?:[\p{L}-]+\s+){0,2}?(?:${PARTICIPANT_UNIT})\b`, "giu")
+    new RegExp(
+      String.raw`${NUMBER}\s+(?:[\p{L}-]+\s+){0,2}?(?:${PARTICIPANT_UNIT})\b`,
+      "giu"
+    )
   )) {
     if (!isRangeOrAge(text, match.index ?? 0)) counts.push(parseCount(match[1]))
   }
 
   // "a sample of 245", "a total of 1,234"
   for (const match of text.matchAll(
-    new RegExp(String.raw`(?:sample|total|cohort|population) of (?:approximately |about |n\s*=\s*)?${NUMBER}|muestra de ${NUMBER}`, "gi")
+    new RegExp(
+      String.raw`(?:sample|total|cohort|population) of (?:approximately |about |n\s*=\s*)?${NUMBER}|(?:muestra|total) de ${NUMBER}`,
+      "gi"
+    )
   )) {
     counts.push(parseCount(match[1] ?? match[2]))
   }
@@ -158,14 +186,40 @@ function findParticipants(text: string): number | null {
   return plausible.length ? Math.max(...plausible) : null
 }
 
+// "included 24 studies", "12 trials were pooled": what the review is built on.
+const INCLUDED_BEFORE = new RegExp(
+  String.raw`(?:included|including|pooled|synthesi[sz]ed|analy[sz]ed|reviewed|comprising|incluy[oó]|incluyeron)\s+(?:a total of |un total de )?${NUMBER}\s+(?:[\p{L}-]+\s+){0,2}?(?:${STUDY_UNIT})\b`,
+  "giu"
+)
+const INCLUDED_AFTER = new RegExp(
+  String.raw`${NUMBER}\s+(?:[\p{L}-]+\s+){0,2}?(?:${STUDY_UNIT})\s+(?:(?:were|was|that|which)\s+)?(?:included|eligible|met|fulfilled|incluidos)`,
+  "giu"
+)
+const ANY_STUDIES = new RegExp(
+  String.raw`${NUMBER}\s+(?:[\p{L}-]+\s+){0,2}?(?:${STUDY_UNIT})\b`,
+  "giu"
+)
+// Reviews report records screened next to the studies kept; the biggest
+// number would then be the search hits, not the included studies.
+const SCREENING = /screen|records|retrieved|identified|excluded|search/i
+
 function findStudies(text: string): number | null {
   const counts: number[] = []
-  for (const match of text.matchAll(
-    new RegExp(String.raw`${NUMBER}\s+(?:[\p{L}-]+\s+){0,2}?(?:${STUDY_UNIT})\b`, "giu")
-  )) {
-    if (!isRangeOrAge(text, match.index ?? 0)) counts.push(parseCount(match[1]))
+  for (const re of [INCLUDED_BEFORE, INCLUDED_AFTER]) {
+    for (const match of text.matchAll(re)) counts.push(parseCount(match[1]))
   }
-  for (const match of text.matchAll(/\bk\s*=\s*(\d+)/g)) counts.push(parseInt(match[1], 10))
+  for (const match of text.matchAll(/\bk\s*=\s*(\d+)/g)) {
+    counts.push(parseInt(match[1], 10))
+  }
+
+  if (!counts.length && !SCREENING.test(text)) {
+    for (const match of text.matchAll(ANY_STUDIES)) {
+      if (!isRangeOrAge(text, match.index ?? 0)) {
+        counts.push(parseCount(match[1]))
+      }
+    }
+  }
+
   const plausible = counts.filter((n) => n >= 2 && n <= 5000)
   return plausible.length ? Math.max(...plausible) : null
 }
@@ -196,11 +250,27 @@ export function extractStudy(
   }
 
   const participants = findParticipants(paper.abstract)
-  return { design, sample: participants ? { n: participants, unit: "participants" } : null }
+  return {
+    design,
+    sample: participants ? { n: participants, unit: "participants" } : null
+  }
+}
+
+// The view asks for every paper on each render; results are immutable objects.
+const memo = new WeakMap<object, StudyInfo>()
+export function studyOf(
+  paper: Pick<RecommendedPaper, "title" | "abstract" | "publicationTypes">
+): StudyInfo {
+  let info = memo.get(paper)
+  if (!info) {
+    info = extractStudy(paper)
+    memo.set(paper, info)
+  }
+  return info
 }
 
 export function formatSample(sample: NonNullable<StudyInfo["sample"]>): string {
   return sample.unit === "studies"
     ? `${sample.n} estudios`
-    : `n = ${sample.n.toLocaleString("es-ES")}`
+    : `n = ${sample.n.toLocaleString()}`
 }

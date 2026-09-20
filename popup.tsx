@@ -2,15 +2,15 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 
 import "~style.css"
 
+import { CopyCitationsButton, ExportButton } from "~components/CitationButtons"
 import { LibraryItem } from "~components/LibraryItem"
 import { LibraryTools } from "~components/LibraryTools"
-import { Timeline } from "~components/Timeline"
 import { PaperCard } from "~components/PaperCard"
+import { Timeline } from "~components/Timeline"
 import { UpdatesPanel } from "~components/UpdatesPanel"
-import { CopyCitationsButton, ExportButton } from "~components/CitationButtons"
+import { getCachedResult } from "~lib/cache"
 import { CITATION_STYLES, type CitationStyle } from "~lib/citation"
 import { extractPaperRef } from "~lib/extract-ref"
-import { getCachedResult } from "~lib/cache"
 import { jobKey, type JobState } from "~lib/job"
 import {
   collectionCounts,
@@ -23,14 +23,22 @@ import {
   type SavedPaper
 } from "~lib/library"
 import type { AnalysisResult, PickKind, ScoredPaper } from "~lib/pipeline"
+import { buildTimeline } from "~lib/timeline"
 import {
   getUpdates,
   markUpdatesViewed,
   UPDATES_KEY,
   type UpdatesState
 } from "~lib/updates"
-import { buildTimeline } from "~lib/timeline"
-import { applyView, FILTERS, SORTS, type Filter, type Sort } from "~lib/view"
+import {
+  applyView,
+  designOptions,
+  FILTERS,
+  SORTS,
+  type DesignFilter,
+  type Filter,
+  type Sort
+} from "~lib/view"
 
 const PICK_LABELS: Record<PickKind, string> = {
   foundational: "Clásico para empezar",
@@ -70,9 +78,12 @@ function IndexPopup() {
   const [tab, setTab] = useState<"related" | "saved">("related")
   const [filter, setFilter] = useState<Filter>("all")
   const [sort, setSort] = useState<Sort>("relevance")
+  const [design, setDesign] = useState<DesignFilter>("all")
   const [library, setLibrary] = useState<SavedPaper[]>([])
   const [statusFilter, setStatusFilter] = useState<ReadStatus | "all">("all")
-  const [collectionFilter, setCollectionFilter] = useState<string | "all">("all")
+  const [collectionFilter, setCollectionFilter] = useState<string | "all">(
+    "all"
+  )
   const [showTimeline, setShowTimeline] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   // Exploring a result (or searching a topic) pushes onto this trail; the
@@ -94,7 +105,8 @@ function IndexPopup() {
       changes: Record<string, chrome.storage.StorageChange>,
       area: string
     ) => {
-      if (area === "local" && changes[UPDATES_KEY]) getUpdates().then(setUpdates)
+      if (area === "local" && changes[UPDATES_KEY])
+        getUpdates().then(setUpdates)
     }
     chrome.storage.onChanged.addListener(onChanged)
     return () => chrome.storage.onChanged.removeListener(onChanged)
@@ -106,7 +118,9 @@ function IndexPopup() {
     if (tab !== "saved" || !updates) return
     const fresh = updates.items.filter((i) => !i.viewed)
     if (fresh.length === 0) return
-    setNewIds((prev) => new Set([...prev, ...fresh.map((i) => i.paper.paperId)]))
+    setNewIds(
+      (prev) => new Set([...prev, ...fresh.map((i) => i.paper.paperId)])
+    )
     markUpdatesViewed()
   }, [tab, updates])
 
@@ -116,7 +130,8 @@ function IndexPopup() {
       changes: Record<string, chrome.storage.StorageChange>,
       area: string
     ) => {
-      if (area === "local" && changes[LIBRARY_KEY]) getLibrary().then(setLibrary)
+      if (area === "local" && changes[LIBRARY_KEY])
+        getLibrary().then(setLibrary)
     }
     chrome.storage.onChanged.addListener(onChanged)
     return () => chrome.storage.onChanged.removeListener(onChanged)
@@ -169,6 +184,7 @@ function IndexPopup() {
     setTab("related")
     setFilter("all")
     setSort("relevance")
+    setDesign("all")
   }
 
   // Clicking a point on the map highlights its card and scrolls to it. Picks
@@ -176,7 +192,10 @@ function IndexPopup() {
   const selectPaper = (paperId: string) => {
     setSelectedId(paperId)
     const cards = document.querySelectorAll(`[data-paper-id="${paperId}"]`)
-    cards[cards.length - 1]?.scrollIntoView({ block: "center", behavior: "smooth" })
+    cards[cards.length - 1]?.scrollIntoView({
+      block: "center",
+      behavior: "smooth"
+    })
   }
 
   const submitSearch = (event: FormEvent) => {
@@ -215,9 +234,16 @@ function IndexPopup() {
     }
   }, [job.phase, activeRef])
 
+  const designs = useMemo(
+    () => (result ? designOptions(result.groups) : []),
+    [result]
+  )
+  // Same guard as the collection filter: a design the new results don't have
+  // must not leave the list stuck on an empty filter.
+  const activeDesign = designs.some((d) => d.id === design) ? design : "all"
   const groups = useMemo(
-    () => (result ? applyView(result.groups, filter, sort) : []),
-    [result, filter, sort]
+    () => (result ? applyView(result.groups, filter, sort, activeDesign) : []),
+    [result, filter, sort, activeDesign]
   )
   const visible = useMemo(() => {
     const seen = new Map<string, ScoredPaper>()
@@ -245,7 +271,8 @@ function IndexPopup() {
       library.filter(
         (p) =>
           (statusFilter === "all" || p.status === statusFilter) &&
-          (activeCollection === "all" || p.collections.includes(activeCollection))
+          (activeCollection === "all" ||
+            p.collections.includes(activeCollection))
       ),
     [library, statusFilter, activeCollection]
   )
@@ -261,7 +288,10 @@ function IndexPopup() {
     [visible]
   )
   const showPicks =
-    !!result?.picks.length && filter === "all" && sort === "relevance"
+    !!result?.picks.length &&
+    filter === "all" &&
+    sort === "relevance" &&
+    activeDesign === "all"
 
   const renderCard = (paper: ScoredPaper) => (
     <PaperCard
@@ -394,7 +424,10 @@ function IndexPopup() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 {styleSelect}
                 <div className="flex gap-1">
-                  <CopyCitationsButton papers={savedVisible} style={citationStyle} />
+                  <CopyCitationsButton
+                    papers={savedVisible}
+                    style={citationStyle}
+                  />
                   <ExportButton papers={savedVisible} format="bibtex" />
                   <ExportButton papers={savedVisible} format="ris" />
                 </div>
@@ -512,6 +545,24 @@ function IndexPopup() {
                   </button>
                 ))}
               </div>
+
+              {designs.length >= 2 && (
+                <label className="flex items-center gap-1.5 text-xs text-slate-500">
+                  Diseño
+                  <select
+                    value={activeDesign}
+                    onChange={(e) => setDesign(e.target.value as DesignFilter)}
+                    title="Diseño detectado con reglas en el título y el abstract"
+                    className="min-w-0 flex-1 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs text-slate-700">
+                    <option value="all">Todos</option>
+                    {designs.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.label} ({d.count})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
 
               <div className="flex items-center justify-between gap-2">
                 <label className="flex items-center gap-1.5 text-xs text-slate-500">

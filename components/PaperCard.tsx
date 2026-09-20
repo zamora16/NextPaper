@@ -1,11 +1,12 @@
 import { useState } from "react"
 
+import { useCopyAction } from "~components/useCopyAction"
 import { supportsInText, type CitationStyle } from "~lib/citation"
 import { citeOne, inTextOne } from "~lib/cite"
-import { useCopyAction } from "~components/useCopyAction"
 import type { ReadStatus } from "~lib/library"
 import { isReview } from "~lib/paper-utils"
 import type { ScoredPaper } from "~lib/pipeline"
+import { designLabel, formatSample, studyOf } from "~lib/study"
 
 function Tag({
   children,
@@ -47,9 +48,12 @@ export function PaperCard({
   const visibleAuthors = paper.authors.slice(0, 3).map((a) => a.name)
   const extraCount = paper.authors.length - visibleAuthors.length
   const influential = paper.influentialCitationCount ?? 0
+  const study = studyOf(paper)
 
   const cite = useCopyAction(() => citeOne(paper, citationStyle))
-  const inText = useCopyAction(async () => (await inTextOne(paper, citationStyle)) ?? "")
+  const inText = useCopyAction(
+    async () => (await inTextOne(paper, citationStyle)) ?? ""
+  )
 
   return (
     <div
@@ -147,6 +151,20 @@ export function PaperCard({
         )}
         {isReview(paper) && (
           <Tag className="bg-amber-50 text-amber-700">Revisión</Tag>
+        )}
+        {study.design && !(study.design === "review" && isReview(paper)) && (
+          <Tag
+            className="bg-teal-50 text-teal-700"
+            title="Diseño detectado en el título y el abstract con reglas; puede fallar">
+            {designLabel(study.design)}
+          </Tag>
+        )}
+        {study.sample && (
+          <Tag
+            className="bg-teal-50 text-teal-700"
+            title="Tamaño de muestra leído del abstract con reglas; puede fallar">
+            {formatSample(study.sample)}
+          </Tag>
         )}
         {status === "read" && (
           <Tag className="bg-emerald-50 text-emerald-700">✓ Leído</Tag>

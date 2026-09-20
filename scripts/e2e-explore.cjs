@@ -34,6 +34,44 @@ const SEED_TITLE = new RegExp(
   )
   check("cards explain what they share with the paper", sharedLines >= 3, sharedLines + " cards")
 
+  // Study-card chips and the design filter
+  const chips = await page.evaluate(
+    () => [...document.querySelectorAll("span[title^='Diseño detectado']")].length
+  )
+  check("cards show a detected study design", chips >= 3, chips + " chips")
+  const designSelect = await page.evaluate(() => {
+    const select = [...document.querySelectorAll("select")].find((s) => s.title.startsWith("Diseño detectado"))
+    return select ? [...select.options].map((o) => o.textContent) : null
+  })
+  check("design filter lists the designs found", !!designSelect && designSelect.length >= 3, (designSelect || []).join(" | "))
+  if (designSelect && designSelect.length >= 3) {
+    const before = await page.evaluate(() => document.querySelectorAll("[data-paper-id]").length)
+    await page.evaluate(() => {
+      const select = [...document.querySelectorAll("select")].find((s) => s.title.startsWith("Diseño detectado"))
+      const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value").set
+      setter.call(select, select.options[1].value)
+      select.dispatchEvent(new Event("change", { bubbles: true }))
+    })
+    await sleep(400)
+    const after = await page.evaluate(() => document.querySelectorAll("[data-paper-id]").length)
+    const picked = await page.evaluate(() => {
+      const select = [...document.querySelectorAll("select")].find((s) => s.title.startsWith("Diseño detectado"))
+      return select.options[select.selectedIndex].textContent
+    })
+    check("choosing a design narrows the list", after > 0 && after < before, `${picked}: ${before} -> ${after} cards`)
+    await page.evaluate(() => {
+      const select = [...document.querySelectorAll("select")].find((s) => s.title.startsWith("Diseño detectado"))
+      const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value").set
+      setter.call(select, "all")
+      select.dispatchEvent(new Event("change", { bubbles: true }))
+    })
+    await sleep(400)
+    check(
+      "Todos restores the full list",
+      (await page.evaluate(() => document.querySelectorAll("[data-paper-id]").length)) === before
+    )
+  }
+
   // Timeline by subtopic
   await clickButton(page, "Ver cronología")
   await sleep(500)

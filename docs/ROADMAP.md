@@ -11,7 +11,7 @@ Effort: S ≈ ≤1 session, M ≈ 1–2, L ≈ 3+. Value: ★ to ★★★.
 | # | Item | Why / how |
 |---|---|---|
 | F0.1 | ~~Storage hygiene~~ **DONE 2026-09-19** | Result stored once, gzip-compressed (`lib/compress.ts`), bounded cache (40 entries, 24 h), pruning of legacy/expired/orphan keys (`pruneStorage`), clear-and-retry on write failure, `unlimitedStorage` as a safety net. One analysis went from ≈112 KB to ≈14.6 KB (~716 per 10 MB instead of ~93). Verified by `scripts/e2e-storage.cjs`. Remaining idea (optional): compress the library too if users ever save thousands of papers. |
-| F0.2 | Version control + CI (S, ★★) | Not a git repo yet. `git init`, first commit (`.env.local` is already ignored), a CI job running `npx tsc --noEmit` and `npx plasmo build`. |
+| F0.2 | ~~Version control + CI~~ **DONE 2026-09-20** | Git repo on `main` (`.env.local` ignored), `.github/workflows/ci.yml` runs `tsc --noEmit`, `npm test` and `plasmo build` on every push/PR. `submit.yml` is Plasmo's manual Web Store template and is unrelated to CI. Not pushed to a remote yet. |
 | F0.3 | ~~Unit tests for pure modules~~ **DONE 2026-09-19** | vitest 2.x (`npm test`; vitest ≥3 needs a newer `@types/node` than Plasmo pins) with jsdom for the extractor: 110 tests over `citation`, `import`/`backup`, `kmeans`/`silhouette`/`clusterAuto` (synthetic blobs, plus a mutation check that breaking the code fails them), `view`, `keywords`, `terms`, `projection`, `timeline`, `pipeline` (`assemble`, `dedupe`, `choosePicks`), `extractPaperRef`. Not unit-tested: `analyzePaper`/`analyzeQuery`, `s2-fetch` retries, `updates` (covered by the e2e scripts). |
 | F0.4 | Surface background failures (S, ★★) | `checkForUpdates` errors are swallowed; store `lastError` in `nextpaper_updates` and show it in `UpdatesPanel`. |
 | F0.5 | Split `popup.tsx` (M, ★) | ~510 lines. Extract `useAnalysis(activeRef)`, `useLibrary()`, `RelatedTab`, `SavedTab`. Behavior must not change (run both e2e scripts). |
@@ -25,7 +25,7 @@ Effort: S ≈ ≤1 session, M ≈ 1–2, L ≈ 3+. Value: ★ to ★★★.
 | F1.3 | Better open-access coverage | ★★ | S | Unpaywall (free, needs an email param) by DOI for PDF links when Semantic Scholar has none. Host permission `https://api.unpaywall.org/*`. |
 | F1.4 | Library upgrades — **mostly done 2026-09-19** | Done: collections (add/remove/filter/delete), **backup/restore JSON**, **import** BibTeX/RIS/DOI/title lists (merge, never overwrites; hostile files sanitized), verified by `scripts/e2e-import.cjs`. **Remaining:** search + sort inside *Guardados*, bulk actions (multi-select → collection/status), rename collection, duplicate detection across differently-identified papers, map BibTeX `note` / RIS `N1` back to notes on import. |
 | F1.5 | Extra filters | ★★ | S | Year range, minimum citations, "last 5 years", exclude preprints. Extend `lib/view.ts`; all data is already on each `ScoredPaper`. |
-| F1.6 | **Study-card heuristics** | ★★★ | M | Regex/keyword extraction from the abstract: design (RCT, cohort, cross-sectional, meta-analysis, qualitative…), sample size (`n = 245`), population keywords. Show as chips, filter by design. Free stand-in for the AI feature A2. |
+| F1.6 | ~~Study-card heuristics~~ **DONE (design + sample) 2026-09-20** | `lib/study.ts`: design (14 categories, ordered by priority) and sample size (participants, or *included* studies for reviews) from title + abstract + `publicationTypes`, derived at render time (nothing stored, no cache bump). Chips on every card (*Relacionados* and *Guardados*) and a **Diseño** filter listing only the designs present. Tuned against ~170 real abstracts (false positives found there are pinned as regression tests): design found in ~65%, sample in ~41%. Ideas left: population keywords, measures, a sortable table of saved papers → CSV (the free version of A2), filter by minimum *n*. |
 | F1.7 | Dark mode, keyboard shortcuts, a11y | ★ | S | Tailwind `dark:` variants (config `darkMode: "media"` already set). |
 | F1.8 | English UI (i18n) | ★★ | M | Widens the audience. Centralize strings first (currently inline Spanish). |
 | F1.9 | Stale-while-revalidate | ★ | S | Show an expired cached result immediately, refresh silently. |
@@ -117,11 +117,11 @@ Prompt caching and the per-item cache lower this further.
 
 ## 5. Suggested order
 
-1. ~~F0.1~~ done. **F0.2 → F0.3** (git, unit tests) — one session, removes the remaining big risks.
+1. ~~F0.1~~, ~~F0.2~~, ~~F0.3~~ done (storage, git + CI, unit tests). Next: push to a remote so CI actually runs.
 2. ~~F1.1 + F1.2 + F1.4~~ done (see above; finish the F1.4 remainder if wanted).
 3. ~~F2.1 + F2.2~~ done; **F2.3** (how others cite this paper) is next in this group.
-4. **F1.6 + F2.4** (study-card heuristics, screening mode) — builds the triage workflow that
-   the AI layer would later enhance.
+4. ~~F1.6~~ done; **F2.4** (screening mode) is next — it builds the triage workflow that the AI
+   layer would later enhance, and the design/sample chips are its first inputs.
 5. Decide on the AI layer (BYOK), with A2/A1/A4 first.
 
 ## 6. Non-goals
