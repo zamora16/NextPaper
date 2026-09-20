@@ -19,9 +19,10 @@ Read these before changing anything non-trivial:
 ```bash
 npm install
 npm run dev                # then load build/chrome-mv3-dev via chrome://extensions
-npx tsc --noEmit           # typecheck (Parcel does NOT typecheck; run this every change)
+npx tsc --noEmit           # typecheck, `strict` on (Parcel does NOT typecheck; run this every change)
+npm run format             # prettier over lib/components/tests/popup/background (CI runs format:check)
 npx plasmo build           # production build -> build/chrome-mv3-prod
-npm test                   # vitest (183 tests): pure modules — citation, import/backup, kmeans, view,
+npm test                   # vitest (330 tests; `npm run test:coverage` enforces floors on lib/, ~98% lines): every module in lib/ —
                            # keywords, terms, projection, timeline, study (design/sample), rate limiter/retry, API client (mocked fetch), pipeline (assemble/dedupe/picks), extractPaperRef (jsdom)
 ```
 
@@ -70,7 +71,7 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
    outside the function body.
 6. **Never store embeddings** (768 floats each). `strip()` in `lib/pipeline.ts` drops
    them; cached results and library items must stay small.
-7. **Bump the cache prefix** (`KEY_PREFIX` in `lib/cache.ts`, currently `v8`) whenever the
+7. **Bump the cache prefix** (`KEY_PREFIX` in `lib/cache.ts`, currently `v9`) whenever the
    `AnalysisResult` shape or the retrieval/ranking strategy changes, or users get stale
    results from the old strategy. Also add the old prefix to `LEGACY_KEYS` so it gets
    cleaned up. Library items (`nextpaper_library`) persist forever: schema changes there
@@ -82,7 +83,7 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
    `nextpaper_library` or `nextpaper_updates`. A new persistent key needs a bound or a
    pruning rule (the Crossref cache is bounded to 500 entries / 30 days in
    `pruneStorage`). Re-check with `node scripts/e2e-storage.cjs`.
-9. **Library writes go through the promise queue** in `lib/library.ts`. Concurrent
+9. **Library writes go through the promise queue** (`createQueue` in `lib/queue.ts`, used by `lib/library.ts`). Concurrent
    read-modify-write on one storage key lost saves once.
 10. **The analysis must survive the popup closing.** It runs in `background.ts`; the popup
    only observes `JobState`. The worker keeps itself alive (`syncKeepAlive`) and the popup
@@ -125,7 +126,11 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
 - Node 22 / Windows / Git Bash. When writing files from a shell, avoid heredocs with
   quotes or backticks — they silently break the whole command. Use the editor tools.
 - The project is under git (branch `main`, no remote yet); CI in `.github/workflows/ci.yml` runs
-  `tsc`, `npm test` and `plasmo build`. Commit small, working steps.
+  `typecheck`, `format:check`, `test:coverage` (floors on `lib/`) and `plasmo build`. Commit small, working steps.
+- Tests of storage-bound modules use the in-memory `chrome` in `tests/helpers/chrome.ts`. **Do not generate
+  regexes or code with escapes through shell/Node scripts** (backslashes get eaten or turned into control
+  characters, twice this broke a regex silently): use the editor tools.
+- A test that has never failed proves nothing: when adding one for a fix, revert the fix once and see it fail.
 
 ## Where things are
 
@@ -143,7 +148,8 @@ lib/study.ts                                 study design + sample size from the
 lib/projection.ts                            2-D PCA — tested but UNUSED (see docs/ARCHITECTURE.md decision log)
 lib/citation.ts, cite.ts, crossref.ts        9 styles + in-text (pure, tested); async Crossref enrichment; Crossref client/cache
 lib/backup.ts, import.ts, export.ts          backup/merge (pure, tested), BibTeX/RIS/DOI import (pure parsers, tested), file download
-lib/library.ts, updates.ts, view.ts, paper-utils.ts, extract-ref.ts
+lib/library.ts, updates.ts, queue.ts, view.ts, paper-utils.ts, extract-ref.ts
+components/SavedTab.tsx, useStorageValue.ts, ui.ts   Guardados tab; storage-mirroring hook; shared class strings
 lib/cache.ts, compress.ts, job.ts            compressed result cache, pruning, JobState (no result inside)
 scripts/             real-browser e2e tests (see above); scripts/perf/ = API performance experiments
 ```

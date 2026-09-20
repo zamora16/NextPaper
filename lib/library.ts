@@ -1,5 +1,7 @@
 import { mergeItems } from "~lib/backup"
+import { plainPaper } from "~lib/paper-utils"
 import type { ScoredPaper } from "~lib/pipeline"
+import { createQueue } from "~lib/queue"
 import type { RecommendedPaper } from "~lib/semantic-scholar"
 
 export const LIBRARY_KEY = "nextpaper_library"
@@ -33,7 +35,10 @@ export async function getLibrary(): Promise<SavedPaper[]> {
   const library = await read()
   return Object.values(library)
     .map((p) => ({
-      ...p,
+      // Items saved by older versions still carry the similarity, relation and
+      // shared terms of the analysis they were saved from.
+      ...plainPaper(p),
+      savedAt: p.savedAt,
       status: p.status ?? "unread",
       note: p.note ?? "",
       collections: p.collections ?? []
@@ -57,21 +62,13 @@ export function collectionCounts(library: SavedPaper[]) {
 // Writes are read-modify-write on a single storage key, so they are queued:
 // two quick clicks would otherwise both read the old library and one would
 // overwrite the other.
-let queue: Promise<unknown> = Promise.resolve()
-const serialized = <T,>(task: () => Promise<T>): Promise<T> => {
-  const run = queue.then(task, task)
-  queue = run.catch(() => undefined)
-  return run
-}
+const serialized = createQueue()
 
-const fromRecommended = (
+const newSaved = (
   paper: RecommendedPaper,
-  collections: string[]
+  collections: string[] = []
 ): SavedPaper => ({
-  ...paper,
-  similarity: null,
-  approximate: false,
-  relation: null,
+  ...plainPaper(paper),
   savedAt: Date.now(),
   status: "unread",
   note: "",
@@ -84,13 +81,7 @@ export const toggleSaved = (paper: ScoredPaper) =>
     if (library[paper.paperId]) {
       delete library[paper.paperId]
     } else {
-      library[paper.paperId] = {
-        ...paper,
-        savedAt: Date.now(),
-        status: "unread",
-        note: "",
-        collections: []
-      }
+      library[paper.paperId] = newSaved(paper)
     }
     await write(library)
   })
@@ -128,7 +119,7 @@ export interface AddResult {
 export const addPapers = (papers: RecommendedPaper[], collection?: string) =>
   serialized(async (): Promise<AddResult> => {
     const incoming = papers.map((p) =>
-      fromRecommended(p, collection ? [collection] : [])
+      newSaved(p, collection ? [collection] : [])
     )
     const { library, added } = mergeItems(await read(), incoming)
     await write(library)

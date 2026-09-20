@@ -61,6 +61,19 @@ const REF = process.argv[2] || "DOI:10.1186/s40337-024-01004-0"
   const cleared = await page.evaluate(() => chrome.action.getBadgeText({}))
   check("badge cleared after opening Guardados", cleared === "")
 
+  // The cards were saved from an analysis (with similarity, relation and shared
+  // terms), but nothing is "open" here: those would describe a paper that is no
+  // longer there.
+  const context = await page.evaluate(() => {
+    const text = document.body.innerText
+    return {
+      similar: /\d+% similar/.test(text),
+      shared: text.includes("Coincide en:"),
+      relation: /\b(Referencia|Lo cita)\b/.test(text)
+    }
+  })
+  check("Guardados shows no similarity, relation or shared terms", !context.similar && !context.shared && !context.relation, JSON.stringify(context))
+
   // Status + note
   await page.evaluate(() => {
     [...document.querySelectorAll("button")]

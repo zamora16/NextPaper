@@ -64,11 +64,16 @@ const EMBEDDING = "embedding.specter_v2"
 const TOP_CITERS = 60 // most cited citing papers kept
 const RECENT_CITERS = 40 // most recent citing papers kept
 const SEARCH_LIMIT = 100
-const BATCH_SIZE = 500
 // Batch lookups are split into parallel chunks: measured 1.6-1.8 s for 3x100
 // ids versus 1.7-5.1 s for one request of 300 (a 429 on a small chunk only
 // repeats that chunk).
 const BATCH_CHUNK = 100
+
+// Ids go into the URL path. A DOI can contain "#" or "?", which would end the
+// path and silently query a different, truncated paper; "/" and ":" must stay
+// literal, as Semantic Scholar expects them.
+const paperPath = (ref: string) =>
+  encodeURI(ref).replace(/[?#]/g, (char) => encodeURIComponent(char))
 
 export class PaperNotFoundError extends Error {
   constructor() {
@@ -100,7 +105,7 @@ async function getJson<T>(
 // citing papers — measured 0.5-1.5 s, replacing three sequential requests.
 export async function getSeed(ref: string): Promise<Seed> {
   const response = await s2Fetch(
-    `${BASE}/graph/v1/paper/${ref}?fields=title,abstract,year,fieldsOfStudy,${EMBEDDING},references.paperId,citations.paperId,citations.citationCount,citations.year`
+    `${BASE}/graph/v1/paper/${paperPath(ref)}?fields=title,abstract,year,fieldsOfStudy,${EMBEDDING},references.paperId,citations.paperId,citations.citationCount,citations.year`
   )
 
   if (response.status === 404) throw new PaperNotFoundError()
@@ -122,16 +127,23 @@ export async function getSeed(ref: string): Promise<Seed> {
   }
 }
 
-export type CandidateSource = "reference" | "citation" | "search" | "recommended"
+export type CandidateSource =
+  | "reference"
+  | "citation"
+  | "search"
+  | "recommended"
 
 // Ids of Semantic Scholar's own recommendations for a paper (any id form,
-// including "DOI:..."). Null when the request failed.
+// including "DOI:..."). Null when the request failed (as opposed to "nothing
+// new"). The endpoint rejects some metadata fields (tldr, embedding), so only
+// ids are requested and metadata comes from one batch call afterwards.
 export async function getRecommendedIds(
   ref: string,
-  pool: "recent" | "all-cs"
+  pool: "recent" | "all-cs",
+  limit = 50
 ): Promise<string[] | null> {
   const data = await getJson<{ recommendedPapers?: { paperId: string }[] }>(
-    `${BASE}/recommendations/v1/papers/forpaper/${ref}?fields=paperId&from=${pool}&limit=50`
+    `${BASE}/recommendations/v1/papers/forpaper/${paperPath(ref)}?fields=paperId&from=${pool}&limit=${limit}`
   )
   return data ? (data.recommendedPapers ?? []).map((p) => p.paperId) : null
 }
@@ -167,7 +179,10 @@ export async function collectCandidates(
   const mostRecent = [...seed.citers]
     .sort((a, b) => (b.year ?? 0) - (a.year ?? 0))
     .slice(0, RECENT_CITERS)
-  add([...topCited, ...mostRecent].map((p) => p.paperId), "citation")
+  add(
+    [...topCited, ...mostRecent].map((p) => p.paperId),
+    "citation"
+  )
 
   const [search, recent, allCs] = await Promise.all([
     getJson<{ data: { paperId: string }[] }>(
@@ -182,38 +197,47 @@ export async function collectCandidates(
   add(search?.data?.map((p) => p.paperId) ?? [], "search")
   // If the early attempt (made with the user's id form) failed, retry with
   // the canonical id now that the seed is known.
-  add(recent ?? (await getRecommendedIds(seed.paperId, "recent")) ?? [], "recommended")
+  add(
+    recent ?? (await getRecommendedIds(seed.paperId, "recent")) ?? [],
+    "recommended"
+  )
   add(allCs ?? [], "recommended")
 
   return candidates
 }
 
-// One batched request for metadata + embeddings of every candidate. This is
-// only possible from a browser because host_permissions exempts extension
-// requests from CORS (the batch endpoint's preflight rejects POST).
-export async function getPapers(
-  ids: string[],
-  withEmbedding = true
-): Promise<PaperWithEmbedding[]> {
+// One batch request: metadata (+ embedding) for up to BATCH_CHUNK ids, one
+// entry per id in the same order, null for the ones Semantic Scholar does not
+// know. This is only possible from a browser because host_permissions exempts
+// extension requests from CORS (the batch endpoint's preflight rejects POST).
+// Null overall when the request failed.
+type BatchEntry =
+  | (RecommendedPaper & { embedding?: { vector: number[] } | null })
+  | null
+
+const postBatch = (chunk: string[], withEmbedding: boolean) =>
+  getJson<BatchEntry[]>(
+    `${BASE}/graph/v1/paper/batch?fields=${FIELDS}${withEmbedding ? "," + EMBEDDING : ""}`,
+    { method: "POST", body: { ids: chunk } }
+  )
+
+// Chunks run in parallel (see BATCH_CHUNK); results keep the input order.
+function inChunks(ids: string[], withEmbedding: boolean) {
   const chunks: string[][] = []
   for (let i = 0; i < ids.length; i += BATCH_CHUNK) {
     chunks.push(ids.slice(i, i + BATCH_CHUNK))
   }
+  return Promise.all(chunks.map((chunk) => postBatch(chunk, withEmbedding)))
+}
 
-  const url = `${BASE}/graph/v1/paper/batch?fields=${FIELDS}${withEmbedding ? "," + EMBEDDING : ""}`
-  const batches = await Promise.all(
-    chunks.map((chunk) =>
-      getJson<
-        (
-          | (RecommendedPaper & { embedding?: { vector: number[] } | null })
-          | null
-        )[]
-      >(url, { method: "POST", body: { ids: chunk } })
-    )
-  )
-
+// Metadata + SPECTER2 embedding of every candidate. A chunk that fails is
+// skipped: a partial result still ranks (unknown ids are skipped too).
+export async function getPapers(
+  ids: string[],
+  withEmbedding = true
+): Promise<PaperWithEmbedding[]> {
   const papers: PaperWithEmbedding[] = []
-  for (const batch of batches) {
+  for (const batch of await inChunks(ids, withEmbedding)) {
     for (const paper of batch ?? []) {
       if (!paper) continue
       const { embedding, ...rest } = paper
@@ -221,19 +245,6 @@ export async function getPapers(
     }
   }
   return papers
-}
-
-// Ids of fresh papers related to one paper, from Semantic Scholar's "recent"
-// pool. The recommendations endpoint rejects some metadata fields (tldr), so
-// only ids are requested and metadata comes from one batch call afterwards.
-// Returns null when the request failed (as opposed to "nothing new").
-export async function getRecentRelated(
-  paperId: string
-): Promise<string[] | null> {
-  const data = await getJson<{ recommendedPapers: { paperId: string }[] }>(
-    `${BASE}/recommendations/v1/papers/forpaper/${paperId}?fields=paperId&from=recent&limit=15`
-  )
-  return data ? (data.recommendedPapers ?? []).map((p) => p.paperId) : null
 }
 
 // Papers matching a free-text topic, ranked by Semantic Scholar's relevance.
@@ -256,16 +267,13 @@ export async function getPapersAligned(
   ids: string[]
 ): Promise<(RecommendedPaper | null)[]> {
   const aligned: (RecommendedPaper | null)[] = []
+  const batches = await inChunks(ids, false)
 
-  for (let i = 0; i < ids.length; i += BATCH_SIZE) {
-    const chunk = ids.slice(i, i + BATCH_SIZE)
-    const batch = await getJson<(RecommendedPaper | null)[]>(
-      `${BASE}/graph/v1/paper/batch?fields=${FIELDS}`,
-      { method: "POST", body: { ids: chunk } }
-    )
+  batches.forEach((batch, chunkIndex) => {
     if (!batch) throw new RateLimitedError()
-    chunk.forEach((_, index) => aligned.push(batch[index] ?? null))
-  }
+    const size = Math.min(BATCH_CHUNK, ids.length - chunkIndex * BATCH_CHUNK)
+    for (let i = 0; i < size; i++) aligned.push(batch[i] ?? null)
+  })
 
   return aligned
 }

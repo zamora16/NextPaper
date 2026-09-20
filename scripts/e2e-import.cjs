@@ -108,7 +108,24 @@ const tmp = (name, content) => {
   // 6. Hostile backup: a javascript: link must not survive
   const hostile = JSON.stringify({
     app: "nextpaper",
-    library: [{ paperId: "evil", title: "Evil paper", url: "javascript:alert(1)", openAccessPdf: { url: "javascript:alert(2)" } }]
+    library: [
+      { paperId: "evil", title: "Evil paper", url: "javascript:alert(1)", openAccessPdf: { url: "javascript:alert(2)" } },
+      {
+        paperId: "evil2",
+        title: "Evil paper two",
+        tldr: { text: { boom: true } },
+        abstract: 12345,
+        venue: { x: 1 },
+        journal: { name: {} },
+        externalIds: { DOI: 5 },
+        influentialCitationCount: { a: 1 },
+        authors: [{ name: {} }, { name: "Ok Author" }],
+        publicationTypes: ["Review", 7],
+        sharedTerms: ["injectedterm"],
+        similarity: 0.99,
+        relation: "reference"
+      }
+    ]
   })
   await upload(tmp("nextpaper-hostile.json", hostile))
   await waitFor(async () => (await library()).some((p) => p.paperId === "evil"), 20000)
@@ -118,6 +135,16 @@ const tmp = (name, content) => {
     [...document.querySelectorAll("a")].filter((a) => /^javascript:/i.test(a.getAttribute("href") ?? "")).length
   )
   check("no javascript: link in the page", dangerous === 0)
+
+  // Wrong types: React throws when asked to render an object, which used to
+  // blank the whole popup (and the item stayed in the library).
+  await waitFor(async () => (await library()).some((p) => p.paperId === "evil2"), 20000)
+  const text = await bodyText()
+  const evil2 = (await library()).find((p) => p.paperId === "evil2")
+  check("item with wrong field types was imported", !!evil2)
+  check("the popup still renders after it", text.includes("Evil paper two") && text.includes("Importar..."))
+  check("its fields were rebuilt with the right types", evil2 && evil2.tldr === null && evil2.abstract === null && evil2.venue === "" && evil2.similarity === null && evil2.sharedTerms === undefined)
+  check("injected similarity / shared terms are not shown", !text.includes("99% similar") && !text.includes("injectedterm"))
 
   // 7. Garbage file is rejected politely
   await upload(tmp("nextpaper-garbage.txt", "x"))

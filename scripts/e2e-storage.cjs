@@ -29,20 +29,21 @@ const FILL = 45 // valid entries seeded; the cap is 40
         nextpaper_cache_v4_OLD: { result: big, cachedAt: Date.now() },
         nextpaper_cache_v6_OLD: { z: big, cachedAt: Date.now() },
         nextpaper_cache_v7_OLD: { z: big, cachedAt: Date.now() },
+        nextpaper_cache_v8_OLD: { z: big, cachedAt: Date.now() },
         nextpaper_emb_v1_PAPER: { v: [0.1, 0.2] },
         nextpaper_rec_v1_REF: { papers: [], cachedAt: Date.now() },
         // job saved by the old code: result embedded, no cache entry
         ["nextpaper_job_" + ref]: { phase: "done", result: { groups: [], picks: [] } },
         nextpaper_job_ORPHAN: { phase: "done" },
         // expired current-version entry
-        nextpaper_cache_v8_EXPIRED: { z: "x", cachedAt: 0 },
+        nextpaper_cache_v9_EXPIRED: { z: "x", cachedAt: 0 },
         // user data that must survive untouched
         nextpaper_library: { P1: { paperId: "P1", title: "Kept paper", savedAt: 1, status: "read", note: "keep me" } },
         nextpaper_updates: { running: false, checkedAt: 5, seen: ["a"], items: [] }
       }
       // more valid entries than the cap allows, newest first
       for (let i = 0; i < fill; i++) {
-        items["nextpaper_cache_v8_FILL" + i] = { z: "x", cachedAt: Date.now() - (i + 1) * 1000 }
+        items["nextpaper_cache_v9_FILL" + i] = { z: "x", cachedAt: Date.now() - (i + 1) * 1000 }
         items["nextpaper_job_FILL" + i] = { phase: "done" }
       }
       await chrome.storage.local.set(items)
@@ -61,12 +62,12 @@ const FILL = 45 // valid entries seeded; the cap is 40
   const keys = await page.evaluate(async () => Object.keys(await chrome.storage.local.get()))
   const has = (re) => keys.filter((k) => re.test(k))
 
-  check("legacy keys removed", has(/^nextpaper_(cache_v[1-7]|emb_v1|rec_v1)_/).length === 0)
-  check("expired cache entry removed", !keys.includes("nextpaper_cache_v8_EXPIRED"))
-  const cacheKeys = has(/^nextpaper_cache_v8_/)
+  check("legacy keys removed", has(/^nextpaper_(cache_v[1-8]|emb_v1|rec_v1)_/).length === 0)
+  check("expired cache entry removed", !keys.includes("nextpaper_cache_v9_EXPIRED"))
+  const cacheKeys = has(/^nextpaper_cache_v9_/)
   check("cache capped at 40 entries", cacheKeys.length <= 40, `${cacheKeys.length} entries`)
   check("fresh analysis kept in cache", cacheKeys.some((k) => k.endsWith(REF)))
-  check("oldest excess entries evicted", !keys.includes("nextpaper_cache_v8_FILL44"))
+  check("oldest excess entries evicted", !keys.includes("nextpaper_cache_v9_FILL44"))
   check("orphan job removed", !keys.includes("nextpaper_job_ORPHAN"))
   check("job of evicted entry removed", !keys.includes("nextpaper_job_FILL44"))
 
@@ -79,13 +80,22 @@ const FILL = 45 // valid entries seeded; the cap is 40
   check("alerts state untouched", data.nextpaper_updates?.checkedAt === 5)
 
   // Size of one analysis
+  // The cache prefix changes with every version bump, so it is found by
+  // pattern: measuring a key that no longer exists reads undefined (9 bytes)
+  // and would pass this check without measuring anything.
   const sizes = await page.evaluate(async (ref) => {
-    const all = await chrome.storage.local.get([`nextpaper_cache_v8_${ref}`, `nextpaper_job_${ref}`])
+    const all = await chrome.storage.local.get()
     const size = (v) => new Blob([JSON.stringify(v)]).size
-    return { cache: size(all[`nextpaper_cache_v8_${ref}`]), job: size(all[`nextpaper_job_${ref}`]) }
+    const cacheKey = Object.keys(all).find((k) => /^nextpaper_cache_v\d+_/.test(k) && k.endsWith(ref))
+    return {
+      found: !!cacheKey,
+      cache: cacheKey ? size(all[cacheKey]) : 0,
+      job: size(all[`nextpaper_job_${ref}`])
+    }
   }, REF)
   const total = sizes.cache + sizes.job
-  check("one analysis is now small", total < 30000, `${total} bytes (was ~111,500)`)
+  check("the analysis' cache entry was found and measured", sizes.found && sizes.cache > 1000, `${sizes.cache} bytes`)
+  check("one analysis is now small", sizes.found && total < 30000, `${total} bytes (was ~111,500)`)
   console.log(`      cache ${sizes.cache} B + job ${sizes.job} B; ~${Math.floor(10485760 / total)} analyses per 10 MB (vs ~93 before)`)
 
   // Results are read from the cache (decompressed) on a fresh popup load.

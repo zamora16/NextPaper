@@ -45,6 +45,8 @@ function syncKeepAlive() {
 
 function runUpdates(): Promise<void> {
   if (!updatesInFlight) {
+    // A failed check is recorded in the alerts state (lastError) and shown in
+    // the panel, so there is nothing more to do with the error here.
     updatesInFlight = checkForUpdates()
       .catch(() => {})
       .finally(() => {

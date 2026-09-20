@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   collectCandidates,
   getPapers,
+  getPapersAligned,
+  getRecommendedIds,
   getSeed,
   type Seed
 } from "~lib/semantic-scholar"
@@ -78,7 +80,9 @@ describe("getSeed", () => {
   })
 
   it("copes with null references/citations (publisher-restricted papers)", async () => {
-    mockFetch(() => json({ paperId: "S", title: "T", references: null, citations: null }))
+    mockFetch(() =>
+      json({ paperId: "S", title: "T", references: null, citations: null })
+    )
     const seed = await getSeed("DOI:10.1/x")
     expect(seed.references).toEqual([])
     expect(seed.citers).toEqual([])
@@ -87,7 +91,9 @@ describe("getSeed", () => {
 
   it("retries a 429 quickly and still succeeds", async () => {
     let attempts = 0
-    mockFetch(() => (++attempts === 1 ? json({}, 429) : json({ paperId: "S", title: "T" })))
+    mockFetch(() =>
+      ++attempts === 1 ? json({}, 429) : json({ paperId: "S", title: "T" })
+    )
     const started = Date.now()
     const seed = await getSeed("DOI:10.1/x")
     expect(seed.paperId).toBe("S")
@@ -105,9 +111,14 @@ describe("collectCandidates", () => {
   }))
 
   const route = (call: Call) => {
-    if (call.url.includes("/paper/search")) return json({ data: [{ paperId: "s1" }, { paperId: "shared" }] })
-    if (call.url.includes("from=recent")) return json({ recommendedPapers: [{ paperId: "rec1" }, { paperId: "shared" }] })
-    if (call.url.includes("from=all-cs")) return json({ recommendedPapers: [{ paperId: "cs1" }] })
+    if (call.url.includes("/paper/search"))
+      return json({ data: [{ paperId: "s1" }, { paperId: "shared" }] })
+    if (call.url.includes("from=recent"))
+      return json({
+        recommendedPapers: [{ paperId: "rec1" }, { paperId: "shared" }]
+      })
+    if (call.url.includes("from=all-cs"))
+      return json({ recommendedPapers: [{ paperId: "cs1" }] })
     return json({}, 404)
   }
 
@@ -118,7 +129,11 @@ describe("collectCandidates", () => {
     const found = await collectCandidates(seed)
 
     // only the independent sources hit the network: search + recent recommendations
-    expect(calls.map((c) => c.url.includes("/paper/search") ? "search" : "recs").sort()).toEqual(["recs", "search"])
+    expect(
+      calls
+        .map((c) => (c.url.includes("/paper/search") ? "search" : "recs"))
+        .sort()
+    ).toEqual(["recs", "search"])
     expect(found.get("r1")).toEqual(new Set(["reference"]))
     // most cited citers are kept
     expect(found.has("c129")).toBe(true)
@@ -128,7 +143,9 @@ describe("collectCandidates", () => {
   it("keeps the 60 most cited and the 40 most recent citers, not all of them", async () => {
     mockFetch(route)
     const found = await collectCandidates({ ...baseSeed, citers })
-    const citing = [...found.entries()].filter(([, s]) => s.has("citation")).length
+    const citing = [...found.entries()].filter(([, s]) =>
+      s.has("citation")
+    ).length
     expect(citing).toBeGreaterThanOrEqual(60)
     expect(citing).toBeLessThanOrEqual(100)
     expect(found.has("c0")).toBe(false) // least cited and old
@@ -136,8 +153,13 @@ describe("collectCandidates", () => {
 
   it("merges every source that found the same paper", async () => {
     mockFetch(route)
-    const found = await collectCandidates({ ...baseSeed, references: ["shared"] })
-    expect(found.get("shared")).toEqual(new Set(["reference", "search", "recommended"]))
+    const found = await collectCandidates({
+      ...baseSeed,
+      references: ["shared"]
+    })
+    expect(found.get("shared")).toEqual(
+      new Set(["reference", "search", "recommended"])
+    )
   })
 
   it("asks for the computer-science pool only for CS seeds, in the same parallel step", async () => {
@@ -146,7 +168,10 @@ describe("collectCandidates", () => {
     expect(calls.some((c) => c.url.includes("all-cs"))).toBe(false)
 
     mockFetch(route)
-    const found = await collectCandidates({ ...baseSeed, isComputerScience: true })
+    const found = await collectCandidates({
+      ...baseSeed,
+      isComputerScience: true
+    })
     expect(calls.filter((c) => c.url.includes("all-cs"))).toHaveLength(1)
     expect(found.has("cs1")).toBe(true)
   })
@@ -163,12 +188,19 @@ describe("collectCandidates", () => {
     mockFetch(route)
     const found = await collectCandidates(baseSeed, Promise.resolve(null))
     expect(calls.filter((c) => c.url.includes("from=recent"))).toHaveLength(1)
-    expect(calls.find((c) => c.url.includes("from=recent"))!.url).toContain("forpaper/SEED")
+    expect(calls.find((c) => c.url.includes("from=recent"))!.url).toContain(
+      "forpaper/SEED"
+    )
     expect(found.has("rec1")).toBe(true)
   })
 
   it("never lists the seed itself as a candidate", async () => {
-    mockFetch(() => json({ data: [{ paperId: "SEED" }], recommendedPapers: [{ paperId: "SEED" }] }))
+    mockFetch(() =>
+      json({
+        data: [{ paperId: "SEED" }],
+        recommendedPapers: [{ paperId: "SEED" }]
+      })
+    )
     const found = await collectCandidates({ ...baseSeed, references: ["SEED"] })
     expect(found.has("SEED")).toBe(false)
   })
@@ -180,7 +212,9 @@ describe("getPapers", () => {
   const batchRoute = (call: Call) =>
     json(
       call.body.ids.map((id: string) =>
-        id === "p7" ? null : { paperId: id, title: id, embedding: { vector: [1, 2] } }
+        id === "p7"
+          ? null
+          : { paperId: id, title: id, embedding: { vector: [1, 2] } }
       )
     )
 
@@ -188,7 +222,9 @@ describe("getPapers", () => {
     mockFetch(batchRoute)
     await getPapers(ids)
     expect(calls).toHaveLength(3)
-    expect(calls.every((c) => c.method === "POST" && c.body.ids.length <= 100)).toBe(true)
+    expect(
+      calls.every((c) => c.method === "POST" && c.body.ids.length <= 100)
+    ).toBe(true)
     expect(calls.flatMap((c) => c.body.ids)).toEqual(ids)
   })
 
@@ -196,14 +232,21 @@ describe("getPapers", () => {
     mockFetch(batchRoute)
     const papers = await getPapers(ids)
     expect(papers).toHaveLength(249)
-    expect(papers.map((p) => p.paperId).slice(5, 9)).toEqual(["p5", "p6", "p8", "p9"])
+    expect(papers.map((p) => p.paperId).slice(5, 9)).toEqual([
+      "p5",
+      "p6",
+      "p8",
+      "p9"
+    ])
     expect(papers[0].embedding).toEqual([1, 2])
     expect("embedding" in papers[0]).toBe(true)
   })
 
   it("keeps the good chunks when one chunk fails", async () => {
     let n = 0
-    mockFetch((call) => (++n === 2 ? json({ error: "bad" }, 400) : batchRoute(call)))
+    mockFetch((call) =>
+      ++n === 2 ? json({ error: "bad" }, 400) : batchRoute(call)
+    )
     const papers = await getPapers(ids)
     expect(papers.length).toBeGreaterThan(100)
     expect(papers.length).toBeLessThan(250)
@@ -218,6 +261,99 @@ describe("getPapers", () => {
   it("makes no request for an empty list", async () => {
     mockFetch(batchRoute)
     expect(await getPapers([])).toEqual([])
+    expect(calls).toHaveLength(0)
+  })
+})
+
+describe("paper ids in URLs", () => {
+  it("keeps the slash and parentheses of a DOI but escapes characters that would end the path", async () => {
+    mockFetch(() => json({ paperId: "S", title: "T" }))
+    await getSeed(
+      "DOI:10.1002/(SICI)1097-0258(20001130)19:22<3187::AID-SIM#1>3.0.CO;2-R?x"
+    )
+    const path = new URL(calls[0].url).pathname
+    expect(path).toContain("DOI:10.1002/(SICI)1097-0258(20001130)19:22")
+    // '#' and '?' would otherwise be read as fragment / query string, so the
+    // request would silently be for a different (truncated) DOI.
+    expect(calls[0].url).not.toMatch(/AID-SIM#/)
+    expect(calls[0].url).toContain("%23")
+    expect(calls[0].url).toContain("%3F")
+    expect(new URL(calls[0].url).searchParams.get("fields")).toContain(
+      "embedding.specter_v2"
+    )
+  })
+
+  it("leaves ordinary ids untouched", async () => {
+    mockFetch(() => json({ paperId: "S", title: "T" }))
+    await getSeed("DOI:10.1186/s40337-024-01004-0")
+    expect(calls[0].url).toContain("/paper/DOI:10.1186/s40337-024-01004-0?")
+  })
+
+  it("escapes them in recommendations as well", async () => {
+    mockFetch(() => json({ recommendedPapers: [] }))
+    await getRecommendedIds("DOI:10.1/a#b", "recent")
+    expect(calls[0].url).toContain("forpaper/DOI:10.1/a%23b?")
+  })
+})
+
+describe("getRecommendedIds", () => {
+  it("asks for the pool and limit it is given (alerts use a smaller one)", async () => {
+    mockFetch(() =>
+      json({ recommendedPapers: [{ paperId: "a" }, { paperId: "b" }] })
+    )
+    expect(await getRecommendedIds("X", "recent")).toEqual(["a", "b"])
+    expect(calls[0].url).toContain("from=recent&limit=50")
+
+    await getRecommendedIds("X", "all-cs")
+    expect(calls[1].url).toContain("from=all-cs&limit=50")
+
+    await getRecommendedIds("X", "recent", 15)
+    expect(calls[2].url).toContain("from=recent&limit=15")
+  })
+
+  it("returns null when the request fails, [] when there is nothing", async () => {
+    mockFetch(() => json({}, 400))
+    expect(await getRecommendedIds("X", "recent")).toBeNull()
+    mockFetch(() => json({}))
+    expect(await getRecommendedIds("X", "recent")).toEqual([])
+  })
+})
+
+describe("getPapersAligned", () => {
+  const ids = Array.from({ length: 230 }, (_, i) => `DOI:10.1/${i}`)
+  const route = (call: Call) =>
+    json(
+      call.body.ids.map((id: string) =>
+        id.endsWith("/7") ? null : { paperId: id, title: id }
+      )
+    )
+
+  it("keeps the input order and puts null where the paper is unknown", async () => {
+    mockFetch(route)
+    const aligned = await getPapersAligned(ids)
+    expect(aligned).toHaveLength(230)
+    expect(aligned[6]?.paperId).toBe("DOI:10.1/6")
+    expect(aligned[7]).toBeNull()
+    expect(aligned[229]?.paperId).toBe("DOI:10.1/229")
+  })
+
+  it("uses the same parallel chunks of 100 as getPapers (measured faster and steadier)", async () => {
+    mockFetch(route)
+    await getPapersAligned(ids)
+    expect(calls).toHaveLength(3)
+    expect(calls.every((c) => c.body.ids.length <= 100)).toBe(true)
+    expect(calls[0].url).not.toContain("embedding")
+  })
+
+  it("throws when a chunk fails, so a failed request is not reported as 'not found'", async () => {
+    let n = 0
+    mockFetch((call) => (++n === 2 ? json({}, 400) : route(call)))
+    await expect(getPapersAligned(ids)).rejects.toThrow()
+  })
+
+  it("makes no request for an empty list", async () => {
+    mockFetch(route)
+    expect(await getPapersAligned([])).toEqual([])
     expect(calls).toHaveLength(0)
   })
 })

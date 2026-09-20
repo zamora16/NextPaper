@@ -2,24 +2,20 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 
 import "~style.css"
 
-import { CopyCitationsButton, ExportButton } from "~components/CitationButtons"
-import { LibraryItem } from "~components/LibraryItem"
-import { LibraryTools } from "~components/LibraryTools"
+import { CopyCitationsButton } from "~components/CitationButtons"
 import { PaperCard } from "~components/PaperCard"
+import { SavedTab } from "~components/SavedTab"
 import { Timeline } from "~components/Timeline"
-import { UpdatesPanel } from "~components/UpdatesPanel"
+import { pillClass } from "~components/ui"
+import { useStorageValue } from "~components/useStorageValue"
 import { getCachedResult } from "~lib/cache"
 import { CITATION_STYLES, type CitationStyle } from "~lib/citation"
 import { extractPaperRef } from "~lib/extract-ref"
 import { jobKey, type JobState } from "~lib/job"
 import {
-  collectionCounts,
-  deleteCollection,
   getLibrary,
   LIBRARY_KEY,
-  STATUSES,
   toggleSaved,
-  type ReadStatus,
   type SavedPaper
 } from "~lib/library"
 import type { AnalysisResult, PickKind, ScoredPaper } from "~lib/pipeline"
@@ -79,10 +75,11 @@ function IndexPopup() {
   const [filter, setFilter] = useState<Filter>("all")
   const [sort, setSort] = useState<Sort>("relevance")
   const [design, setDesign] = useState<DesignFilter>("all")
-  const [library, setLibrary] = useState<SavedPaper[]>([])
-  const [statusFilter, setStatusFilter] = useState<ReadStatus | "all">("all")
-  const [collectionFilter, setCollectionFilter] = useState<string | "all">(
-    "all"
+  const library = useStorageValue<SavedPaper[]>(LIBRARY_KEY, getLibrary, [])
+  const updates = useStorageValue<UpdatesState | null>(
+    UPDATES_KEY,
+    getUpdates,
+    null
   )
   const [showTimeline, setShowTimeline] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -92,24 +89,10 @@ function IndexPopup() {
   const [queryInput, setQueryInput] = useState("")
   const current = trail.length ? trail[trail.length - 1] : null
   const activeRef = current ? current.ref : ref
-  const [updates, setUpdates] = useState<UpdatesState | null>(null)
   const [newIds, setNewIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     getActiveTabPaperRef().then(setRef)
-  }, [])
-
-  useEffect(() => {
-    getUpdates().then(setUpdates)
-    const onChanged = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: string
-    ) => {
-      if (area === "local" && changes[UPDATES_KEY])
-        getUpdates().then(setUpdates)
-    }
-    chrome.storage.onChanged.addListener(onChanged)
-    return () => chrome.storage.onChanged.removeListener(onChanged)
   }, [])
 
   // Opening the saved tab counts as seeing the alerts: remember which ones
@@ -123,19 +106,6 @@ function IndexPopup() {
     )
     markUpdatesViewed()
   }, [tab, updates])
-
-  useEffect(() => {
-    getLibrary().then(setLibrary)
-    const onChanged = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: string
-    ) => {
-      if (area === "local" && changes[LIBRARY_KEY])
-        getLibrary().then(setLibrary)
-    }
-    chrome.storage.onChanged.addListener(onChanged)
-    return () => chrome.storage.onChanged.removeListener(onChanged)
-  }, [])
 
   useEffect(() => {
     if (!activeRef) return
@@ -260,22 +230,6 @@ function IndexPopup() {
     () => new Map(library.map((p) => [p.paperId, p.status])),
     [library]
   )
-  const collections = useMemo(() => collectionCounts(library), [library])
-  // A collection that no longer exists (deleted, or its last paper removed)
-  // must not leave the list stuck on an empty filter.
-  const activeCollection = collections.some((c) => c.name === collectionFilter)
-    ? collectionFilter
-    : "all"
-  const savedVisible = useMemo(
-    () =>
-      library.filter(
-        (p) =>
-          (statusFilter === "all" || p.status === statusFilter) &&
-          (activeCollection === "all" ||
-            p.collections.includes(activeCollection))
-      ),
-    [library, statusFilter, activeCollection]
-  )
   const unviewedUpdates =
     updates?.items.filter((i) => !i.viewed && !savedIds.has(i.paper.paperId))
       .length ?? 0
@@ -306,13 +260,6 @@ function IndexPopup() {
     />
   )
 
-  const pill = (active: boolean) =>
-    `rounded-full border px-2 py-0.5 text-xs font-medium ${
-      active
-        ? "border-violet-300 bg-violet-50 text-violet-700"
-        : "border-slate-200 text-slate-500 hover:bg-slate-50"
-    }`
-
   const styleSelect = (
     <label className="flex items-center gap-1.5 text-xs text-slate-500">
       Citar como
@@ -336,12 +283,12 @@ function IndexPopup() {
         <div className="flex gap-1">
           <button
             onClick={() => setTab("related")}
-            className={pill(tab === "related")}>
+            className={pillClass(tab === "related")}>
             Relacionados
           </button>
           <button
             onClick={() => setTab("saved")}
-            className={pill(tab === "saved")}>
+            className={pillClass(tab === "saved")}>
             ★ Guardados · {library.length}
             {unviewedUpdates > 0 && (
               <span
@@ -355,101 +302,15 @@ function IndexPopup() {
       </div>
 
       {tab === "saved" && (
-        <div className="flex max-h-[32rem] flex-col gap-3 overflow-y-auto">
-          {library.length === 0 && (
-            <p className="text-sm text-slate-500">
-              Aún no has guardado nada. Pulsa la ☆ de cualquier paper para
-              guardarlo aquí, o importa tus referencias desde otra herramienta.
-            </p>
-          )}
-
-          <LibraryTools library={library} />
-
-          {library.length > 0 && (
-            <>
-              {updates && (
-                <UpdatesPanel
-                  updates={updates}
-                  savedIds={savedIds}
-                  newIds={newIds}
-                  renderCard={renderCard}
-                />
-              )}
-
-              <div className="flex flex-wrap gap-1">
-                {(
-                  [{ id: "all", label: "Todos" }, ...STATUSES] as {
-                    id: ReadStatus | "all"
-                    label: string
-                  }[]
-                ).map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => setStatusFilter(s.id)}
-                    className={pill(statusFilter === s.id)}>
-                    {s.label} ·{" "}
-                    {s.id === "all"
-                      ? library.length
-                      : library.filter((p) => p.status === s.id).length}
-                  </button>
-                ))}
-              </div>
-
-              {collections.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1">
-                  <button
-                    onClick={() => setCollectionFilter("all")}
-                    className={pill(activeCollection === "all")}>
-                    Todas las colecciones
-                  </button>
-                  {collections.map((c) => (
-                    <button
-                      key={c.name}
-                      onClick={() => setCollectionFilter(c.name)}
-                      className={pill(activeCollection === c.name)}>
-                      {c.name} · {c.count}
-                    </button>
-                  ))}
-                  {activeCollection !== "all" && (
-                    <button
-                      onClick={() => deleteCollection(activeCollection)}
-                      title="Quita la colección de todos los papers; los papers se conservan"
-                      className="text-[11px] font-medium text-red-500 hover:underline">
-                      Eliminar colección
-                    </button>
-                  )}
-                </div>
-              )}
-
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                {styleSelect}
-                <div className="flex gap-1">
-                  <CopyCitationsButton
-                    papers={savedVisible}
-                    style={citationStyle}
-                  />
-                  <ExportButton papers={savedVisible} format="bibtex" />
-                  <ExportButton papers={savedVisible} format="ris" />
-                </div>
-              </div>
-
-              {savedVisible.length === 0 && (
-                <p className="text-sm text-slate-500">
-                  Ningún paper guardado con este filtro.
-                </p>
-              )}
-
-              {savedVisible.map((paper) => (
-                <LibraryItem
-                  key={paper.paperId}
-                  paper={paper}
-                  card={renderCard(paper)}
-                  knownCollections={collections.map((c) => c.name)}
-                />
-              ))}
-            </>
-          )}
-        </div>
+        <SavedTab
+          library={library}
+          updates={updates}
+          newIds={newIds}
+          citationStyle={citationStyle}
+          styleSelect={styleSelect}
+          savedIds={savedIds}
+          renderCard={renderCard}
+        />
       )}
 
       {tab === "related" && (
@@ -540,7 +401,7 @@ function IndexPopup() {
                   <button
                     key={f.id}
                     onClick={() => setFilter(f.id)}
-                    className={pill(filter === f.id)}>
+                    className={pillClass(filter === f.id)}>
                     {f.label}
                   </button>
                 ))}

@@ -164,7 +164,7 @@ const HEADER = /^(study )?(design|methods?|setting|study type)\W*$/i
 
 // Title plus the abstract sentences that describe the study itself; a short
 // section header ("Design.") lends its cue to the sentence after it.
-function selfText(title: string, abstract: string | null): string {
+function selfText(title: string, abstract?: string | null): string {
   const kept = [title]
   if (abstract) {
     const sentences = abstract.split(/(?<=[.!?])\s+/)

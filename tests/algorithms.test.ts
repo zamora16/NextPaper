@@ -1,13 +1,12 @@
 import { describe, expect, it } from "vitest"
 
+import { labelClusters } from "~lib/keywords"
 import {
   clusterAuto,
   kMeans,
   mergeSmallClusters,
   silhouetteScore
 } from "~lib/kmeans"
-import { labelClusters } from "~lib/keywords"
-import { isReview } from "~lib/paper-utils"
 import type { PaperGroup, ScoredPaper } from "~lib/pipeline"
 import {
   cosineSimilarity,
@@ -21,7 +20,7 @@ import { applyView } from "~lib/view"
 // Deterministic pseudo-random noise (LCG) so failures are reproducible.
 function rng(seed: number) {
   let s = seed
-  return () => ((s = (s * 16807) % 2147483647) / 2147483647 - 0.5)
+  return () => (s = (s * 16807) % 2147483647) / 2147483647 - 0.5
 }
 
 const DIM = 64
@@ -34,7 +33,10 @@ function blobs(perBlob: number[], noise = 0.25, seed = 7) {
   perBlob.forEach((count, blob) => {
     for (let i = 0; i < count; i++) {
       vectors.push(
-        Array.from({ length: DIM }, (_, d) => (d % perBlob.length === blob ? 1 : 0) + random() * noise)
+        Array.from(
+          { length: DIM },
+          (_, d) => (d % perBlob.length === blob ? 1 : 0) + random() * noise
+        )
       )
       truth.push(blob)
     }
@@ -66,7 +68,12 @@ describe("vector-math", () => {
   })
 
   it("mean and euclidean distance", () => {
-    expect(meanVector([[0, 2], [2, 4]])).toEqual([1, 3])
+    expect(
+      meanVector([
+        [0, 2],
+        [2, 4]
+      ])
+    ).toEqual([1, 3])
     expect(euclideanDistance([0, 0], [3, 4])).toBe(5)
   })
 })
@@ -92,7 +99,10 @@ describe("silhouette score", () => {
   it("is high for the true clustering and lower for a scrambled one", () => {
     const { vectors, truth } = blobs([6, 6, 6])
     const good = silhouetteScore(vectors, truth)
-    const scrambled = silhouetteScore(vectors, truth.map((_, i) => i % 3))
+    const scrambled = silhouetteScore(
+      vectors,
+      truth.map((_, i) => i % 3)
+    )
     expect(good).toBeGreaterThan(0.5)
     expect(good).toBeGreaterThan(scrambled)
   })
@@ -158,24 +168,6 @@ describe("labelClusters", () => {
   })
 })
 
-describe("isReview", () => {
-  const paper = (title: string, publicationTypes?: string[]) =>
-    ({ title, publicationTypes }) as ScoredPaper
-
-  it("trusts Semantic Scholar's publication types", () => {
-    expect(isReview(paper("Anything", ["Review"]))).toBe(true)
-    expect(isReview(paper("Anything", ["MetaAnalysis"]))).toBe(true)
-    expect(isReview(paper("Anything", ["JournalArticle"]))).toBe(false)
-  })
-
-  it("falls back to title patterns", () => {
-    expect(isReview(paper("A systematic review of X"))).toBe(true)
-    expect(isReview(paper("Meta-analysis of Y"))).toBe(true)
-    expect(isReview(paper("Revisión sistemática de Z"))).toBe(true)
-    expect(isReview(paper("A new method for X"))).toBe(false)
-  })
-})
-
 describe("applyView", () => {
   const make = (id: string, over: Partial<ScoredPaper>): ScoredPaper =>
     ({
@@ -197,26 +189,43 @@ describe("applyView", () => {
       label: "A",
       papers: [
         make("a1", { relation: "reference", citationCount: 5, year: 2010 }),
-        make("a2", { relation: "citation", citationCount: 50, year: 2024, openAccessPdf: { url: "https://x/y.pdf" } })
+        make("a2", {
+          relation: "citation",
+          citationCount: 50,
+          year: 2024,
+          openAccessPdf: { url: "https://x/y.pdf" }
+        })
       ]
     },
     {
       label: "B",
-      papers: [make("b1", { title: "A systematic review", citationCount: 500, year: 2018 })]
+      papers: [
+        make("b1", {
+          title: "A systematic review",
+          citationCount: 500,
+          year: 2018
+        })
+      ]
     }
   ]
-  const ids = (g: PaperGroup[]) => g.flatMap((x) => x.papers.map((p) => p.paperId))
+  const ids = (g: PaperGroup[]) =>
+    g.flatMap((x) => x.papers.map((p) => p.paperId))
 
   it("filters and drops groups that end up empty", () => {
     expect(ids(applyView(groups, "reference", "relevance"))).toEqual(["a1"])
     expect(ids(applyView(groups, "citation", "relevance"))).toEqual(["a2"])
     expect(ids(applyView(groups, "review", "relevance"))).toEqual(["b1"])
     expect(ids(applyView(groups, "open", "relevance"))).toEqual(["a2"])
-    expect(applyView(groups, "review", "relevance").map((g) => g.label)).toEqual(["B"])
+    expect(
+      applyView(groups, "review", "relevance").map((g) => g.label)
+    ).toEqual(["B"])
   })
 
   it("relevance keeps the groups; other sorts flatten into one list", () => {
-    expect(applyView(groups, "all", "relevance").map((g) => g.label)).toEqual(["A", "B"])
+    expect(applyView(groups, "all", "relevance").map((g) => g.label)).toEqual([
+      "A",
+      "B"
+    ])
     const byCitations = applyView(groups, "all", "citations")
     expect(byCitations).toHaveLength(1)
     expect(byCitations[0].label).toBe("Todos")
@@ -226,6 +235,12 @@ describe("applyView", () => {
 
   it("returns no groups when nothing matches", () => {
     expect(applyView(groups, "open", "citations")).toHaveLength(1)
-    expect(applyView([{ label: "X", papers: [make("x", {})] }], "review", "citations")).toEqual([])
+    expect(
+      applyView(
+        [{ label: "X", papers: [make("x", {})] }],
+        "review",
+        "citations"
+      )
+    ).toEqual([])
   })
 })

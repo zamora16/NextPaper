@@ -1,12 +1,10 @@
 import { useState } from "react"
 
+import { buttonClass } from "~components/ui"
+import { useCopyAction } from "~components/useCopyAction"
 import type { Citable, CitationStyle } from "~lib/citation"
 import { citeMany } from "~lib/cite"
 import { downloadFile } from "~lib/export"
-import { useCopyAction } from "~components/useCopyAction"
-
-const buttonClass =
-  "rounded border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-60"
 
 // "Copiar N citas": every paper in the chosen style, joined by blank lines.
 export function CopyCitationsButton({

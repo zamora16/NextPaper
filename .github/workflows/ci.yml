@@ -14,6 +14,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx tsc --noEmit
-      - run: npm test
+      - run: npm run typecheck
+      - run: npm run format:check
+      - run: npm run test:coverage
       - run: npx plasmo build

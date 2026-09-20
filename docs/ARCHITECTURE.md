@@ -94,7 +94,9 @@ the message and a *Reintentar* button; nothing is cached.
 
 | File | Responsibility |
 |---|---|
-| `popup.tsx` | UI shell (~510 lines): tabs (Relacionados / Guardados), search box, `trail` (Explorar breadcrumb), filters, sort, picks, bulk copy, saved tab, updates panel. |
+| `popup.tsx` | UI shell (~510 lines): tabs, topic search, `trail` (Explorar breadcrumb), filters/design filter/sort, picks, timeline, bulk copy. Mirrors storage with `useStorageValue` (library, alerts). |
+| `components/SavedTab.tsx` | The whole *Guardados* tab: status/collection filters, alerts panel, backup/import, bulk citation export, one `LibraryItem` per paper. |
+| `components/useStorageValue.ts`, `components/ui.ts` | Hook that mirrors a `chrome.storage.local` key (read + re-read on change); shared class strings (`buttonClass`, `pillClass`). |
 | `background.ts` | Message handler (`analyze`, `check-updates`), `inFlight` dedupe, `syncKeepAlive`, alarm `nextpaper-updates` (first after 5 min, then 24 h), badge refresh on start. |
 | `components/PaperCard.tsx` | Card: title link, ★, authors, tl;dr, abstract toggle, tags (citations, similarity, relation, Revisión, reading status), actions (Explorar, PDF gratis, Citar). |
 | `components/Timeline.tsx` | SVG chart of `buildTimeline`: one lane per subtopic, dots by year (radius = log citations), dashed line = the open paper's year, filtered-out papers dimmed, click → `selectPaper` (highlights + scrolls to the card via `data-paper-id`). |
@@ -102,7 +104,7 @@ the message and a *Reintentar* button; nothing is cached.
 | `components/LibraryTools.tsx` | "Copia de seguridad" and "Importar..." (one picker: NextPaper backup or BibTeX/RIS/DOI list); always visible, even with an empty library. |
 | `components/CitationButtons.tsx`, `useCopyAction.ts` | `CopyCitationsButton`, `ExportButton` with progress, and the copy phases hook (busy → copied, or "Pulsa para copiar" fallback). |
 | `components/UpdatesPanel.tsx` | "Novedades para ti": items with "Porque guardaste…", *Nuevo* tag, dismiss, "Buscar ahora". |
-| `lib/semantic-scholar.ts` | API client: `getSeed`, `collectCandidates`, `getPapers`, `searchPapers`, `getRecentRelated`; `getJson` (null on failure + `console.warn`). |
+| `lib/semantic-scholar.ts` | API client: `getSeed`, `collectCandidates`, `getPapers`, `getPapersAligned` (import: same order, `null` for unknown, throws on failure), `searchPapers`, `getRecommendedIds(ref, pool, limit)` (alerts use limit 15). One shared `postBatch` → **parallel chunks of 100** for both batch lookups. Ids go into the URL path through `paperPath` (a DOI with `#` or `?` would otherwise be truncated and query a different paper). `getJson` (null on failure + `console.warn`). |
 | `lib/s2-fetch.ts` | `s2Fetch` (limiter + up to 8 **short** retries on 429/5xx/network errors via `retryDelay`: 0.35 s ×1.5 up to 3 s, + ≤250 ms jitter; honors Retry-After if ever sent) and `RateLimitedError`. |
 | `lib/rate-limit.ts` | `createLimiter(maxConcurrent, minGapMs)` (start slots reserved synchronously) and the shared instance: **3 in flight, 120 ms between starts**. No fixed pause between requests — see `docs/PERFORMANCE.md`. |
 | `lib/api-key.ts` | `x-api-key` header from `process.env.PLASMO_PUBLIC_S2_API_KEY`. |
@@ -118,14 +120,15 @@ the message and a *Reintentar* button; nothing is cached.
 | `lib/crossref.ts` | Crossref client: `getCrossref(doi)` → structured authors, issue, article number, month, ISO/NLM journal abbreviation. Own 300 ms queue; cache `nextpaper_crossref_v1_<doi>` (30 d hit / 7 d miss, ≤500 entries). Optional `PLASMO_PUBLIC_CROSSREF_MAILTO` for the polite pool (never set by default). |
 | `lib/cite.ts` | Async layer: `citeOne`, `inTextOne`, `citeMany` (sequential, progress callback) = Crossref lookup + formatter. |
 | `lib/export.ts` | `downloadFile` (Blob + `<a download>`). |
-| `lib/backup.ts` | **Pure**: backup file format (`{app:"nextpaper", version, library}`), `parseBackup`/`normalizeSaved` (validation, http(s)-only URLs), `mergeItems` (adds new papers, keeps the user's status/note, unions collections). |
+| `lib/backup.ts` | **Pure**: backup file format, `parseBackup`/`normalizeSaved` (**whitelist**: every field is rebuilt with its expected type, so a wrong type cannot reach React and blank the popup; http(s)-only URLs; length/count caps; ≤5000 items; analysis context dropped), `mergeItems` (adds new papers, keeps the user's status/note, unions collections). |
 | `lib/import.ts` | Import from BibTeX / RIS / plain DOI-or-title lists: pure `parseReferences`, `similarTitles`, and `resolveReferences` (DOIs via one aligned batch; ≤25 titles via search + title-similarity check). |
-| `lib/library.ts` | Saved papers with `status`, `note`, `collections`; serialized writes (`toggleSaved`, `updateSaved`, `deleteCollection`, `addPapers`, `restoreItems`); `collectionCounts`. |
-| `lib/updates.ts` | Daily alerts: for the 8 latest saves, `recent`-pool recommendation ids (≤5 new each) → one batch for metadata; `seen` set prevents repeats; badge = unseen count. |
+| `lib/library.ts` | Saved papers with `status`, `note`, `collections`; writes queued (`toggleSaved`, `updateSaved`, `deleteCollection`, `addPapers`, `restoreItems`); `collectionCounts`. Saved papers go through `plainPaper`, so **similarity / relation / shared terms of the analysis they came from are not kept** (in Guardados nothing is "open"); `getLibrary` also cleans items saved by older versions. |
+| `lib/queue.ts` | `createQueue()`: runs async tasks one at a time (a failed task does not block the next). Orders work **within one JS context** only; popup and worker are separate, so cross-context state re-reads right before saving (see `updates.ts`). |
+| `lib/updates.ts` | Daily alerts: for the 8 latest saves, `recent`-pool ids (≤5 new each) → one batch for metadata; `seen` prevents repeats; badge = unseen count. Every change re-reads the state right before writing (a check lasts seconds; dismissing or viewing meanwhile used to be undone). `lastError` records why a check failed and `UpdatesPanel` shows it. |
 | `lib/view.ts` | Filters (`reference`, `citation`, `review`, `open`), an independent design filter (`DesignFilter`, `designOptions` = designs present with counts) and sorts (`relevance` keeps groups; `citations`/`year` flatten). |
-| `lib/paper-utils.ts` | `isReview` (S2 `publicationTypes` Review/MetaAnalysis, else title regex). |
+| `lib/paper-utils.ts` | `isReview`: title patterns or a review design declared in the text (`studyOf`); Semantic Scholar's `Review` type is **not trusted** (it tagged 109 of 430 papers whose text declares a trial, cohort or survey; `MetaAnalysis` is consistent and kept through `study.ts`). `plainPaper`: a paper with no analysis context and no embedding. |
 | `lib/extract-ref.ts` | Self-contained page extractor (see Rules in `CONTRIBUTING.md`). |
-| `lib/cache.ts` | Compressed result cache (`v8`, 7-day TTL), `pruneStorage` (expiry, 40-entry cap, legacy keys, orphan jobs; runs after each analysis and at worker start) and a clear-and-retry on write failure. |
+| `lib/cache.ts` | Compressed result cache (`v9`, 7-day TTL), `pruneStorage` (expiry, 40-entry cap, legacy keys, orphan jobs; runs after each analysis and at worker start) and a clear-and-retry on write failure. |
 | `lib/compress.ts` | `compressJson` / `decompressJson`: native gzip (`CompressionStream`) + base64. |
 | `lib/job.ts` | `JobState` (`loading` \| `done` \| `error`; **no result inside**), `JOB_PREFIX`, `jobKey`. |
 
@@ -134,10 +137,10 @@ the message and a *Reintentar* button; nothing is cached.
 | Key | Value | Lifetime / bound |
 |---|---|---|
 | `nextpaper_job_<ref>` | `JobState`: `{phase:"loading",step?}` \| `{phase:"done"}` \| `{phase:"error",message}` (a few bytes) | Pruned when its cache entry disappears |
-| `nextpaper_cache_v8_<ref>` | `{z, cachedAt}` where `z` = base64(gzip(JSON of `AnalysisResult`)) | 7-day TTL **and** newest 40 entries only; removed by `pruneStorage` |
+| `nextpaper_cache_v9_<ref>` | `{z, cachedAt}` where `z` = base64(gzip(JSON of `AnalysisResult`)) | 7-day TTL **and** newest 40 entries only; removed by `pruneStorage` |
 | `nextpaper_library` | `Record<paperId, SavedPaper>` (`ScoredPaper` + `savedAt`, `status`, `note`, `collections`) | permanent, never pruned |
 | `nextpaper_crossref_v1_<doi>` | `{m: CrossrefMeta \| null, at}` (`null` = Crossref has no record, e.g. arXiv DOIs) | 30 d hit / 7 d miss, newest 500 kept (`pruneStorage`) |
-| `nextpaper_updates` | `{running, checkedAt, seen[≤600], items[≤40]}` | permanent, bounded |
+| `nextpaper_updates` | `{running, checkedAt, lastError, seen[≤600], items[≤40]}` | permanent, bounded |
 
 Older prefixes (`nextpaper_cache_v1..v5_`, `nextpaper_emb_v1_`, `nextpaper_rec_v1_`) are
 deleted on sight (`LEGACY_KEYS`), as are job states written in the old shape (with an
@@ -206,10 +209,10 @@ deleted.
 ## 7. Known technical debt
 
 1. ~~Storage growth with no eviction~~ — fixed 2026-09-19 (see §4).
-2. Unit tests (183) cover the pure modules, `assemble`, the API client and the rate limiter (mocked fetch); `analyzePaper`/`analyzeQuery` themselves and `updates` are covered only by the e2e scripts.
+2. Unit tests (330, `lib/` at ~98% line coverage, floors enforced by `npm run test:coverage`) cover every module in `lib/`: storage-bound ones against an in-memory `chrome.storage` (`tests/helpers/chrome.ts`, with a simulated quota), network-bound ones against a mocked `fetch`/module. Only the UI (popup, components, worker) and real request behavior rely on the e2e scripts.
 3. ~~Not under version control~~ — git + CI since 2026-09-20 (no remote yet).
-4. `checkForUpdates` failures are swallowed in `background.ts` (`.catch(() => {})`); the
-   UI cannot show that a daily check failed.
+4. ~~`checkForUpdates` failures swallowed~~ — recorded in `lastError` and shown in the panel (2026-09-20).
+   `strict` TypeScript is on (2026-09-20); `npm run typecheck`, `format:check` and coverage run in CI.
 5. `popup.tsx` is large and mixes several concerns (tabs, search, filters, library).
 6. Citation styles are hand-implemented and not CSL-certified; without Crossref (arXiv-only papers) author parsing is heuristic; Vancouver/AMA abbreviations depend on Crossref's short titles; IEEE uses the full journal name.
 7. Cluster labels can be uninformative when all results are near-identical (e.g. all

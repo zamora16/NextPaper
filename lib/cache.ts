@@ -15,10 +15,10 @@ const TTL_MS = 7 * 24 * 60 * 60 * 1000
 const MAX_ENTRIES = 40
 // Bumped whenever the shape or the retrieval strategy changes, so entries
 // produced by an older strategy are never served.
-const KEY_PREFIX = "nextpaper_cache_v8_"
+export const KEY_PREFIX = "nextpaper_cache_v9_"
 // Keys written by earlier versions (uncompressed results, per-paper embeddings,
 // raw recommendation lists). Removed on sight so they don't eat the quota.
-const LEGACY_KEYS = /^nextpaper_(cache_v[1-7]|emb_v1|rec_v1)_/
+const LEGACY_KEYS = /^nextpaper_(cache_v[1-8]|emb_v1|rec_v1)_/
 
 interface CacheEntry {
   z: string // gzip + base64 of the AnalysisResult JSON
@@ -68,7 +68,9 @@ export async function pruneStorage(
   }
 
   crossref.sort((a, b) => b.at - a.at)
-  crossref.slice(CROSSREF_MAX_ENTRIES).forEach((entry) => remove.push(entry.key))
+  crossref
+    .slice(CROSSREF_MAX_ENTRIES)
+    .forEach((entry) => remove.push(entry.key))
 
   live.sort((a, b) => b.cachedAt - a.cachedAt)
   live.slice(MAX_ENTRIES).forEach((entry) => remove.push(entry.key))

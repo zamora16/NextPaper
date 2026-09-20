@@ -19,53 +19,103 @@ export const buildBackup = (library: SavedPaper[]): Backup => ({
 
 const STATUS_VALUES: ReadStatus[] = ["unread", "reading", "read"]
 
+// Limits keep a crafted or corrupt file from filling the storage quota.
+const MAX_ITEMS = 5000
+const MAX_TITLE = 1000
+const MAX_TEXT = 10_000 // abstract, tl;dr, note
+const MAX_SHORT = 300 // venue, journal fields, author names, ids
+const MAX_COLLECTIONS = 50
+const MAX_COLLECTION_NAME = 100
+const MAX_AUTHORS = 200
+
 // A backup file is untrusted input: only http(s) links survive, so a crafted
 // file cannot plant a javascript: URL behind a card's link.
 const safeUrl = (value: unknown): string | undefined =>
   typeof value === "string" && /^https?:\/\//i.test(value) ? value : undefined
 
-const text = (value: unknown, fallback = "") =>
-  typeof value === "string" ? value : fallback
+// The interface renders these fields as they are, and React throws when asked
+// to render an object, so every field is rebuilt with its expected type
+// instead of being copied from the file.
+const text = (value: unknown, max: number): string | undefined =>
+  typeof value === "string" ? value.slice(0, max) : undefined
+
+const count = (value: unknown): number | undefined =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? Math.round(value)
+    : undefined
+
+const strings = (value: unknown, max: number, each: number): string[] =>
+  Array.isArray(value)
+    ? Array.from(
+        new Set(
+          value
+            .filter((v): v is string => typeof v === "string")
+            .map((v) => v.trim().slice(0, each))
+            .filter(Boolean)
+        )
+      ).slice(0, max)
+    : []
+
+function normalizeAuthors(raw: unknown): SavedPaper["authors"] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((a: any) => typeof a?.name === "string")
+    .slice(0, MAX_AUTHORS)
+    .map((a: any) => ({
+      authorId: text(a.authorId, MAX_SHORT) ?? "",
+      name: a.name.slice(0, MAX_SHORT)
+    }))
+}
+
+function normalizeJournal(raw: any): SavedPaper["journal"] {
+  const journal = {
+    name: text(raw?.name, MAX_SHORT),
+    volume: text(raw?.volume, MAX_SHORT),
+    pages: text(raw?.pages, MAX_SHORT)
+  }
+  return journal.name || journal.volume || journal.pages ? journal : null
+}
 
 export function normalizeSaved(raw: any): SavedPaper | null {
-  if (typeof raw?.paperId !== "string" || typeof raw?.title !== "string") {
+  if (
+    typeof raw?.paperId !== "string" ||
+    raw.paperId === "" ||
+    typeof raw?.title !== "string"
+  ) {
     return null
   }
 
-  const collections: string[] = Array.isArray(raw.collections)
-    ? Array.from(
-        new Set<string>(
-          raw.collections
-            .filter((c: unknown): c is string => typeof c === "string")
-            .map((c: string) => c.trim())
-            .filter(Boolean)
-        )
-      )
-    : []
-
+  const paperId = raw.paperId.slice(0, MAX_SHORT)
   const pdf = safeUrl(raw.openAccessPdf?.url)
+  const doi = text(raw.externalIds?.DOI, MAX_SHORT)
+  const tldr = text(raw.tldr?.text, MAX_TEXT)
+  const year = count(raw.year)
 
   return {
-    ...raw,
-    paperId: raw.paperId,
-    title: raw.title,
-    authors: Array.isArray(raw.authors)
-      ? raw.authors.filter((a: any) => typeof a?.name === "string")
-      : [],
-    year: typeof raw.year === "number" ? raw.year : null,
-    citationCount: Number(raw.citationCount) || 0,
-    venue: text(raw.venue),
+    paperId,
+    title: raw.title.slice(0, MAX_TITLE),
+    authors: normalizeAuthors(raw.authors),
+    year: year !== undefined && year >= 1000 && year <= 2200 ? year : null,
+    citationCount: count(raw.citationCount) ?? 0,
+    venue: text(raw.venue, MAX_SHORT) ?? "",
     url:
       safeUrl(raw.url) ??
-      `https://www.semanticscholar.org/paper/${encodeURIComponent(raw.paperId)}`,
+      `https://www.semanticscholar.org/paper/${encodeURIComponent(paperId)}`,
+    externalIds: doi ? { DOI: doi } : undefined,
     openAccessPdf: pdf ? { url: pdf } : null,
+    abstract: text(raw.abstract, MAX_TEXT) ?? null,
+    journal: normalizeJournal(raw.journal),
+    tldr: tldr ? { text: tldr } : null,
+    publicationTypes: strings(raw.publicationTypes, 20, MAX_SHORT),
+    influentialCitationCount: count(raw.influentialCitationCount) ?? null,
+    // Context of the analysis it was saved from: meaningless here.
     similarity: null,
     approximate: false,
     relation: null,
-    savedAt: typeof raw.savedAt === "number" ? raw.savedAt : Date.now(),
+    savedAt: count(raw.savedAt) ?? Date.now(),
     status: STATUS_VALUES.includes(raw.status) ? raw.status : "unread",
-    note: text(raw.note),
-    collections
+    note: text(raw.note, MAX_TEXT) ?? "",
+    collections: strings(raw.collections, MAX_COLLECTIONS, MAX_COLLECTION_NAME)
   }
 }
 
@@ -80,6 +130,7 @@ export function parseBackup(content: string): SavedPaper[] | null {
   if (data?.app !== "nextpaper" || !Array.isArray(data.library)) return null
 
   return data.library
+    .slice(0, MAX_ITEMS)
     .map(normalizeSaved)
     .filter((p: SavedPaper | null): p is SavedPaper => p !== null)
 }

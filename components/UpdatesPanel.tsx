@@ -40,10 +40,16 @@ export function UpdatesPanel({
       </div>
 
       <p className="text-[11px] text-slate-500">
-        Papers nuevos relacionados con lo que guardaste. Se revisa solo cada
-        24 h
-        {updates.checkedAt ? ` (última vez ${ago(updates.checkedAt)})` : ""}.
+        Papers nuevos relacionados con lo que guardaste. Se revisa solo cada 24
+        h{updates.checkedAt ? ` (última vez ${ago(updates.checkedAt)})` : ""}.
       </p>
+
+      {updates.lastError && !updates.running && (
+        <p role="alert" className="text-[11px] text-red-600">
+          La última comprobación falló: {updates.lastError} Se reintentará sola;
+          también puedes pulsar «Buscar ahora».
+        </p>
+      )}
 
       {items.length === 0 && !updates.running && (
         <p className="text-xs text-slate-500">
