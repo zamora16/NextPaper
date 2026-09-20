@@ -94,8 +94,9 @@ the message and a *Reintentar* button; nothing is cached.
 
 | File | Responsibility |
 |---|---|
-| `popup.tsx` | UI shell (~510 lines): tabs, topic search, `trail` (Explorar breadcrumb), filters/design filter/sort, picks, timeline, bulk copy. Mirrors storage with `useStorageValue` (library, alerts). |
+| `popup.tsx` | UI shell (~440 lines): tabs, topic search, `trail` (Explorar breadcrumb), filters/design filter/sort, picks, timeline, bulk copy. Uses `useAnalysis` (the analysis) and `useStorageValue` (library, alerts). |
 | `components/SavedTab.tsx` | The whole *Guardados* tab: status/collection filters, alerts panel, backup/import, bulk citation export, one `LibraryItem` per paper. |
+| `components/useAnalysis.ts` | `useAnalysis(ref)` → `{job, result, retry}`: asks the worker to analyze `ref`, follows its `JobState`, re-asks every 25 s while "loading" (watchdog, rule 10), reads the finished result from the cache and re-analyzes once when a "done" job has no cached result (self-healing). After a retry the next start does not re-read the stale stored state (it used to flash the old error for a moment). Unit-tested in jsdom (`tests/use-analysis.test.ts`). |
 | `components/useStorageValue.ts`, `components/ui.ts` | Hook that mirrors a `chrome.storage.local` key (read + re-read on change); shared class strings (`buttonClass`, `pillClass`). |
 | `background.ts` | Message handler (`analyze`, `check-updates`), `inFlight` dedupe, `syncKeepAlive`, alarm `nextpaper-updates` (first after 5 min, then 24 h), badge refresh on start. |
 | `components/PaperCard.tsx` | Card: title link, ★, authors, tl;dr, abstract toggle, tags (citations, similarity, relation, Revisión, reading status), actions (Explorar, PDF gratis, Citar). |

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react"
+import { useEffect, useMemo, useState, type FormEvent } from "react"
 
 import "~style.css"
 
@@ -7,18 +7,17 @@ import { PaperCard } from "~components/PaperCard"
 import { SavedTab } from "~components/SavedTab"
 import { Timeline } from "~components/Timeline"
 import { pillClass } from "~components/ui"
+import { useAnalysis } from "~components/useAnalysis"
 import { useStorageValue } from "~components/useStorageValue"
-import { getCachedResult } from "~lib/cache"
 import { CITATION_STYLES, type CitationStyle } from "~lib/citation"
 import { extractPaperRef } from "~lib/extract-ref"
-import { jobKey, type JobState } from "~lib/job"
 import {
   getLibrary,
   LIBRARY_KEY,
   toggleSaved,
   type SavedPaper
 } from "~lib/library"
-import type { AnalysisResult, PickKind, ScoredPaper } from "~lib/pipeline"
+import type { PickKind, ScoredPaper } from "~lib/pipeline"
 import { buildTimeline } from "~lib/timeline"
 import {
   getUpdates,
@@ -64,12 +63,6 @@ async function getActiveTabPaperRef(): Promise<string | null> {
 
 function IndexPopup() {
   const [ref, setRef] = useState<string | null | undefined>(undefined)
-  const [job, setJob] = useState<JobState>({ phase: "loading" })
-  const [attempt, setAttempt] = useState(0)
-  const [result, setResult] = useState<AnalysisResult | null>(null)
-  const staleRetries = useRef(new Set<string>())
-  const phaseRef = useRef(job.phase)
-  phaseRef.current = job.phase
   const [citationStyle, setCitationStyle] = useState<CitationStyle>("apa")
   const [tab, setTab] = useState<"related" | "saved">("related")
   const [filter, setFilter] = useState<Filter>("all")
@@ -89,6 +82,7 @@ function IndexPopup() {
   const [queryInput, setQueryInput] = useState("")
   const current = trail.length ? trail[trail.length - 1] : null
   const activeRef = current ? current.ref : ref
+  const { job, result, retry } = useAnalysis(activeRef)
   const [newIds, setNewIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
@@ -107,47 +101,10 @@ function IndexPopup() {
     markUpdatesViewed()
   }, [tab, updates])
 
+  // A new paper starts with nothing highlighted.
   useEffect(() => {
-    if (!activeRef) return
-
-    const key = jobKey(activeRef)
-    let active = true
-
-    // Never show the previous paper's state while the new one loads.
-    setJob({ phase: "loading" })
     setSelectedId(null)
-    chrome.storage.local.get([key]).then((stored) => {
-      if (active && stored[key]) setJob(stored[key])
-    })
-
-    const onChanged = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: string
-    ) => {
-      if (area === "local" && changes[key]?.newValue) {
-        setJob(changes[key].newValue)
-      }
-    }
-    chrome.storage.onChanged.addListener(onChanged)
-
-    // The background worker does the heavy lifting and keeps going even if
-    // this popup is closed; reopening just resumes observing its state.
-    chrome.runtime.sendMessage({ type: "analyze", ref: activeRef })
-
-    // If the worker was suspended mid-analysis the job would stay "loading"
-    // forever; asking again is idempotent and restarts it when it died.
-    const watchdog = setInterval(() => {
-      if (phaseRef.current === "loading") {
-        chrome.runtime.sendMessage({ type: "analyze", ref: activeRef })
-      }
-    }, 25_000)
-
-    return () => {
-      active = false
-      clearInterval(watchdog)
-      chrome.storage.onChanged.removeListener(onChanged)
-    }
-  }, [activeRef, attempt])
+  }, [activeRef])
 
   const explore = (target: { ref: string; label: string }) => {
     setTrail((t) => [...t, target])
@@ -175,34 +132,6 @@ function IndexPopup() {
     explore({ ref: `QUERY:${query.toLowerCase()}`, label: `Tema: ${query}` })
     setQueryInput("")
   }
-
-  // Finished results live (compressed) in the cache, not in the job state.
-  useEffect(() => {
-    if (job.phase !== "done" || !activeRef) {
-      setResult(null)
-      return
-    }
-
-    let live = true
-    getCachedResult(activeRef).then((cached) => {
-      if (!live) return
-      if (cached) {
-        setResult(cached)
-        return
-      }
-      // A "done" job without a cached result is a leftover (expired, pruned
-      // or written by an older version): analyze again, once per paper.
-      setResult(null)
-      if (!staleRetries.current.has(activeRef)) {
-        staleRetries.current.add(activeRef)
-        setJob({ phase: "loading" })
-        setAttempt((n) => n + 1)
-      }
-    })
-    return () => {
-      live = false
-    }
-  }, [job.phase, activeRef])
 
   const designs = useMemo(
     () => (result ? designOptions(result.groups) : []),
@@ -374,10 +303,7 @@ function IndexPopup() {
             <div className="flex flex-col items-start gap-2">
               <p className="text-sm text-red-600">{job.message}</p>
               <button
-                onClick={() => {
-                  setJob({ phase: "loading" })
-                  setAttempt((n) => n + 1)
-                }}
+                onClick={retry}
                 className="rounded border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-100">
                 Reintentar
               </button>

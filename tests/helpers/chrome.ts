@@ -9,7 +9,16 @@ export interface FakeChrome {
   quotaBytes: number
   badge: { text: string }
   sets: number
+  // Messages sent to the background worker with chrome.runtime.sendMessage.
+  messages: unknown[]
+  // Listeners registered with chrome.storage.onChanged.
+  listeners: Set<Listener>
 }
+
+type Listener = (
+  changes: Record<string, { oldValue?: unknown; newValue?: unknown }>,
+  area: string
+) => void
 
 const clone = <T>(value: T): T =>
   value === undefined ? value : (JSON.parse(JSON.stringify(value)) as T)
@@ -25,7 +34,16 @@ export function installChrome(): FakeChrome {
     data: new Map(),
     quotaBytes: Infinity,
     badge: { text: "" },
-    sets: 0
+    sets: 0,
+    messages: [],
+    listeners: new Set()
+  }
+
+  // Like the real API, change events are delivered after the write.
+  const emit = (
+    changes: Record<string, { oldValue?: unknown; newValue?: unknown }>
+  ) => {
+    for (const listener of [...state.listeners]) listener(changes, "local")
   }
 
   const local = {
@@ -40,7 +58,15 @@ export function installChrome(): FakeChrome {
     },
     async set(items: Record<string, unknown>) {
       const next = new Map(state.data)
+      const changes: Record<
+        string,
+        { oldValue?: unknown; newValue?: unknown }
+      > = {}
       for (const [key, value] of Object.entries(items)) {
+        changes[key] = {
+          oldValue: clone(state.data.get(key)),
+          newValue: clone(value)
+        }
         next.set(key, clone(value))
       }
       if (size(next) > state.quotaBytes) {
@@ -48,16 +74,32 @@ export function installChrome(): FakeChrome {
       }
       state.sets++
       state.data = next
+      emit(changes)
     },
     async remove(keys: string | string[]) {
-      for (const key of ([] as string[]).concat(keys)) state.data.delete(key)
+      const changes: Record<string, { oldValue?: unknown }> = {}
+      for (const key of ([] as string[]).concat(keys)) {
+        if (state.data.has(key))
+          changes[key] = { oldValue: clone(state.data.get(key)) }
+        state.data.delete(key)
+      }
+      emit(changes)
     }
   }
 
   ;(globalThis as any).chrome = {
     storage: {
       local,
-      onChanged: { addListener: vi.fn(), removeListener: vi.fn() }
+      onChanged: {
+        addListener: (listener: Listener) => state.listeners.add(listener),
+        removeListener: (listener: Listener) => state.listeners.delete(listener)
+      }
+    },
+    runtime: {
+      sendMessage: (message: unknown) => {
+        state.messages.push(message)
+        return Promise.resolve({ started: true })
+      }
     },
     action: {
       setBadgeText: async ({ text }: { text: string }) => {

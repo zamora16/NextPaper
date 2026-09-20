@@ -22,7 +22,7 @@ npm run dev                # then load build/chrome-mv3-dev via chrome://extensi
 npx tsc --noEmit           # typecheck, `strict` on (Parcel does NOT typecheck; run this every change)
 npm run format             # prettier over lib/components/tests/popup/background (CI runs format:check)
 npx plasmo build           # production build -> build/chrome-mv3-prod
-npm test                   # vitest (330 tests; `npm run test:coverage` enforces floors on lib/, ~98% lines): every module in lib/ —
+npm test                   # vitest (344 tests; `npm run test:coverage` enforces floors on lib/, ~98% lines): every module in lib/ —
                            # keywords, terms, projection, timeline, study (design/sample), rate limiter/retry, API client (mocked fetch), pipeline (assemble/dedupe/picks), extractPaperRef (jsdom)
 ```
 
@@ -87,7 +87,7 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
    read-modify-write on one storage key lost saves once.
 10. **The analysis must survive the popup closing.** It runs in `background.ts`; the popup
    only observes `JobState`. The worker keeps itself alive (`syncKeepAlive`) and the popup
-   re-sends `analyze` every 25 s while a job is "loading" (watchdog). Keep both.
+   re-sends `analyze` every 25 s while a job is "loading" (watchdog, in `components/useAnalysis.ts`, tested). Keep both.
 11. **`all-cs` recommendation pool only for computer-science seeds.** It is CS-biased and
     returns irrelevant e-health/ML papers for other fields.
 12. **No AI/LLM calls and no server in the default path.** Retrieval, ranking and
@@ -149,7 +149,7 @@ lib/projection.ts                            2-D PCA — tested but UNUSED (see 
 lib/citation.ts, cite.ts, crossref.ts        9 styles + in-text (pure, tested); async Crossref enrichment; Crossref client/cache
 lib/backup.ts, import.ts, export.ts          backup/merge (pure, tested), BibTeX/RIS/DOI import (pure parsers, tested), file download
 lib/library.ts, updates.ts, queue.ts, view.ts, paper-utils.ts, extract-ref.ts
-components/SavedTab.tsx, useStorageValue.ts, ui.ts   Guardados tab; storage-mirroring hook; shared class strings
+components/SavedTab.tsx, useAnalysis.ts, useStorageValue.ts, ui.ts   Guardados tab; analysis hook (job + watchdog + cached result); storage hook; class strings
 lib/cache.ts, compress.ts, job.ts            compressed result cache, pruning, JobState (no result inside)
 scripts/             real-browser e2e tests (see above); scripts/perf/ = API performance experiments
 ```

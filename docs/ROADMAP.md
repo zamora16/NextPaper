@@ -14,7 +14,7 @@ Effort: S ≈ ≤1 session, M ≈ 1–2, L ≈ 3+. Value: ★ to ★★★.
 | F0.2 | ~~Version control + CI~~ **DONE 2026-09-20** | Git repo on `main` (`.env.local` ignored), `.github/workflows/ci.yml` runs `tsc --noEmit`, `npm test` and `plasmo build` on every push/PR. `submit.yml` is Plasmo's manual Web Store template and is unrelated to CI. Not pushed to a remote yet. |
 | F0.3 | ~~Unit tests for pure modules~~ **DONE 2026-09-19** | vitest 2.x (`npm test`; vitest ≥3 needs a newer `@types/node` than Plasmo pins) with jsdom for the extractor: 110 tests over `citation`, `import`/`backup`, `kmeans`/`silhouette`/`clusterAuto` (synthetic blobs, plus a mutation check that breaking the code fails them), `view`, `keywords`, `terms`, `projection`, `timeline`, `pipeline` (`assemble`, `dedupe`, `choosePicks`), `extractPaperRef`. Not unit-tested: `analyzePaper`/`analyzeQuery`, `s2-fetch` retries, `updates` (covered by the e2e scripts). |
 | F0.4 | ~~Surface background failures~~ **DONE 2026-09-20** | `lastError` in `nextpaper_updates`, shown in `UpdatesPanel`. |
-| F0.5 | Split `popup.tsx` — **partly done 2026-09-20** | `SavedTab`, `useStorageValue` and `ui.ts` extracted (650 → 512 lines). Left: `useAnalysis(activeRef)` (job + watchdog + cached result) and a `RelatedTab`. Behavior must not change (run the four e2e scripts). |
+| F0.5 | ~~Split `popup.tsx`~~ **DONE 2026-09-20** | `SavedTab`, `useStorageValue`, `ui.ts` and `useAnalysis` extracted (650 → ~440 lines; the analysis hook has its own jsdom tests). Left, if ever needed: a `RelatedTab` for the results view. |
 
 ## 1. Free layer — quick wins (no cost, no AI)
 
