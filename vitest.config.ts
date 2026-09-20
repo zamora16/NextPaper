@@ -5,15 +5,17 @@ const root = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 
 // Unit tests for everything in lib/ (pure logic, plus the storage- and
 // network-bound modules against an in-memory chrome.storage and a mocked
-// fetch: see tests/helpers/chrome.ts). The UI (popup, components, background
-// worker) and real request behavior are covered by the real-browser scripts.
+// fetch: see tests/helpers/chrome.ts). Components and the popup are tested in
+// jsdom; the background worker and real request behavior (CORS, rate limits,
+// the actual layout) are covered by the real-browser scripts.
 export default defineConfig({
   // Same JSX transform as the Plasmo build (no `import React` in components).
   esbuild: { jsx: "automatic" },
   resolve: {
     alias: {
       "~lib": root("./lib"),
-      "~components": root("./components")
+      "~components": root("./components"),
+      "~style.css": root("./style.css")
     }
   },
   test: {

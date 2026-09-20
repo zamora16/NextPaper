@@ -1,7 +1,8 @@
-import { useRef, useState } from "react"
+import { useRef, useState, type ReactNode } from "react"
 
 import { useT, type Translate } from "~components/i18n"
-import { buttonClass } from "~components/ui"
+import { IconDownload, IconUpload } from "~components/icons"
+import { buttonClass, iconButtonClass } from "~components/ui"
 import { buildBackup, parseBackup } from "~lib/backup"
 import { errorCode } from "~lib/errors"
 import { downloadFile } from "~lib/export"
@@ -19,8 +20,13 @@ const stepText = (t: Translate, step: ImportStep) =>
 
 // Backup / restore of the whole library, and import from other tools.
 // One file picker handles both: a NextPaper backup is restored, anything else
-// is read as BibTeX, RIS or a list of DOIs / titles.
-export function LibraryTools({ library }: { library: SavedPaper[] }) {
+// is read as BibTeX, RIS or a list of DOIs / titles. Returns the buttons and
+// the result message separately so the caller can lay them out.
+export function useLibraryTools(
+  library: SavedPaper[],
+  // Icons only (next to the search box); the empty library shows the labels.
+  compact?: boolean
+): { controls: ReactNode; status: ReactNode } {
   const t = useT()
   const input = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -91,32 +97,44 @@ export function LibraryTools({ library }: { library: SavedPaper[] }) {
     }
   }
 
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <button
-          onClick={backup}
-          disabled={library.length === 0}
-          title={t("tools.backup.hint")}
-          className={buttonClass}>
-          {t("tools.backup")}
-        </button>
-        <button
-          onClick={() => input.current?.click()}
-          disabled={busy !== null}
-          title={t("tools.import.hint")}
-          className={buttonClass}>
-          {busy ?? t("tools.import")}
-        </button>
-        <input
-          ref={input}
-          type="file"
-          accept=".json,.bib,.ris,.txt,.csv"
-          className="hidden"
-          onChange={(e) => e.target.files?.[0] && importFile(e.target.files[0])}
-        />
-      </div>
-      {message && <p className="text-[11px] text-slate-500">{message}</p>}
+  const backupLabel = t("tools.backup")
+  const importLabel = busy ?? t("tools.import")
+
+  const controls = (
+    <div className="flex items-center gap-1.5">
+      <button
+        onClick={backup}
+        disabled={library.length === 0}
+        title={t("tools.backup.hint")}
+        aria-label={backupLabel}
+        className={compact ? iconButtonClass : buttonClass}>
+        <IconDownload size={15} />
+        {!compact && backupLabel}
+      </button>
+      <button
+        onClick={() => input.current?.click()}
+        disabled={busy !== null}
+        title={t("tools.import.hint")}
+        aria-label={importLabel}
+        className={compact && !busy ? iconButtonClass : buttonClass}>
+        <IconUpload size={15} />
+        {(!compact || busy) && importLabel}
+      </button>
+      <input
+        ref={input}
+        type="file"
+        accept=".json,.bib,.ris,.txt,.csv"
+        className="hidden"
+        onChange={(e) => e.target.files?.[0] && importFile(e.target.files[0])}
+      />
     </div>
   )
+
+  const status = message ? (
+    <p role="status" className="text-[11px] leading-snug text-muted">
+      {message}
+    </p>
+  ) : null
+
+  return { controls, status }
 }

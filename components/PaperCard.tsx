@@ -1,6 +1,14 @@
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 
 import { useT } from "~components/i18n"
+import {
+  IconBookmark,
+  IconChevronDown,
+  IconCompass,
+  IconFile,
+  IconQuote
+} from "~components/icons"
+import { accentButtonClass, buttonClass, iconButtonClass } from "~components/ui"
 import { useCopyAction } from "~components/useCopyAction"
 import { supportsInText, type CitationStyle } from "~lib/citation"
 import { citeOne, inTextOne } from "~lib/cite"
@@ -11,26 +19,63 @@ import type { ScoredPaper } from "~lib/pipeline"
 import { studyOf } from "~lib/study"
 import { httpUrl } from "~lib/url"
 
-function Tag({
+// What a tab adds to a card: the library's controls, a label, or the short form.
+export interface CardExtra {
+  footer?: ReactNode
+  badge?: ReactNode
+  compact?: boolean
+}
+export type RenderCard = (paper: ScoredPaper, extra?: CardExtra) => ReactNode
+
+function Chip({
   children,
   title,
-  className = "bg-slate-100 text-slate-500"
+  tone = "neutral"
 }: {
-  children: React.ReactNode
+  children: ReactNode
   title?: string
-  className?: string
+  tone?: "neutral" | "teal" | "warn" | "ok" | "info"
 }) {
+  const tones = {
+    neutral: "border-line text-soft",
+    teal: "border-transparent bg-teal-soft text-teal",
+    warn: "border-transparent bg-warn-soft text-warn",
+    ok: "border-transparent bg-ok-soft text-ok",
+    info: "border-transparent bg-info-soft text-info"
+  }
   return (
     <span
       title={title}
-      className={`rounded px-1.5 py-px text-[11px] font-medium ${className}`}>
+      className={`inline-flex items-center rounded-md border px-1.5 py-px text-[11px] font-medium ${tones[tone]}`}>
       {children}
     </span>
   )
 }
 
-const actionClass =
-  "rounded border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-60"
+// How close the paper is to the open one, as a small bar: comparing ten cards
+// is faster with a shape than with ten numbers.
+function SimilarityMeter({
+  percent,
+  title
+}: {
+  percent: number
+  title: string
+}) {
+  const t = useT()
+  return (
+    <span title={title} className="inline-flex items-center gap-1.5">
+      <span className="h-1.5 w-9 overflow-hidden rounded-full bg-sunken">
+        <span
+          className="block h-full rounded-full bg-accent"
+          style={{ width: `${Math.max(4, Math.min(100, percent))}%` }}
+        />
+      </span>
+      <span className="text-[11px] font-medium tabular-nums text-accent-ink">
+        {t("card.similar", { n: percent })}
+      </span>
+    </span>
+  )
+}
 
 export function PaperCard({
   paper,
@@ -38,6 +83,9 @@ export function PaperCard({
   saved,
   status,
   highlighted,
+  compact,
+  badge,
+  footer,
   onToggleSave,
   onExplore
 }: {
@@ -46,182 +94,213 @@ export function PaperCard({
   saved: boolean
   status?: ReadStatus
   highlighted?: boolean
+  // The short form used for "Start here": no summary, tags or citation buttons.
+  compact?: boolean
+  badge?: ReactNode
+  // Extra content attached to the bottom of the card (the library's controls).
+  footer?: ReactNode
   onToggleSave: () => void
   onExplore?: () => void
 }) {
   const t = useT()
   const [showAbstract, setShowAbstract] = useState(false)
 
-  const visibleAuthors = paper.authors.slice(0, 3).map((a) => a.name)
-  const extraCount = paper.authors.length - visibleAuthors.length
+  const authors = paper.authors.slice(0, 3).map((a) => a.name)
+  const extraCount = paper.authors.length - authors.length
   const influential = paper.influentialCitationCount ?? 0
   const study = studyOf(paper)
   const pdfUrl = httpUrl(paper.openAccessPdf?.url)
+  const similarity =
+    paper.similarity !== null ? Math.round(paper.similarity * 100) : null
 
   const cite = useCopyAction(() => citeOne(paper, citationStyle))
   const inText = useCopyAction(
     async () => (await inTextOne(paper, citationStyle)) ?? ""
   )
 
+  const showDesign =
+    study.design && !(study.design === "review" && isReview(paper))
+
   return (
-    <div
+    <article
       data-paper-id={paper.paperId}
-      className={`rounded-lg border p-3 transition hover:bg-slate-50 ${
-        highlighted
-          ? "border-violet-400 ring-2 ring-violet-300"
-          : "border-slate-200 hover:border-slate-300"
+      className={`overflow-hidden rounded-xl bg-surface shadow-card transition-shadow hover:shadow-pop ${
+        highlighted ? "ring-2 ring-accent" : ""
       }`}>
-      <div className="flex items-start justify-between gap-2">
-        <a
-          href={httpUrl(paper.url)}
-          target="_blank"
-          rel="noreferrer"
-          className="line-clamp-2 text-sm font-medium text-slate-900 hover:underline">
-          {paper.title}
-        </a>
-        <button
-          onClick={onToggleSave}
-          title={saved ? t("card.unsave") : t("card.save")}
-          aria-label={saved ? t("card.unsave") : t("card.save")}
-          aria-pressed={saved}
-          className={`shrink-0 text-base leading-none ${
-            saved ? "text-amber-500" : "text-slate-500 hover:text-amber-500"
-          }`}>
-          {saved ? "★" : "☆"}
-        </button>
-      </div>
+      <div className="flex flex-col gap-2 p-3.5">
+        {badge}
 
-      <p className="mt-1 text-xs text-slate-500">
-        {visibleAuthors.join(", ")}
-        {extraCount > 0 ? ` +${extraCount}` : ""} ·{" "}
-        {paper.year ?? t("card.noYear")}
-        {paper.venue ? ` · ${paper.venue}` : ""}
-      </p>
-
-      {paper.tldr?.text && (
-        <p className="mt-1.5 text-xs italic text-slate-600">
-          {paper.tldr.text}
-        </p>
-      )}
-
-      {paper.abstract && (
-        <>
-          <button
-            onClick={() => setShowAbstract((prev) => !prev)}
-            aria-expanded={showAbstract}
-            className="mt-1 text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline">
-            {showAbstract ? t("card.abstract.hide") : t("card.abstract.show")}
-          </button>
-          {showAbstract && (
-            <p className="mt-1 text-xs text-slate-600">{paper.abstract}</p>
-          )}
-        </>
-      )}
-
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <Tag
-          className="bg-blue-50 text-blue-700"
-          title={
-            influential > 0
-              ? `${t("card.citations.hint")} · ${t("card.influential", { n: influential.toLocaleString() })}`
-              : t("card.citations.hint")
-          }>
-          {t("card.citations", { n: paper.citationCount })}
-        </Tag>
-        {paper.similarity !== null && (
-          <Tag
-            className="bg-violet-50 text-violet-700"
-            title={
-              paper.approximate
-                ? t("card.similar.approx.hint")
-                : t("card.similar.hint")
-            }>
-            {paper.approximate ? "~" : ""}
-            {t("card.similar", { n: Math.round(paper.similarity * 100) })}
-          </Tag>
-        )}
-        {paper.relation && (
-          <Tag
-            title={
-              paper.relation === "reference"
-                ? t("card.relation.reference.hint")
-                : t("card.relation.citation.hint")
-            }>
-            {paper.relation === "reference"
-              ? t("card.relation.reference")
-              : t("card.relation.citation")}
-          </Tag>
-        )}
-        {isReview(paper) && (
-          <Tag
-            className="bg-amber-50 text-amber-700"
-            title={t("card.review.hint")}>
-            {t("card.review")}
-          </Tag>
-        )}
-        {study.design && !(study.design === "review" && isReview(paper)) && (
-          <Tag
-            className="bg-teal-50 text-teal-700"
-            title={t("card.design.hint")}>
-            {t(`design.${study.design}` as TKey)}
-          </Tag>
-        )}
-        {study.sample && (
-          <Tag
-            className="bg-teal-50 text-teal-700"
-            title={t("card.sample.hint")}>
-            {study.sample.unit === "studies"
-              ? t("card.sample.studies", { n: study.sample.n })
-              : `n = ${study.sample.n.toLocaleString()}`}
-          </Tag>
-        )}
-        {status === "read" && (
-          <Tag className="bg-emerald-50 text-emerald-700">
-            {t("status.read")}
-          </Tag>
-        )}
-        {status === "reading" && (
-          <Tag className="bg-sky-50 text-sky-700">{t("status.reading")}</Tag>
-        )}
-        {status === "unread" && <Tag>{t("status.unread")}</Tag>}
-      </div>
-
-      <div className="mt-2 flex justify-end gap-1.5">
-        {onExplore && (
-          <button
-            onClick={onExplore}
-            title={t("card.explore.hint")}
-            className="rounded border border-violet-200 px-2 py-0.5 text-xs font-medium text-violet-700 hover:bg-violet-50">
-            {t("card.explore")}
-          </button>
-        )}
-        {pdfUrl && (
+        <div className="flex items-start justify-between gap-2">
           <a
-            href={pdfUrl}
+            data-paper-title
+            href={httpUrl(paper.url)}
             target="_blank"
             rel="noreferrer"
-            title={t("card.pdf.hint")}
-            className="rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
-            {t("card.pdf")}
+            title={paper.title}
+            className="line-clamp-3 font-serif text-[15px] font-semibold leading-snug text-ink hover:text-accent-ink hover:underline">
+            {paper.title}
           </a>
-        )}
-        {supportsInText(citationStyle) && (
           <button
-            onClick={inText.run}
-            disabled={inText.phase === "busy"}
-            title={t("card.inText.hint")}
-            className={actionClass}>
-            {inText.label(t("card.inText"))}
+            data-save
+            onClick={onToggleSave}
+            title={saved ? t("card.unsave") : t("card.save")}
+            aria-label={saved ? t("card.unsave") : t("card.save")}
+            aria-pressed={saved}
+            className={`${iconButtonClass} -mr-1.5 -mt-1 ${
+              saved ? "text-accent hover:text-accent-hi" : ""
+            }`}>
+            <IconBookmark size={17} filled={saved} />
           </button>
+        </div>
+
+        <p className="text-xs leading-relaxed text-muted">
+          <span className="text-soft">
+            {authors.join(", ")}
+            {extraCount > 0 ? ` +${extraCount}` : ""}
+          </span>
+          {" · "}
+          <span className="font-medium text-soft">
+            {paper.year ?? t("card.noYear")}
+          </span>
+          {paper.venue ? (
+            <>
+              {" · "}
+              <span className="italic">{paper.venue}</span>
+            </>
+          ) : null}
+        </p>
+
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+          {similarity !== null && (
+            <SimilarityMeter
+              percent={similarity}
+              title={
+                paper.approximate
+                  ? t("card.similar.approx.hint")
+                  : t("card.similar.hint")
+              }
+            />
+          )}
+          <span
+            title={
+              influential > 0
+                ? `${t("card.citations.hint")} · ${t("card.influential", { n: influential.toLocaleString() })}`
+                : t("card.citations.hint")
+            }
+            className="text-[11px] font-medium tabular-nums text-soft">
+            {t("card.citations", { n: paper.citationCount })}
+          </span>
+          {paper.relation && (
+            <Chip
+              title={
+                paper.relation === "reference"
+                  ? t("card.relation.reference.hint")
+                  : t("card.relation.citation.hint")
+              }>
+              {paper.relation === "reference"
+                ? t("card.relation.reference")
+                : t("card.relation.citation")}
+            </Chip>
+          )}
+          {!compact && isReview(paper) && (
+            <Chip tone="warn" title={t("card.review.hint")}>
+              {t("card.review")}
+            </Chip>
+          )}
+          {!compact && showDesign && (
+            <Chip tone="teal" title={t("card.design.hint")}>
+              {t(`design.${study.design}` as TKey)}
+            </Chip>
+          )}
+          {!compact && study.sample && (
+            <Chip tone="teal" title={t("card.sample.hint")}>
+              {study.sample.unit === "studies"
+                ? t("card.sample.studies", { n: study.sample.n })
+                : `n = ${study.sample.n.toLocaleString()}`}
+            </Chip>
+          )}
+          {status === "read" && <Chip tone="ok">{t("status.read")}</Chip>}
+          {status === "reading" && (
+            <Chip tone="info">{t("status.reading")}</Chip>
+          )}
+          {status === "unread" && <Chip>{t("status.unread")}</Chip>}
+        </div>
+
+        {!compact && paper.tldr?.text && (
+          <p className="border-l-2 border-accent/40 pl-2.5 text-[12.5px] leading-relaxed text-soft">
+            <span
+              title={t("card.tldr.hint")}
+              className="mr-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
+              TL;DR
+            </span>
+            {paper.tldr.text}
+          </p>
         )}
-        <button
-          onClick={cite.run}
-          disabled={cite.phase === "busy"}
-          title={t("card.cite.hint")}
-          className={actionClass}>
-          {cite.label(t("card.cite"))}
-        </button>
+
+        {!compact && paper.abstract && (
+          <div>
+            <button
+              onClick={() => setShowAbstract((prev) => !prev)}
+              aria-expanded={showAbstract}
+              className="inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-ink">
+              <span
+                className={`transition-transform ${showAbstract ? "rotate-180" : ""}`}>
+                <IconChevronDown size={14} />
+              </span>
+              {showAbstract ? t("card.abstract.hide") : t("card.abstract.show")}
+            </button>
+            {showAbstract && (
+              <p className="mt-1.5 text-xs leading-relaxed text-soft">
+                {paper.abstract}
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-wrap justify-end gap-1.5 pt-0.5">
+          {onExplore && (
+            <button
+              onClick={onExplore}
+              title={t("card.explore.hint")}
+              className={accentButtonClass}>
+              <IconCompass size={14} />
+              {t("card.explore")}
+            </button>
+          )}
+          {!compact && pdfUrl && (
+            <a
+              href={pdfUrl}
+              target="_blank"
+              rel="noreferrer"
+              title={t("card.pdf.hint")}
+              className={`${buttonClass} border-ok/30 text-ok hover:border-ok/60 hover:text-ok`}>
+              <IconFile size={14} />
+              {t("card.pdf")}
+            </a>
+          )}
+          {!compact && supportsInText(citationStyle) && (
+            <button
+              onClick={inText.run}
+              disabled={inText.phase === "busy"}
+              title={t("card.inText.hint")}
+              className={buttonClass}>
+              {inText.label(t("card.inText"))}
+            </button>
+          )}
+          {!compact && (
+            <button
+              onClick={cite.run}
+              disabled={cite.phase === "busy"}
+              title={t("card.cite.hint")}
+              className={buttonClass}>
+              <IconQuote size={14} />
+              {cite.label(t("card.cite"))}
+            </button>
+          )}
+        </div>
       </div>
-    </div>
+
+      {footer}
+    </article>
   )
 }

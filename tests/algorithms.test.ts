@@ -15,7 +15,63 @@ import {
   norm,
   normalize
 } from "~lib/vector-math"
-import { applyView } from "~lib/view"
+import { applyView, searchLibrary } from "~lib/view"
+
+describe("searchLibrary", () => {
+  const item = (
+    title: string,
+    over: Partial<{
+      authors: string[]
+      venue: string
+      year: number
+      note: string
+      collections: string[]
+    }> = {}
+  ) => ({
+    title,
+    authors: (over.authors ?? []).map((name) => ({ name })),
+    venue: over.venue ?? "",
+    year: over.year ?? null,
+    note: over.note ?? "",
+    collections: over.collections ?? []
+  })
+  const library = [
+    item("Body image in virtual reality", {
+      authors: ["Tracy Tylka"],
+      year: 2015,
+      venue: "Body Image"
+    }),
+    item("Evaluación psicométrica de la escala", {
+      authors: ["José Pérez"],
+      note: "usar en el capítulo 3",
+      collections: ["Tesis"]
+    })
+  ]
+
+  it("returns everything for an empty query", () => {
+    expect(searchLibrary(library, "")).toEqual(library)
+    expect(searchLibrary(library, "   ")).toEqual(library)
+  })
+
+  it("needs every word, wherever it appears", () => {
+    expect(searchLibrary(library, "tylka 2015")).toEqual([library[0]])
+    expect(searchLibrary(library, "tylka 2020")).toEqual([])
+  })
+
+  it("looks in the venue, the note and the collections", () => {
+    expect(searchLibrary(library, "capitulo")).toEqual([library[1]])
+    expect(searchLibrary(library, "tesis")).toEqual([library[1]])
+    expect(searchLibrary(library, "body image")).toEqual([library[0]])
+  })
+
+  it("ignores case and accents in both directions", () => {
+    expect(searchLibrary(library, "EVALUACION PSICOMETRICA")).toEqual([
+      library[1]
+    ])
+    expect(searchLibrary(library, "perez")).toEqual([library[1]])
+    expect(searchLibrary(library, "José")).toEqual([library[1]])
+  })
+})
 
 // Deterministic pseudo-random noise (LCG) so failures are reproducible.
 function rng(seed: number) {

@@ -2,7 +2,13 @@
 
 **Related literature while you read.** Open any paper in your browser and NextPaper shows the most relevant related work — ranked by semantic similarity, grouped by subtopic, with everything you need to triage, save and cite it. It runs entirely in your browser: no server, no account, no tracking, no AI calls, no cost.
 
-The interface is available in **English and Spanish** (it follows your browser language; you can change it in Settings).
+The interface is available in **English and Spanish** (it follows your browser language; you can change it in Settings) and follows your system's light or dark theme.
+
+<p align="center">
+  <img src="docs/img/results.png" width="300" alt="Related papers for the open article, with the paper's title, filters and a Start here section">
+  <img src="docs/img/timeline.png" width="300" alt="Timeline of the subtopics">
+  <img src="docs/img/results-dark.png" width="300" alt="The same view in dark mode">
+</p>
 
 ## What it does
 
@@ -10,7 +16,7 @@ The interface is available in **English and Spanish** (it follows your browser l
 - **Where to start**: a classic, the most relevant review and the most recent work.
 - **Triage**: one-sentence summary, abstract, citation counts, study design and sample size read from the abstract, a timeline of the subtopics, and free-PDF links.
 - **Snowballing**: *Explorar* runs the same analysis on any result; the search box analyzes a free-text topic.
-- **Library**: save papers with a reading status, notes and collections; back up and restore; import from BibTeX, RIS or a list of DOIs.
+- **Library**: save papers with a reading status, notes and collections; search inside it; back up and restore; import from BibTeX, RIS or a list of DOIs.
 - **Citations** in APA 7, MLA 9, Chicago, Harvard, IEEE, Vancouver, AMA, BibTeX and RIS (plus in-text), enriched with Crossref; export `.bib` / `.ris` for Zotero or Mendeley.
 - **Alerts**: once a day it looks for new papers related to what you saved.
 
@@ -37,7 +43,7 @@ The first time you open NextPaper it walks you through it:
 2. **Copy the key** from the e-mail. Do not share it with anyone.
 3. **Paste it** in NextPaper and press *Guardar y empezar*. It is checked before being saved.
 
-You can also continue without a key and add it later from *Ajustes* (⚙).
+You can also continue without a key and add it later from *Ajustes*.
 
 ## Privacy
 

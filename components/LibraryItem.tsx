@@ -1,6 +1,8 @@
-import { useState, type ReactNode } from "react"
+import { useState } from "react"
 
 import { Hint, useT } from "~components/i18n"
+import { IconPencil, IconX } from "~components/icons"
+import { inputClass } from "~components/ui"
 import type { TKey } from "~lib/i18n"
 import { STATUSES, updateSaved, type SavedPaper } from "~lib/library"
 
@@ -10,13 +12,14 @@ const STATUS_LABEL: Record<(typeof STATUSES)[number], TKey> = {
   read: "status.read.plain"
 }
 
+// What the reader does with a saved paper: where they are with it, which
+// collections it belongs to, and a private note. Sits at the bottom of the
+// paper's card.
 export function LibraryItem({
   paper,
-  card,
   knownCollections
 }: {
   paper: SavedPaper
-  card: ReactNode
   knownCollections: string[]
 }) {
   const t = useT()
@@ -33,27 +36,30 @@ export function LibraryItem({
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      {card}
-
-      <div className="flex flex-wrap items-center gap-1 px-1">
-        {STATUSES.map((status) => (
-          <button
-            key={status}
-            onClick={() => updateSaved(paper.paperId, { status })}
-            aria-pressed={paper.status === status}
-            className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${
-              paper.status === status
-                ? "border-violet-300 bg-violet-50 text-violet-700"
-                : "border-slate-200 text-slate-500 hover:bg-slate-50"
-            }`}>
-            {t(STATUS_LABEL[status])}
-          </button>
-        ))}
+    <div className="flex flex-col gap-2.5 border-t border-line bg-sunken/70 px-3.5 py-3">
+      <div className="flex items-center justify-between gap-2">
+        <div
+          role="group"
+          className="inline-flex rounded-lg border border-line bg-surface p-0.5">
+          {STATUSES.map((status) => (
+            <button
+              key={status}
+              onClick={() => updateSaved(paper.paperId, { status })}
+              aria-pressed={paper.status === status}
+              className={`rounded-md px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
+                paper.status === status
+                  ? "bg-accent-soft text-accent-ink"
+                  : "text-muted hover:text-ink"
+              }`}>
+              {t(STATUS_LABEL[status])}
+            </button>
+          ))}
+        </div>
         <button
           onClick={() => setNoteOpen((open) => !open)}
           aria-expanded={noteOpen}
-          className="ml-auto text-[11px] font-medium text-slate-500 hover:text-slate-700 hover:underline">
+          className="inline-flex items-center gap-1 text-[11px] font-medium text-muted hover:text-ink">
+          <IconPencil size={13} />
           {noteOpen
             ? t("item.note.hide")
             : note
@@ -62,11 +68,11 @@ export function LibraryItem({
         </button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1 px-1">
+      <div className="flex flex-wrap items-center gap-1.5">
         {paper.collections.map((name) => (
           <span
             key={name}
-            className="flex items-center gap-1 rounded bg-sky-50 px-1.5 py-px text-[11px] font-medium text-sky-700">
+            className="inline-flex items-center gap-1 rounded-md bg-info-soft py-px pl-1.5 pr-0.5 text-[11px] font-medium text-info">
             {name}
             <button
               title={t("item.collection.remove", { name })}
@@ -76,8 +82,8 @@ export function LibraryItem({
                   collections: paper.collections.filter((c) => c !== name)
                 })
               }
-              className="text-sky-500 hover:text-sky-700">
-              ×
+              className="rounded p-0.5 opacity-70 hover:opacity-100">
+              <IconX size={11} />
             </button>
           </span>
         ))}
@@ -89,7 +95,7 @@ export function LibraryItem({
           onBlur={addCollection}
           placeholder={t("item.collection.add")}
           aria-label={t("item.collection.add")}
-          className="w-24 rounded border border-transparent px-1 py-px text-[11px] text-slate-600 placeholder:text-slate-500 hover:border-slate-200 focus:border-slate-300"
+          className="w-28 rounded-md border border-dashed border-line-strong bg-transparent px-1.5 py-px text-[11px] text-soft placeholder:text-muted focus:border-accent focus:outline-none"
         />
         <Hint text={t("item.collection.hint")} />
         <datalist id={listId}>
@@ -108,8 +114,8 @@ export function LibraryItem({
           onBlur={() => updateSaved(paper.paperId, { note })}
           placeholder={t("item.note.placeholder")}
           aria-label={t("item.note.add")}
-          rows={2}
-          className="mx-1 rounded border border-slate-200 p-1.5 text-xs text-slate-700 placeholder:text-slate-500"
+          rows={3}
+          className={`${inputClass} resize-y text-xs leading-relaxed`}
         />
       )}
     </div>

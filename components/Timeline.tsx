@@ -1,7 +1,9 @@
 import { groupLabel, useT } from "~components/i18n"
 import type { TimelineData } from "~lib/timeline"
 
-const COLORS = ["#7c3aed", "#0ea5e9", "#f59e0b", "#10b981", "#f43f5e"]
+const INK = "rgb(var(--ink))"
+const GRID = "rgb(var(--line))"
+const MUTED = "rgb(var(--muted))"
 const WIDTH = 400
 const PAD_X = 16
 const LANE_HEIGHT = 50
@@ -18,12 +20,15 @@ export function Timeline({
   seedYear,
   visibleIds,
   selectedId,
+  colorOf,
   onSelect
 }: {
   data: TimelineData
   seedYear?: number | null
   visibleIds: Set<string>
   selectedId: string | null
+  // The color of a subtopic, the same one its heading has in the list.
+  colorOf: (label: string) => string
   onSelect: (paperId: string) => void
 }) {
   const t = useT()
@@ -35,12 +40,14 @@ export function Timeline({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-[11px] text-slate-500">{t("timeline.legend")}</p>
+      <p className="text-[11px] leading-snug text-muted">
+        {t("timeline.legend")}
+      </p>
       <svg
         viewBox={`0 0 ${WIDTH} ${height}`}
         role="img"
         aria-label={t("timeline.aria")}
-        className="w-full rounded-lg border border-slate-200 bg-slate-50">
+        className="w-full rounded-xl border border-line bg-surface">
         {data.ticks.map((tick) => (
           <g key={tick}>
             <line
@@ -48,7 +55,7 @@ export function Timeline({
               x2={x(tick)}
               y1={TOP - 4}
               y2={height - AXIS_HEIGHT}
-              stroke="#e2e8f0"
+              stroke={GRID}
               strokeWidth={1}
             />
             <text
@@ -56,14 +63,14 @@ export function Timeline({
               y={height - 6}
               fontSize="10"
               textAnchor="middle"
-              fill="#64748b">
+              fill={MUTED}>
               {tick}
             </text>
           </g>
         ))}
 
         {data.lanes.map((lane, laneIndex) => {
-          const color = COLORS[laneIndex % COLORS.length]
+          const color = colorOf(lane.label)
           const top = laneTop(laneIndex)
           const centerY = top + LABEL_HEIGHT + (LANE_HEIGHT - LABEL_HEIGHT) / 2
           const label = groupLabel(lane.label, t)
@@ -100,7 +107,7 @@ export function Timeline({
                     r={3.5 + Math.min(7, 2 * Math.log10(1 + dot.citationCount))}
                     fill={color}
                     fillOpacity={dimmed ? 0.12 : 0.6}
-                    stroke={selected ? "#0f172a" : color}
+                    stroke={selected ? INK : color}
                     strokeWidth={selected ? 2.5 : 1}
                     tabIndex={0}
                     role="button"
@@ -137,7 +144,7 @@ export function Timeline({
               x2={x(seedYear)}
               y1={TOP - 6}
               y2={height - AXIS_HEIGHT}
-              stroke="#0f172a"
+              stroke={INK}
               strokeWidth={1.5}
               strokeDasharray="4 3"
             />
@@ -147,7 +154,7 @@ export function Timeline({
               fontSize="10"
               fontWeight="600"
               textAnchor="middle"
-              fill="#0f172a">
+              fill={INK}>
               {t("timeline.you", { year: seedYear })}
             </text>
           </g>
@@ -158,10 +165,10 @@ export function Timeline({
         {data.lanes.map((lane, index) => (
           <span
             key={lane.label}
-            className="flex items-center gap-1.5 text-[11px] text-slate-500">
+            className="flex items-center gap-1.5 text-[11px] text-muted">
             <span
               className="inline-block h-2 w-2 shrink-0 rounded-full"
-              style={{ background: COLORS[index % COLORS.length] }}
+              style={{ background: colorOf(lane.label) }}
             />
             <span className="line-clamp-1">
               {groupLabel(lane.label, t)} · {lane.dots.length} ·{" "}
@@ -173,7 +180,7 @@ export function Timeline({
           </span>
         ))}
         {data.undated > 0 && (
-          <span className="text-[11px] text-slate-500">
+          <span className="text-[11px] text-muted">
             {t("timeline.undated", { n: data.undated })}
           </span>
         )}

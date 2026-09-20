@@ -2,7 +2,7 @@
 // language switch. Needs the Semantic Scholar API (about a minute).
 //
 //   node scripts/e2e-english.cjs [S2 ref]
-const { launch, openPopup, waitDone, clickButton, check, sleep, finish } = require("./e2e-lib.cjs")
+const { launch, openPopup, waitDone, clickButton, clickLabel, check, sleep, finish } = require("./e2e-lib.cjs")
 
 const REF = process.argv[2] || "DOI:10.1186/s40337-024-01004-0"
 const SPANISH = /Guardados|Novedades|Relacionados|Buscar art|Ver cronolog|Empieza por aqu/
@@ -19,7 +19,7 @@ const SPANISH = /Guardados|Novedades|Relacionados|Buscar art|Ver cronolog|Empiez
   check("the popup is in English", /Related/.test(text) && /Saved/.test(text) && /Updates/.test(text), text.slice(0, 120))
   check("no Spanish left in the interface", !SPANISH.test(text), text.match(SPANISH)?.[0])
   check("the page declares its language", (await page.evaluate(() => document.documentElement.lang)) === "en")
-  check("results count is in English", /\d+ of \d+ papers/.test(text))
+  check("results count is in English", /\d+ (of \d+ )?papers/.test(text))
   check("three tabs", (await page.evaluate(() => document.querySelectorAll('[role="tab"]').length)) === 3)
 
   const hints = await page.evaluate(() =>
@@ -30,9 +30,9 @@ const SPANISH = /Guardados|Novedades|Relacionados|Buscar art|Ver cronolog|Empiez
   )
   check("hover hints are present and labelled", hints.length >= 3 && hints.every((h) => h.title && h.title === h.label), String(hints.length))
 
-  await clickButton(page, "Show timeline", false)
+  await clickButton(page, "Timeline", false)
   await sleep(500)
-  check("the timeline opens from its English button", /Hide timeline/.test(await body()))
+  check("the timeline toggle turns on", await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => b.textContent.trim() === "Timeline" && b.getAttribute("aria-pressed") === "true")))
 
   if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT })
   await clickButton(page, "Updates", false)
@@ -48,7 +48,7 @@ const SPANISH = /Guardados|Novedades|Relacionados|Buscar art|Ver cronolog|Empiez
   check("no Spanish in the Saved tab", !SPANISH.test(text))
 
   // Switching language in the settings changes the interface at once and is remembered.
-  await clickButton(page, "⚙")
+  await clickLabel(page, "Settings")
   await sleep(500)
   await clickButton(page, "Español")
   await sleep(600)

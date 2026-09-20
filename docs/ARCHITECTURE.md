@@ -88,18 +88,20 @@ the translated message and a *Retry* button; nothing is cached.
 
 | File | Responsibility |
 |---|---|
-| `popup.tsx` | UI shell (~440 lines): tabs, topic search, `trail` (Explorar breadcrumb), filters/design filter/sort, picks, timeline, bulk copy. Uses `useAnalysis` (the analysis) and `useStorageValue` (library, alerts). |
-| `components/SavedTab.tsx` | The *Guardados / Saved* tab: status/collection filters, backup/import, bulk citation export, one `LibraryItem` per paper. Alerts are **not** here (they used to be, and pushed the saved papers down): they have their own tab. |
+| `popup.tsx` | UI shell (~330 lines): the fixed 600 px frame (header + tab bar stay, only the content scrolls), the three tabs (roving tabindex, arrow keys), the `trail` (Explorar breadcrumb), the shared view state and `renderCard`. Uses `useAnalysis` (the analysis) and `useStorageValue` (library, alerts). Tested in jsdom (`tests/popup.test.ts`). |
+| `components/RelatedTab.tsx` | The *Related* tab: search, *context card* (which paper or topic this is: title, byline, year; the raw reference only until the analysis returns it), filters, sort/design, timeline toggle, citation bar, *Start here* (compact cards), subtopic groups (heading dot = timeline lane color), skeleton loading, error and empty states. |
+| `components/SearchField.tsx`, `components/icons.tsx` | The search box (topic search or filter-as-you-type) and the hand-drawn SVG icon set + `Logo` (no icon font, no dependency). The mark is a paper with neighbours around it; `scripts/make-icon.cjs` renders `assets/icon.png` from the same drawing. |
+| `components/SavedTab.tsx` | The *Guardados / Saved* tab: text search over title/authors/venue/year/notes/collections (`searchLibrary` in `lib/view.ts`, accent- and case-insensitive), status/collection filters, backup/import icons, bulk citation export, one card per paper with its `LibraryItem` attached as the card's footer. Alerts are **not** here (they used to be, and pushed the saved papers down): they have their own tab. |
 | `components/i18n.tsx`, `lib/i18n/*` | `I18nProvider`/`useT`/`useLang`, `Hint` (the small "i" that explains a control on hover, focusable, with `aria-label`), `Rich` (`**bold**`), `groupLabel`. `en.ts` is the source of truth, `es.ts` has the same keys (type-enforced). `resolveLang(pref, navigator.language)`; preference (`auto`/`es`/`en`) is in `nextpaper_settings.language`. |
 | `lib/errors.ts` | Typed errors + `ErrorCode`/`errorCode(err)`. Job state, updates and the UI carry the code and translate at render time. |
 | `components/useAnalysis.ts` | `useAnalysis(ref)` → `{job, result, retry}`: asks the worker to analyze `ref`, follows its `JobState`, re-asks every 25 s while "loading" (watchdog, rule 10), reads the finished result from the cache and re-analyzes once when a "done" job has no cached result (self-healing). After a retry the next start does not re-read the stale stored state (it used to flash the old error for a moment). Unit-tested in jsdom (`tests/use-analysis.test.ts`). |
-| `components/useStorageValue.ts`, `components/ui.ts` | Hook that mirrors a `chrome.storage.local` key (read + re-read on change); shared class strings (`buttonClass`, `pillClass`). |
+| `components/useStorageValue.ts`, `components/ui.ts` | Hook that mirrors a `chrome.storage.local` key (read + re-read on change); shared class strings (`buttonClass`, `pillClass`, `inputClass`...) and `groupColor`. |
 | `background.ts` | Message handler (`analyze`, `check-updates`), `inFlight` dedupe, `syncKeepAlive`, alarm `nextpaper-updates` (first after 5 min, then 24 h), badge refresh on start. |
-| `components/PaperCard.tsx` | Card: title link, ★, authors, tl;dr, abstract toggle, tags (citations, similarity, relation, Revisión, reading status), actions (Explorar, PDF gratis, Citar). |
+| `components/PaperCard.tsx` | Card: serif title link, bookmark, byline, a *similarity bar* + citations + relation/review/design/sample chips + reading status, tl;dr, abstract toggle, actions (Explore, Free PDF, In text, Cite). `compact` is the short form used by *Start here*; `badge`/`footer` let a tab add a label or the library controls (`RenderCard`/`CardExtra`). |
 | `components/Timeline.tsx` | SVG chart of `buildTimeline`: one lane per subtopic, dots by year (radius = log citations), dashed line = the open paper's year, filtered-out papers dimmed, click → `selectPaper` (highlights + scrolls to the card via `data-paper-id`). |
-| `components/LibraryItem.tsx` | Reading status chips, collection chips + add box, note textarea (saved on blur). |
-| `components/LibraryTools.tsx` | "Copia de seguridad" and "Importar..." (one picker: NextPaper backup or BibTeX/RIS/DOI list); always visible, even with an empty library. |
-| `components/CitationButtons.tsx`, `useCopyAction.ts` | `CopyCitationsButton`, `ExportButton` with progress, and the copy phases hook (busy → copied, or "Pulsa para copiar" fallback). |
+| `components/LibraryItem.tsx` | The library controls at the bottom of a saved card: reading status (segmented), collection chips + add box, note textarea (saved on blur). |
+| `components/LibraryTools.tsx` | `useLibraryTools`: backup and import (one picker: NextPaper backup or BibTeX/RIS/DOI list) as `{controls, status}`; icon-only next to the search box, with labels in the empty-library state. |
+| `components/CitationButtons.tsx`, `useCopyAction.ts` | `CitationBar` (copy N citations joined to the style select; `.bib`/`.ris` in the library), and the copy phases hook (busy → copied, or "Pulsa para copiar" fallback). |
 | `components/UpdatesTab.tsx` | The *Novedades / Updates* tab (own tab with an unseen-count badge; opening it marks the alerts as seen): items with "because you saved…", *New* tag, dismiss, "Check now". |
 | `lib/semantic-scholar.ts` | API client: `getSeed`, `collectCandidates`, `getPapers`, `getPapersAligned` (import: same order, `null` for unknown, throws on failure), `searchPapers`, `getRecommendedIds(ref, pool, limit)` (alerts use limit 15). One shared `postBatch` → **parallel chunks of 100** for both batch lookups. Ids go into the URL path through `paperPath` (a DOI with `#` or `?` would otherwise be truncated and query a different paper). `getJson` (null on failure + `console.warn`). |
 | `lib/s2-fetch.ts` | `s2Fetch` (limiter + up to 8 **short** retries on 429/5xx/network errors via `retryDelay`: 0.35 s ×1.5 up to 3 s, + ≤250 ms jitter; honors Retry-After if ever sent) and `RateLimitedError`. |
@@ -126,7 +128,7 @@ the translated message and a *Retry* button; nothing is cached.
 | `lib/view.ts` | Filters (`reference`, `citation`, `review`, `open`), an independent design filter (`DesignFilter`, `designOptions` = designs present with counts) and sorts (`relevance` keeps groups; `citations`/`year` flatten). |
 | `lib/paper-utils.ts` | `isReview`: title patterns or a review design declared in the text (`studyOf`); Semantic Scholar's `Review` type is **not trusted** (it tagged 109 of 430 papers whose text declares a trial, cohort or survey; `MetaAnalysis` is consistent and kept through `study.ts`). `plainPaper`: a paper with no analysis context and no embedding. |
 | `lib/extract-ref.ts` | Self-contained page extractor (see Rules in `CONTRIBUTING.md`). |
-| `lib/cache.ts` | Compressed result cache (`v10`, 7-day TTL), `pruneStorage` (expiry, 40-entry cap, legacy keys, orphan jobs; runs after each analysis and at worker start) and a clear-and-retry on write failure. |
+| `lib/cache.ts` | Compressed result cache (`v11`, 7-day TTL), `pruneStorage` (expiry, 40-entry cap, legacy keys, orphan jobs; runs after each analysis and at worker start) and a clear-and-retry on write failure. |
 | `lib/compress.ts` | `compressJson` / `decompressJson`: native gzip (`CompressionStream`) + base64. |
 | `lib/job.ts` | `JobState` (`loading` \| `done` \| `error`; **no result inside**), `JOB_PREFIX`, `jobKey`. |
 
@@ -135,7 +137,7 @@ the translated message and a *Retry* button; nothing is cached.
 | Key | Value | Lifetime / bound |
 |---|---|---|
 | `nextpaper_job_<ref>` | `JobState`: `{phase:"loading",step?}` | `{phase:"done"}` | `{phase:"error",error: ErrorCode}` (a few bytes, language-neutral) | Pruned when its cache entry disappears |
-| `nextpaper_cache_v10_<ref>` | `{z, cachedAt}` where `z` = base64(gzip(JSON of `AnalysisResult`)) | 7-day TTL **and** newest 40 entries only; removed by `pruneStorage` |
+| `nextpaper_cache_v11_<ref>` | `{z, cachedAt}` where `z` = base64(gzip(JSON of `AnalysisResult`)) | 7-day TTL **and** newest 40 entries only; removed by `pruneStorage` |
 | `nextpaper_library` | `Record<paperId, SavedPaper>` (`ScoredPaper` + `savedAt`, `status`, `note`, `collections`) | permanent, never pruned |
 | `nextpaper_crossref_v1_<doi>` | `{m: CrossrefMeta \| null, at}` (`null` = Crossref has no record, e.g. arXiv DOIs) | 30 d hit / 7 d miss, newest 500 kept (`pruneStorage`) |
 | `nextpaper_updates` | `{running, checkedAt, lastError, seen[≤600], items[≤40]}` | permanent, bounded |
@@ -203,16 +205,19 @@ deleted.
 | Heuristic author-name parsing | S2 gives free-text names ("S. Mölbert", "Michael J. Black"); wrong for compound surnames. A fix needs a structured source (Crossref) — see ROADMAP. |
 | Language-neutral data + dictionaries (codes, not sentences, in storage) | Job state and cached results outlive a language switch; storing translated text would show the old language until a re-analysis. Codes are translated at render. |
 | Tooltips as native `title` + focusable `Hint` | A custom popover would be clipped by the scrolling result list; the native tooltip never is, and the `aria-label` gives screen-reader users the same text. |
+| Colors are CSS variables (`style.css`), not Tailwind palette classes | One place defines light and dark, so the whole popup follows the system theme; `tests/design-tokens.test.ts` fails on a raw palette color or hex in a component. |
+| Fixed 600 px popup frame with a scrolling content area | Chrome caps a popup at 600 px; without a frame the header and tabs scrolled away with a long list. |
+| Native `<select>`, `title` tooltips and a serif for paper titles | Zero dependencies, correct keyboard and screen-reader behavior for free, and the reading feel of a journal. |
 | `?ref=` popup param | The only way to drive the popup in automation (no toolbar click ⇒ no `activeTab`). |
 
 ## 7. Known technical debt
 
 1. ~~Storage growth with no eviction~~ — fixed 2026-09-19 (see §4).
-2. Unit tests (392, `lib/` at ~98% line coverage, floors enforced by `npm run test:coverage`) cover every module in `lib/`: storage-bound ones against an in-memory `chrome.storage` (`tests/helpers/chrome.ts`, with a simulated quota), network-bound ones against a mocked `fetch`/module. Only the UI (popup, components, worker) and real request behavior rely on the e2e scripts.
+2. Unit tests (~475, `lib/` at ~98% line coverage, floors enforced by `npm run test:coverage`) cover every module in `lib/`: storage-bound ones against an in-memory `chrome.storage` (`tests/helpers/chrome.ts`, with a simulated quota), network-bound ones against a mocked `fetch`/module. Only the UI (popup, components, worker) and real request behavior rely on the e2e scripts.
 3. ~~Not under version control~~ — git + CI since 2026-09-20 (no remote yet).
 4. ~~`checkForUpdates` failures swallowed~~ — recorded in `lastError` and shown in the panel (2026-09-20).
    `strict` TypeScript is on (2026-09-20); `npm run typecheck`, `format:check` and coverage run in CI.
-5. `popup.tsx` is large and mixes several concerns (tabs, search, filters, library).
+5. ~~`popup.tsx` is large~~ — split into `RelatedTab`, `SavedTab`, `UpdatesTab`, `KeySetup` and `useAnalysis` (2026-09-20).
 6. Citation styles are hand-implemented and not CSL-certified; without Crossref (arXiv-only papers) author parsing is heuristic; Vancouver/AMA abbreviations depend on Crossref's short titles; IEEE uses the full journal name.
 7. Cluster labels can be uninformative when all results are near-identical (e.g. all
    translations of one scale).

@@ -7,7 +7,7 @@
 const fs = require("fs")
 const os = require("os")
 const path = require("path")
-const { launch, check, sleep, clickButton, finish } = require("./e2e-lib.cjs")
+const { launch, check, sleep, clickButton, clickLabel, finish } = require("./e2e-lib.cjs")
 
 const BIB = `
 @article{bmc, title = {Psychometric properties of the Spanish version of the functionality appreciation scale}, doi = {10.1186/s40337-024-01004-0}}
@@ -55,7 +55,7 @@ const tmp = (name, content) => {
   }
 
   // The popup reads its settings before drawing anything.
-  await page.waitForFunction(() => document.body.innerText.includes("★ Guardados"), { timeout: 15000 })
+  await page.waitForFunction(() => document.body.innerText.includes("Guardados"), { timeout: 15000 })
 
   // 1. New user: empty library still offers import
   await clickButton(page, "Guardados", false)
@@ -85,7 +85,7 @@ const tmp = (name, content) => {
   check("collection chip filter appears", (await bodyText()).includes("Tesis · 1"))
   await clickButton(page, "Tesis · 1")
   await sleep(400)
-  const cards = () => page.evaluate(() => document.querySelectorAll("a.line-clamp-2").length)
+  const cards = () => page.evaluate(() => document.querySelectorAll("[data-paper-title]").length)
   check("filtering by the collection shows only its paper", (await cards()) === 1)
   await clickButton(page, "Eliminar colección")
   await sleep(600)
@@ -93,7 +93,7 @@ const tmp = (name, content) => {
   check("deleted collection is gone from the filters", !(await bodyText()).includes("Tesis ·"))
 
   // 5. Backup: download, wipe, restore
-  await clickButton(page, "Copia de seguridad")
+  await clickLabel(page, "Copia de seguridad")
   await sleep(500)
   const backupText = await page.evaluate(async () => window.__blobs[window.__blobs.length - 1].text())
   const backup = JSON.parse(backupText)
@@ -101,7 +101,7 @@ const tmp = (name, content) => {
 
   await page.evaluate(() => chrome.storage.local.remove("nextpaper_library"))
   await page.reload()
-  await page.waitForFunction(() => document.body.innerText.includes("★ Guardados"), { timeout: 15000 })
+  await page.waitForFunction(() => document.body.innerText.includes("Guardados"), { timeout: 15000 })
   await clickButton(page, "Guardados", false)
   await sleep(500)
   check("library is empty after the wipe", (await library()).length === 0)
@@ -146,7 +146,7 @@ const tmp = (name, content) => {
   const text = await bodyText()
   const evil2 = (await library()).find((p) => p.paperId === "evil2")
   check("item with wrong field types was imported", !!evil2)
-  check("the popup still renders after it", text.includes("Evil paper two") && text.includes("Importar..."))
+  check("the popup still renders after it", text.includes("Evil paper two") && !!(await page.$("button[aria-label='Importar...']")))
   check("its fields were rebuilt with the right types", evil2 && evil2.tldr === null && evil2.abstract === null && evil2.venue === "" && evil2.similarity === null && evil2.sharedTerms === undefined)
   check("injected similarity / shared terms are not shown", !text.includes("99% similar") && !text.includes("injectedterm"))
 

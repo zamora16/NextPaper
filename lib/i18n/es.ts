@@ -30,7 +30,9 @@ export const es: Record<Key, string> = {
   "search.button": "Buscar",
   "search.hint":
     "Encuentra y agrupa papers sobre un tema, sin necesidad de tener un artículo abierto",
-  exploring: "Explorando:",
+  "context.open": "Paper abierto",
+  "context.exploring": "Explorando",
+  "context.topic": "Tema",
   back: "← Volver",
   "back.hint": "Volver al análisis anterior",
   detecting: "Detectando paper...",
@@ -52,7 +54,7 @@ export const es: Record<Key, string> = {
     "Semantic Scholar está limitando las peticiones. Vuelve a intentarlo en un momento.",
   "error.not_found": "Este paper no está indexado en Semantic Scholar todavía.",
   "error.key_rejected":
-    "Semantic Scholar ha rechazado tu clave de API. Revísala en Ajustes (⚙) o quítala para usar NextPaper sin clave.",
+    "Semantic Scholar ha rechazado tu clave de API. Revísala en Ajustes o quítala para usar NextPaper sin clave.",
   "error.storage_full":
     "No hay espacio suficiente en el almacenamiento de la extensión.",
   "error.unavailable": "No se pudo conectar con Semantic Scholar.",
@@ -86,8 +88,7 @@ export const es: Record<Key, string> = {
   citeAs: "Citar como",
   "citeAs.hint": "El estilo de cita que se usa al copiar o exportar citas",
   count: "{shown} de {total} papers",
-  "timeline.show": "Ver cronología",
-  "timeline.hide": "Ocultar cronología",
+  "timeline.label": "Cronología",
   "timeline.hint":
     "Un gráfico con una fila por subtema y cada paper colocado por año (punto más grande = más citado). Muestra qué líneas de trabajo son clásicas y cuáles recientes.",
   noneMatch: "Ningún paper cumple este filtro.",
@@ -119,6 +120,8 @@ export const es: Record<Key, string> = {
   "card.save": "Guardar para leer después",
   "card.unsave": "Quitar de guardados",
   "card.noYear": "s.f.",
+  "card.tldr.hint":
+    "Resumen de una frase generado automáticamente por Semantic Scholar",
   "card.abstract.show": "Ver abstract",
   "card.abstract.hide": "Ocultar abstract",
   "card.citations_one": "{n} cita",
@@ -189,6 +192,7 @@ export const es: Record<Key, string> = {
   "saved.empty":
     "Aún no has guardado nada. Pulsa la ☆ de cualquier paper para guardarlo aquí, o importa tus referencias desde otra herramienta.",
   "saved.status.all": "Todos",
+  "saved.search": "Buscar en tu biblioteca",
   "saved.collections.all": "Todas las colecciones",
   "saved.collection.delete": "Eliminar colección",
   "saved.collection.delete.hint":
@@ -304,7 +308,7 @@ export const es: Record<Key, string> = {
   "key.msg.removed":
     "Clave quitada. NextPaper funcionará sin clave (más lento).",
   "setup.skipHint":
-    "¿No quieres pedir una clave ahora? Puedes empezar sin ella y añadirla más tarde en Ajustes (⚙).",
+    "¿No quieres pedir una clave ahora? Puedes empezar sin ella y añadirla más tarde en Ajustes.",
   "setup.skip": "Continuar sin clave (más lento)",
   "about.dataPrefix": "Datos de ",
   "about.dataAnd": " (Allen Institute for AI) y ",

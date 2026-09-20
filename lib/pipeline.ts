@@ -49,6 +49,10 @@ export interface AnalysisResult {
   picks: Pick[]
   // Publication year of the open paper, for the timeline marker.
   seedYear?: number | null
+  // Which paper the results are about (shown at the top of the list).
+  seedTitle?: string
+  // "A, B, C +2": the first three authors and how many more there are.
+  seedByline?: string
 }
 
 type Embedded = PaperWithEmbedding & { embedding: number[] }
@@ -56,6 +60,12 @@ interface Entry {
   paper: Embedded
   sources: Set<CandidateSource>
   score: number
+}
+
+// The first three authors and how many more there are.
+export function byline(names: string[]): string {
+  const shown = names.slice(0, 3).join(", ")
+  return names.length > 3 ? `${shown} +${names.length - 3}` : shown
 }
 
 const TOP_N = 18
@@ -312,6 +322,8 @@ async function analyzePaper(
     })
   }
   result.seedYear = seed.year
+  result.seedTitle = seed.title
+  if (seed.authors?.length) result.seedByline = byline(seed.authors)
 
   await setCachedResult(ref, result)
   return result

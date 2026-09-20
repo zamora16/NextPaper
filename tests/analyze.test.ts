@@ -120,15 +120,30 @@ describe("analyzing a paper", () => {
       0.1
     )
     expect(result.seedYear).toBe(YEAR - 1)
+    expect(result.seedTitle).toBe("Body image in virtual reality")
 
     expect(await getCachedResult("DOI:10.1/x")).toEqual(result)
+  })
+
+  it("says which paper it is about: first three authors and how many more", async () => {
+    realisticSet()
+    const names = ["Ada", "Alan", "Grace", "Edsger", "Barbara"]
+    seedRequest.mockResolvedValue(seed({ authors: names }) as any)
+    const result = await analyze("DOI:10.1/x")
+    expect(result.seedByline).toBe("Ada, Alan, Grace +2")
+  })
+
+  it("leaves the byline out when the paper has no author data", async () => {
+    realisticSet()
+    const result = await analyze("DOI:10.1/y")
+    expect(result.seedByline).toBeUndefined()
   })
 
   it("never stores embeddings (rule 6)", async () => {
     realisticSet()
     const result = await analyze("DOI:10.1/x")
     expect(JSON.stringify(result)).not.toContain("embedding")
-    const cached = chrome.data.get("nextpaper_cache_v10_DOI:10.1/x") as {
+    const cached = chrome.data.get("nextpaper_cache_v11_DOI:10.1/x") as {
       z: string
     }
     expect(cached.z.length).toBeLessThan(3000)

@@ -24,7 +24,7 @@ Nothing else is sent, and nothing is sent to any server run by the maintainers (
 
 ## Your API key
 
-Each person uses their own free Semantic Scholar key. It is stored only in this browser, shown masked in the settings, and sent only to Semantic Scholar. It is not included in the extension's code. You can remove it at any time in *Ajustes* (⚙).
+Each person uses their own free Semantic Scholar key. It is stored only in this browser, shown masked in the settings, and sent only to Semantic Scholar. It is not included in the extension's code. You can remove it at any time in *Ajustes*.
 
 ## Permissions, and why
 

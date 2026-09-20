@@ -76,3 +76,36 @@ export function applyView(
   )
   return flat.length ? [{ label: ALL_GROUP, papers: flat }] : []
 }
+
+// Text search inside the library: every word typed must appear somewhere in
+// the title, authors, venue, year, note or collection names (accents and case
+// ignored), so "tylka 2015" narrows down instead of matching nothing.
+const fold = (text: string) =>
+  text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase()
+
+export function searchLibrary<
+  T extends {
+    title: string
+    authors: { name: string }[]
+    venue?: string | null
+    year?: number | null
+    note?: string
+    collections?: string[]
+  }
+>(items: T[], query: string): T[] {
+  const words = fold(query).split(/\s+/).filter(Boolean)
+  if (words.length === 0) return items
+  return items.filter((item) => {
+    const haystack = fold(
+      [
+        item.title,
+        item.authors.map((a) => a.name).join(" "),
+        item.venue ?? "",
+        item.year ?? "",
+        item.note ?? "",
+        (item.collections ?? []).join(" ")
+      ].join(" ")
+    )
+    return words.every((word) => haystack.includes(word))
+  })
+}

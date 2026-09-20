@@ -49,6 +49,8 @@ export interface Seed {
   title: string
   abstract: string | null
   year: number | null
+  // Author names in order, to show which paper is open.
+  authors?: string[]
   embedding: number[] | null
   isComputerScience: boolean
 }
@@ -107,7 +109,7 @@ async function getJson<T>(
 // citing papers — measured 0.5-1.5 s, replacing three sequential requests.
 export async function getSeed(ref: string): Promise<Seed> {
   const response = await s2Fetch(
-    `${BASE}/graph/v1/paper/${paperPath(ref)}?fields=title,abstract,year,fieldsOfStudy,${EMBEDDING},references.paperId,citations.paperId,citations.citationCount,citations.year`
+    `${BASE}/graph/v1/paper/${paperPath(ref)}?fields=title,abstract,year,authors.name,fieldsOfStudy,${EMBEDDING},references.paperId,citations.paperId,citations.citationCount,citations.year`
   )
 
   if (response.status === 403) throw new ApiKeyRejectedError()
@@ -121,6 +123,10 @@ export async function getSeed(ref: string): Promise<Seed> {
     title: data.title,
     abstract: data.abstract ?? null,
     year: data.year ?? null,
+    authors: (data.authors ?? [])
+      .map((a: { name?: string }) => a?.name)
+      .filter((name: string | undefined): name is string => !!name)
+      .slice(0, 50),
     embedding: data.embedding?.vector ?? null,
     isComputerScience: !!data.fieldsOfStudy?.includes("Computer Science"),
     references: (data.references ?? [])

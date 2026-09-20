@@ -32,7 +32,9 @@ export const en = {
   "search.button": "Search",
   "search.hint":
     "Find and group papers about a topic, without needing an open article",
-  exploring: "Exploring:",
+  "context.open": "Open paper",
+  "context.exploring": "Exploring",
+  "context.topic": "Topic",
   back: "← Back",
   "back.hint": "Go back to the previous analysis",
   detecting: "Detecting paper...",
@@ -55,7 +57,7 @@ export const en = {
     "Semantic Scholar is limiting requests. Try again in a moment.",
   "error.not_found": "This paper is not indexed in Semantic Scholar yet.",
   "error.key_rejected":
-    "Semantic Scholar rejected your API key. Check it in Settings (⚙) or remove it to use NextPaper without a key.",
+    "Semantic Scholar rejected your API key. Check it in Settings or remove it to use NextPaper without a key.",
   "error.storage_full": "There is not enough extension storage left.",
   "error.unavailable": "Semantic Scholar could not be reached.",
   "error.no_data": "The data for the new papers could not be retrieved.",
@@ -88,8 +90,7 @@ export const en = {
   citeAs: "Cite as",
   "citeAs.hint": "The citation style used when you copy or export citations",
   count: "{shown} of {total} papers",
-  "timeline.show": "Show timeline",
-  "timeline.hide": "Hide timeline",
+  "timeline.label": "Timeline",
   "timeline.hint":
     "A chart with one row per subtopic and every paper placed by year (bigger dot = more cited). It shows which lines of work are classic and which are recent.",
   noneMatch: "No paper matches this filter.",
@@ -121,6 +122,8 @@ export const en = {
   "card.save": "Save to read later",
   "card.unsave": "Remove from saved",
   "card.noYear": "n.d.",
+  "card.tldr.hint":
+    "One-sentence summary generated automatically by Semantic Scholar",
   "card.abstract.show": "Show abstract",
   "card.abstract.hide": "Hide abstract",
   "card.citations_one": "{n} citation",
@@ -191,6 +194,7 @@ export const en = {
   "saved.empty":
     "You have not saved anything yet. Press the ☆ on any paper to save it here, or import your references from another tool.",
   "saved.status.all": "All",
+  "saved.search": "Search your library",
   "saved.collections.all": "All collections",
   "saved.collection.delete": "Delete collection",
   "saved.collection.delete.hint":
@@ -303,7 +307,7 @@ export const en = {
     "Key saved, but I could not check it right now (Semantic Scholar is busy). If something fails, review it here.",
   "key.msg.removed": "Key removed. NextPaper will work without a key (slower).",
   "setup.skipHint":
-    "Do not want to request a key now? You can start without one and add it later in Settings (⚙).",
+    "Do not want to request a key now? You can start without one and add it later in Settings.",
   "setup.skip": "Continue without a key (slower)",
   "about.dataPrefix": "Data from ",
   "about.dataAnd": " (Allen Institute for AI) and ",

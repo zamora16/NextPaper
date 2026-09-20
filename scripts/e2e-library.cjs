@@ -25,10 +25,10 @@ const REF = process.argv[2] || "DOI:10.1186/s40337-024-01004-0"
   // serialized library writes (a race here once lost one of them).
   await page.evaluate(() => {
     const seen = new Set()
-    for (const link of document.querySelectorAll("a.line-clamp-2")) {
+    for (const link of document.querySelectorAll("[data-paper-title]")) {
       if (seen.has(link.textContent) || seen.size >= 2) continue
       seen.add(link.textContent)
-      link.parentElement.querySelector("button").click()
+      link.closest("[data-paper-id]").querySelector("[data-save]").click()
     }
   })
   await sleep(800)

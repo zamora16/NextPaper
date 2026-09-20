@@ -1,51 +1,51 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode
+} from "react"
 
 import "~style.css"
 
-import { CopyCitationsButton } from "~components/CitationButtons"
-import { groupLabel, Hint, I18nProvider, useT } from "~components/i18n"
+import { I18nProvider, useT } from "~components/i18n"
+import {
+  IconBell,
+  IconBookmark,
+  IconNetwork,
+  IconSliders,
+  Logo
+} from "~components/icons"
 import { KeySetup } from "~components/KeySetup"
-import { PaperCard } from "~components/PaperCard"
+import { PaperCard, type RenderCard } from "~components/PaperCard"
+import {
+  DEFAULT_VIEW,
+  RelatedTab,
+  type ViewState
+} from "~components/RelatedTab"
 import { SavedTab } from "~components/SavedTab"
-import { Timeline } from "~components/Timeline"
-import { pillClass } from "~components/ui"
+import { iconButtonClass } from "~components/ui"
 import { UpdatesTab } from "~components/UpdatesTab"
 import { useAnalysis } from "~components/useAnalysis"
 import { useStorageValue } from "~components/useStorageValue"
-import { CITATION_STYLES, type CitationStyle } from "~lib/citation"
+import type { CitationStyle } from "~lib/citation"
 import { extractPaperRef } from "~lib/extract-ref"
-import { resolveLang, type TKey } from "~lib/i18n"
-import type { Step } from "~lib/job"
+import { resolveLang } from "~lib/i18n"
 import {
   getLibrary,
   LIBRARY_KEY,
   toggleSaved,
   type SavedPaper
 } from "~lib/library"
-import type { PickKind, ScoredPaper } from "~lib/pipeline"
 import { getSettings, SETTINGS_KEY, type Settings } from "~lib/settings"
-import { buildTimeline } from "~lib/timeline"
 import {
   getUpdates,
   markUpdatesViewed,
   UPDATES_KEY,
   type UpdatesState
 } from "~lib/updates"
-import {
-  applyView,
-  designOptions,
-  FILTERS,
-  SORTS,
-  type DesignFilter,
-  type Filter,
-  type Sort
-} from "~lib/view"
-
-const PICK_LABEL: Record<PickKind, TKey> = {
-  foundational: "pick.foundational",
-  review: "pick.review",
-  recent: "pick.recent"
-}
 
 async function getActiveTabPaperRef(): Promise<string | null> {
   // Lets the popup be opened on a specific paper (popup.html?ref=DOI:...),
@@ -68,27 +68,81 @@ async function getActiveTabPaperRef(): Promise<string | null> {
 }
 
 type Tab = "related" | "saved" | "updates" | "settings"
+const TAB_ORDER: Tab[] = ["related", "saved", "updates"]
+
+// The popup's fixed frame: Chrome caps a popup at 600 px tall, so the header
+// stays put and only the content scrolls.
+function Frame({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex h-[600px] w-[27rem] flex-col overflow-hidden bg-paper font-sans text-ink">
+      {children}
+    </div>
+  )
+}
+
+function TabButton({
+  selected,
+  icon,
+  label,
+  badge,
+  badgeTitle,
+  hint,
+  onClick
+}: {
+  selected: boolean
+  icon: ReactNode
+  label: string
+  badge?: number
+  badgeTitle?: string
+  hint: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      role="tab"
+      aria-selected={selected}
+      tabIndex={selected ? 0 : -1}
+      onClick={onClick}
+      title={hint}
+      className={`relative flex flex-1 items-center justify-center gap-1.5 px-2 pb-2.5 pt-2 text-[13px] font-medium transition-colors ${
+        selected ? "text-ink" : "text-muted hover:text-ink"
+      }`}>
+      {icon}
+      {label}
+      {badge !== undefined && (
+        <span
+          title={badgeTitle}
+          className={`rounded-full px-1.5 text-[11px] font-semibold tabular-nums ${
+            selected ? "bg-accent-soft text-accent-ink" : "bg-sunken text-soft"
+          }`}>
+          {badge}
+        </span>
+      )}
+      <span
+        className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full transition-colors ${
+          selected ? "bg-accent" : "bg-transparent"
+        }`}
+      />
+    </button>
+  )
+}
 
 function PopupBody({ settings }: { settings: Settings }) {
   const t = useT()
   const [ref, setRef] = useState<string | null | undefined>(undefined)
   const [citationStyle, setCitationStyle] = useState<CitationStyle>("apa")
   const [tab, setTab] = useState<Tab>("related")
-  const [filter, setFilter] = useState<Filter>("all")
-  const [sort, setSort] = useState<Sort>("relevance")
-  const [design, setDesign] = useState<DesignFilter>("all")
+  const [view, setView] = useState<ViewState>(DEFAULT_VIEW)
   const library = useStorageValue<SavedPaper[]>(LIBRARY_KEY, getLibrary, [])
   const updates = useStorageValue<UpdatesState | null>(
     UPDATES_KEY,
     getUpdates,
     null
   )
-  const [showTimeline, setShowTimeline] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   // Exploring a result (or searching a topic) pushes onto this trail; the
   // page's own paper is the root and is never stored in it.
   const [trail, setTrail] = useState<{ ref: string; label: string }[]>([])
-  const [queryInput, setQueryInput] = useState("")
   const current = trail.length ? trail[trail.length - 1] : null
   const activeRef = current ? current.ref : ref
   // No analysis (and no request) before the first-run setup is answered.
@@ -96,6 +150,7 @@ function PopupBody({ settings }: { settings: Settings }) {
     settings.setupDone ? activeRef : null
   )
   const [newIds, setNewIds] = useState<Set<string>>(new Set())
+  const scroller = useRef<HTMLElement>(null)
 
   useEffect(() => {
     getActiveTabPaperRef().then(setRef)
@@ -113,18 +168,21 @@ function PopupBody({ settings }: { settings: Settings }) {
     markUpdatesViewed()
   }, [tab, updates])
 
-  // A new paper starts with nothing highlighted.
+  // A new paper starts with nothing highlighted and the default view.
   useEffect(() => {
     setSelectedId(null)
+    setView(DEFAULT_VIEW)
   }, [activeRef])
 
-  const explore = (target: { ref: string; label: string }) => {
+  // Each tab starts at its top.
+  useEffect(() => {
+    scroller.current?.scrollTo({ top: 0 })
+  }, [tab, activeRef])
+
+  const explore = useCallback((target: { ref: string; label: string }) => {
     setTrail((trail) => [...trail, target])
     setTab("related")
-    setFilter("all")
-    setSort("relevance")
-    setDesign("all")
-  }
+  }, [])
 
   // Clicking a point on the map highlights its card and scrolls to it. Picks
   // repeat some papers, so the last match (the group list) is the target.
@@ -137,33 +195,6 @@ function PopupBody({ settings }: { settings: Settings }) {
     })
   }
 
-  const submitSearch = (event: FormEvent) => {
-    event.preventDefault()
-    const query = queryInput.trim().replace(/\s+/g, " ")
-    if (query.length < 3) return
-    // The label is user text (their own query): it needs no translation.
-    explore({ ref: `QUERY:${query.toLowerCase()}`, label: query })
-    setQueryInput("")
-  }
-
-  const designs = useMemo(
-    () => (result ? designOptions(result.groups) : []),
-    [result]
-  )
-  // Same guard as the collection filter: a design the new results don't have
-  // must not leave the list stuck on an empty filter.
-  const activeDesign = designs.some((d) => d.id === design) ? design : "all"
-  const groups = useMemo(
-    () => (result ? applyView(result.groups, filter, sort, activeDesign) : []),
-    [result, filter, sort, activeDesign]
-  )
-  const visible = useMemo(() => {
-    const seen = new Map<string, ScoredPaper>()
-    groups.forEach((g) => g.papers.forEach((p) => seen.set(p.paperId, p)))
-    return [...seen.values()]
-  }, [groups])
-  const totalPapers =
-    result?.groups.reduce((sum, g) => sum + g.papers.length, 0) ?? 0
   const savedIds = useMemo(
     () => new Set(library.map((p) => p.paperId)),
     [library]
@@ -175,26 +206,8 @@ function PopupBody({ settings }: { settings: Settings }) {
   const unviewedUpdates =
     updates?.items.filter((i) => !i.viewed && !savedIds.has(i.paper.paperId))
       .length ?? 0
-  const timeline = useMemo(
-    () => (result ? buildTimeline(result.groups, result.seedYear) : null),
-    [result]
-  )
-  const visibleIds = useMemo(
-    () => new Set(visible.map((paper) => paper.paperId)),
-    [visible]
-  )
-  const showPicks =
-    !!result?.picks.length &&
-    filter === "all" &&
-    sort === "relevance" &&
-    activeDesign === "all"
 
-  const stepText = (step: Step | undefined) =>
-    step && typeof step === "object"
-      ? t(`step.${step.code}` as TKey, "n" in step ? { n: step.n } : undefined)
-      : t("step.default")
-
-  const renderCard = (paper: ScoredPaper) => (
+  const renderCard: RenderCard = (paper, extra) => (
     <PaperCard
       key={paper.paperId}
       paper={paper}
@@ -204,307 +217,128 @@ function PopupBody({ settings }: { settings: Settings }) {
       highlighted={paper.paperId === selectedId}
       onToggleSave={() => toggleSaved(paper)}
       onExplore={() => explore({ ref: paper.paperId, label: paper.title })}
+      {...extra}
     />
   )
 
-  const styleSelect = (
-    <span className="flex items-center gap-1.5">
-      <label className="flex items-center gap-1.5 text-xs text-slate-500">
-        {t("citeAs")}
-        <select
-          value={citationStyle}
-          onChange={(e) => setCitationStyle(e.target.value as CitationStyle)}
-          className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs text-slate-700">
-          {CITATION_STYLES.map((style) => (
-            <option key={style} value={style}>
-              {t(`style.${style}` as TKey)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <Hint text={t("citeAs.hint")} />
-    </span>
-  )
+  const inSettings = tab === "settings"
 
-  const tabs: { id: Exclude<Tab, "settings">; label: string; hint: TKey }[] = [
-    { id: "related", label: t("tab.related"), hint: "tab.related.hint" },
-    {
-      id: "saved",
-      label: `★ ${t("tab.saved")} · ${library.length}`,
-      hint: "tab.saved.hint"
-    },
-    { id: "updates", label: t("tab.updates"), hint: "tab.updates.hint" }
-  ]
+  // Arrow keys move between the tabs, as a tab list is expected to.
+  const onTabKeys = (event: KeyboardEvent<HTMLDivElement>) => {
+    const index = TAB_ORDER.indexOf(tab)
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key]
+    if (index < 0 || !step) return
+    event.preventDefault()
+    const next = (index + step + TAB_ORDER.length) % TAB_ORDER.length
+    setTab(TAB_ORDER[next])
+    ;(event.currentTarget.children[next] as HTMLElement).focus()
+  }
 
   return (
-    <div className="flex w-[26rem] flex-col gap-3 p-4 font-sans">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-slate-900">NextPaper</h1>
+    <Frame>
+      <header className="flex items-center gap-2.5 px-4 pb-1 pt-3">
+        <Logo size={26} />
+        <h1 className="text-[15px] font-semibold tracking-tight">NextPaper</h1>
         <button
-          onClick={() => setTab(tab === "settings" ? "related" : "settings")}
+          onClick={() => setTab(inSettings ? "related" : "settings")}
           title={t("tab.settings.hint")}
           aria-label={t("tab.settings")}
-          aria-pressed={tab === "settings"}
-          className={pillClass(tab === "settings")}>
-          ⚙
+          aria-pressed={inSettings}
+          className={`${iconButtonClass} ml-auto ${
+            inSettings ? "bg-accent-soft text-accent-ink" : ""
+          }`}>
+          <IconSliders size={17} />
         </button>
-      </div>
+      </header>
 
-      <div role="tablist" className="flex gap-1">
-        {tabs.map(({ id, label, hint }) => (
-          <button
-            key={id}
-            role="tab"
-            aria-selected={tab === id}
-            onClick={() => setTab(id)}
-            title={t(hint)}
-            className={`${pillClass(tab === id)} flex-1`}>
-            {label}
-            {id === "updates" && unviewedUpdates > 0 && (
-              <span
-                title={t("updates.unseen")}
-                className="ml-1 rounded-full bg-violet-600 px-1.5 text-[10px] text-white">
-                {unviewedUpdates}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {tab === "settings" && (
-        <KeySetup
-          settings={settings}
-          firstRun={false}
-          onClose={() => setTab("related")}
-        />
+      {!inSettings && (
+        <div
+          role="tablist"
+          onKeyDown={onTabKeys}
+          className="flex border-b border-line px-2">
+          <TabButton
+            selected={tab === "related"}
+            icon={<IconNetwork size={15} />}
+            label={t("tab.related")}
+            hint={t("tab.related.hint")}
+            onClick={() => setTab("related")}
+          />
+          <TabButton
+            selected={tab === "saved"}
+            icon={<IconBookmark size={15} />}
+            label={t("tab.saved")}
+            badge={library.length}
+            hint={t("tab.saved.hint")}
+            onClick={() => setTab("saved")}
+          />
+          <TabButton
+            selected={tab === "updates"}
+            icon={<IconBell size={15} />}
+            label={t("tab.updates")}
+            badge={unviewedUpdates > 0 ? unviewedUpdates : undefined}
+            badgeTitle={t("updates.unseen")}
+            hint={t("tab.updates.hint")}
+            onClick={() => setTab("updates")}
+          />
+        </div>
       )}
 
-      {tab === "saved" && (
-        <SavedTab
-          library={library}
-          citationStyle={citationStyle}
-          styleSelect={styleSelect}
-          renderCard={renderCard}
-        />
-      )}
+      <main
+        ref={scroller}
+        role={inSettings ? undefined : "tabpanel"}
+        className="min-h-0 flex-1 overflow-y-auto">
+        {tab === "settings" && (
+          <KeySetup
+            settings={settings}
+            firstRun={false}
+            onClose={() => setTab("related")}
+          />
+        )}
 
-      {tab === "updates" && (
-        <UpdatesTab
-          updates={updates}
-          hasSaved={library.length > 0}
-          savedIds={savedIds}
-          newIds={newIds}
-          renderCard={renderCard}
-        />
-      )}
+        {tab === "saved" && (
+          <SavedTab
+            library={library}
+            citationStyle={citationStyle}
+            onStyleChange={setCitationStyle}
+            renderCard={renderCard}
+          />
+        )}
 
-      {tab === "related" && (
-        <>
-          <form onSubmit={submitSearch} className="flex gap-1.5">
-            <input
-              value={queryInput}
-              onChange={(e) => setQueryInput(e.target.value)}
-              placeholder={t("search.placeholder")}
-              aria-label={t("search.placeholder")}
-              title={t("search.hint")}
-              className="min-w-0 flex-1 rounded border border-slate-200 px-2 py-1 text-xs text-slate-700 placeholder:text-slate-500"
-            />
-            <button
-              type="submit"
-              disabled={queryInput.trim().length < 3}
-              title={t("search.hint")}
-              className="rounded border border-violet-200 bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-50">
-              {t("search.button")}
-            </button>
-          </form>
+        {tab === "updates" && (
+          <UpdatesTab
+            updates={updates}
+            hasSaved={library.length > 0}
+            savedIds={savedIds}
+            newIds={newIds}
+            renderCard={renderCard}
+          />
+        )}
 
-          {current && (
-            <div className="flex items-center justify-between gap-2 rounded bg-slate-50 px-2 py-1">
-              <span className="line-clamp-1 text-xs text-slate-600">
-                {t("exploring")} <strong>{current.label}</strong>
-              </span>
-              <button
-                onClick={() => setTrail((trail) => trail.slice(0, -1))}
-                title={t("back.hint")}
-                className="shrink-0 text-xs font-medium text-violet-700 hover:underline">
-                {t("back")}
-              </button>
-            </div>
-          )}
-
-          {!current && ref === undefined && (
-            <p className="text-sm text-slate-500">{t("detecting")}</p>
-          )}
-
-          {!current && ref === null && (
-            <p className="text-sm text-slate-500">{t("noPaper")}</p>
-          )}
-
-          {!current && ref && (
-            <p className="break-all text-xs text-slate-500">{ref}</p>
-          )}
-
-          {activeRef && job.phase === "loading" && (
-            <div className="flex flex-col gap-1" role="status">
-              <p className="text-sm text-slate-500">{stepText(job.step)}</p>
-              <p className="text-xs text-slate-500">{t("runsInBackground")}</p>
-            </div>
-          )}
-
-          {job.phase === "error" && (
-            <div className="flex flex-col items-start gap-2" role="alert">
-              <p className="text-sm text-red-600">
-                {/* a job stored by an older version has no error code */}
-                {t(`error.${job.error ?? "unknown"}` as TKey)}
-              </p>
-              {!settings.s2ApiKey && (
-                <p className="text-xs text-slate-500">
-                  {t("error.noKeyHint")}{" "}
-                  <button
-                    onClick={() => setTab("settings")}
-                    className="font-medium text-violet-700 hover:underline">
-                    {t("error.addKey")}
-                  </button>
-                  .
-                </p>
-              )}
-              <button
-                onClick={retry}
-                className="rounded border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-100">
-                {t("retry")}
-              </button>
-            </div>
-          )}
-
-          {job.phase === "done" && !result && (
-            <p className="text-sm text-slate-500">{t("loadingResults")}</p>
-          )}
-
-          {job.phase === "done" && result && totalPapers === 0 && (
-            <p className="text-sm text-slate-500">{t("noResults")}</p>
-          )}
-
-          {totalPapers > 0 && (
-            <>
-              <div className="flex flex-wrap gap-1">
-                {FILTERS.map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setFilter(f)}
-                    aria-pressed={filter === f}
-                    title={t(`filter.${f}.hint` as TKey)}
-                    className={pillClass(filter === f)}>
-                    {t(`filter.${f}` as TKey)}
-                  </button>
-                ))}
-              </div>
-
-              {designs.length >= 2 && (
-                <label className="flex items-center gap-1.5 text-xs text-slate-500">
-                  {t("design.label")}
-                  <Hint text={t("design.hint")} />
-                  <select
-                    value={activeDesign}
-                    onChange={(e) => setDesign(e.target.value as DesignFilter)}
-                    title={t("design.hint")}
-                    className="min-w-0 flex-1 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs text-slate-700">
-                    <option value="all">{t("design.all")}</option>
-                    {designs.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {t(`design.${d.id}` as TKey)} ({d.count})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-
-              <div className="flex items-center justify-between gap-2">
-                <label
-                  className="flex items-center gap-1.5 text-xs text-slate-500"
-                  title={t("sort.hint")}>
-                  {t("sort.label")}
-                  <select
-                    value={sort}
-                    onChange={(e) => setSort(e.target.value as Sort)}
-                    className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs text-slate-700">
-                    {SORTS.map((s) => (
-                      <option key={s} value={s}>
-                        {t(`sort.${s}` as TKey)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {styleSelect}
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-2 text-xs text-slate-500">
-                  {t("count", { shown: visible.length, total: totalPapers })}
-                  {timeline && (
-                    <span className="flex items-center gap-1">
-                      <button
-                        onClick={() => setShowTimeline((open) => !open)}
-                        aria-expanded={showTimeline}
-                        className="font-medium text-violet-700 hover:underline">
-                        {showTimeline ? t("timeline.hide") : t("timeline.show")}
-                      </button>
-                      <Hint text={t("timeline.hint")} />
-                    </span>
-                  )}
-                </span>
-                {visible.length > 0 && (
-                  <CopyCitationsButton papers={visible} style={citationStyle} />
-                )}
-              </div>
-
-              <div className="flex max-h-[28rem] flex-col gap-4 overflow-y-auto">
-                {showTimeline && timeline && (
-                  <Timeline
-                    data={timeline}
-                    seedYear={result?.seedYear}
-                    visibleIds={visibleIds}
-                    selectedId={selectedId}
-                    onSelect={selectPaper}
-                  />
-                )}
-
-                {showPicks && (
-                  <div className="flex flex-col gap-2 rounded-lg bg-violet-50/60 p-2">
-                    <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-violet-700">
-                      {t("picks.title")}
-                      <Hint text={t("picks.hint")} />
-                    </p>
-                    {result!.picks.map((pick) => (
-                      <div key={pick.kind} className="flex flex-col gap-1">
-                        <span className="text-[11px] font-medium text-violet-700">
-                          {t(PICK_LABEL[pick.kind])}
-                        </span>
-                        {renderCard(pick.paper)}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {visible.length === 0 && (
-                  <p className="text-sm text-slate-500">{t("noneMatch")}</p>
-                )}
-
-                {groups.map((group) => (
-                  <div key={group.label} className="flex flex-col gap-2">
-                    <p
-                      title={t("group.hint")}
-                      className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      {groupLabel(group.label, t)} · {group.papers.length}
-                    </p>
-                    {group.papers.map(renderCard)}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </>
-      )}
-    </div>
+        {tab === "related" && (
+          <RelatedTab
+            pageRef={ref}
+            current={current}
+            job={job}
+            result={result}
+            hasKey={settings.s2ApiKey !== null}
+            view={view}
+            onView={(patch) => setView((prev) => ({ ...prev, ...patch }))}
+            citationStyle={citationStyle}
+            onStyleChange={setCitationStyle}
+            selectedId={selectedId}
+            onSelectPaper={selectPaper}
+            onBack={() => setTrail((trail) => trail.slice(0, -1))}
+            onSearch={(query) =>
+              // The label is the user's own text: it needs no translation.
+              explore({ ref: `QUERY:${query.toLowerCase()}`, label: query })
+            }
+            onRetry={retry}
+            onOpenSettings={() => setTab("settings")}
+            renderCard={renderCard}
+          />
+        )}
+      </main>
+    </Frame>
   )
 }
 
@@ -518,7 +352,7 @@ function IndexPopup() {
     getSettings,
     null
   )
-  if (settings === null) return <div className="w-[26rem] p-4" />
+  if (settings === null) return <Frame>{null}</Frame>
 
   const lang = resolveLang(settings.language, navigator.language)
   return (
@@ -526,10 +360,11 @@ function IndexPopup() {
       {settings.setupDone ? (
         <PopupBody settings={settings} />
       ) : (
-        <div className="flex w-[26rem] flex-col gap-3 p-4 font-sans">
-          <h1 className="text-lg font-semibold text-slate-900">NextPaper</h1>
-          <KeySetup settings={settings} firstRun />
-        </div>
+        <Frame>
+          <main className="min-h-0 flex-1 overflow-y-auto">
+            <KeySetup settings={settings} firstRun />
+          </main>
+        </Frame>
       )}
     </I18nProvider>
   )

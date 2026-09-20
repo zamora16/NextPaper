@@ -1,7 +1,8 @@
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 
 import { Hint, Rich, useLang, useT } from "~components/i18n"
-import { buttonClass, pillClass, primaryButtonClass } from "~components/ui"
+import { IconCheck, IconExternal, Logo } from "~components/icons"
+import { buttonClass, inputClass, primaryButtonClass } from "~components/ui"
 import type { LangPreference } from "~lib/i18n"
 import {
   checkApiKey,
@@ -20,9 +21,9 @@ export const KEY_FORM_URL =
 type Message = { tone: "ok" | "warn" | "error"; text: string } | null
 
 const toneClass = {
-  ok: "text-emerald-700",
-  warn: "text-amber-700",
-  error: "text-red-600"
+  ok: "bg-ok-soft text-ok",
+  warn: "bg-warn-soft text-warn",
+  error: "bg-danger-soft text-danger"
 }
 
 const LANGUAGE_CHOICES: LangPreference[] = ["auto", "es", "en"]
@@ -35,22 +36,30 @@ export function LanguageSwitch({ preference }: { preference: LangPreference }) {
     <div
       role="group"
       aria-label={t("lang.title")}
-      className="flex items-center gap-1">
-      <span className="text-xs text-slate-500">{t("lang.title")}</span>
-      <Hint text={t("lang.hint")} />
-      {LANGUAGE_CHOICES.map((choice) => (
-        <button
-          key={choice}
-          onClick={() => saveLanguage(choice)}
-          aria-pressed={preference === choice}
-          className={pillClass(preference === choice)}>
-          {choice === "auto"
-            ? t("lang.auto")
-            : choice === "es"
-              ? t("lang.es")
-              : t("lang.en")}
-        </button>
-      ))}
+      className="flex items-center justify-between gap-2">
+      <span className="flex items-center gap-1.5 text-xs font-medium text-soft">
+        {t("lang.title")}
+        <Hint text={t("lang.hint")} />
+      </span>
+      <div className="inline-flex rounded-lg border border-line bg-sunken p-0.5">
+        {LANGUAGE_CHOICES.map((choice) => (
+          <button
+            key={choice}
+            onClick={() => saveLanguage(choice)}
+            aria-pressed={preference === choice}
+            className={`rounded-md px-2.5 py-0.5 text-xs font-medium transition-colors ${
+              preference === choice
+                ? "bg-surface text-ink shadow-card"
+                : "text-muted hover:text-ink"
+            }`}>
+            {choice === "auto"
+              ? t("lang.auto")
+              : choice === "es"
+                ? t("lang.es")
+                : t("lang.en")}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
@@ -73,6 +82,8 @@ export function KeySetup({
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<Message>(null)
   const hasKey = settings.s2ApiKey !== null
+  // Someone who already has a key does not need the explanation again.
+  const showGuide = firstRun || !hasKey
 
   const save = async () => {
     const key = normalizeApiKey(input)
@@ -106,20 +117,20 @@ export function KeySetup({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4 p-4">
       {firstRun ? (
-        <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <Logo size={40} />
           <div>
-            <h2 className="text-base font-semibold text-slate-900">
+            <h2 className="text-base font-semibold leading-tight text-ink">
               {t("setup.title")}
             </h2>
-            <p className="text-xs text-slate-500">{t("setup.subtitle")}</p>
+            <p className="text-xs text-muted">{t("setup.subtitle")}</p>
           </div>
-          <LanguageSwitch preference={settings.language} />
         </div>
       ) : (
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900">
+          <h2 className="text-base font-semibold text-ink">
             {t("settings.title")}
           </h2>
           {onClose && (
@@ -130,16 +141,16 @@ export function KeySetup({
         </div>
       )}
 
-      {!firstRun && <LanguageSwitch preference={settings.language} />}
+      <LanguageSwitch preference={settings.language} />
 
       {firstRun && (
-        <p className="text-sm text-slate-700">
+        <p className="text-[13px] leading-relaxed text-soft">
           <Rich text={t("setup.intro")} />
         </p>
       )}
 
       {!firstRun && (
-        <p className="text-sm text-slate-700">
+        <p className="flex items-center gap-2 rounded-lg bg-sunken px-3 py-2 text-[13px] text-soft">
           <Rich
             text={t("settings.keyStatus", {
               status: `**${
@@ -154,25 +165,29 @@ export function KeySetup({
         </p>
       )}
 
-      <div className="rounded-lg bg-violet-50/60 p-2 text-xs text-slate-600">
-        <p className="mb-1 font-semibold text-violet-700">{t("why.title")}</p>
-        <ul className="ml-4 list-disc space-y-0.5">
-          <li>
-            <Rich text={t("why.fast")} />
-          </li>
-          <li>
-            <Rich text={t("why.private")} />
-          </li>
-          <li>
-            <Rich text={t("why.yours")} />
-          </li>
-        </ul>
-      </div>
+      {showGuide && (
+        <div className="rounded-xl bg-accent-soft p-3 text-xs leading-relaxed text-soft">
+          <p className="mb-1.5 font-semibold text-accent-ink">
+            {t("why.title")}
+          </p>
+          <ul className="space-y-1">
+            {(["why.fast", "why.private", "why.yours"] as const).map((key) => (
+              <li key={key} className="flex gap-2">
+                <span className="mt-0.5 text-accent">
+                  <IconCheck size={13} />
+                </span>
+                <span>
+                  <Rich text={t(key)} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-      <ol className="flex flex-col gap-2.5 text-sm text-slate-700">
-        <li className="flex gap-2">
-          <span className="font-semibold text-violet-600">1.</span>
-          <div className="flex flex-col items-start gap-1">
+      <ol className="flex flex-col gap-4 text-[13px] leading-relaxed text-soft">
+        {showGuide && (
+          <Step n={1}>
             <span>
               <Rich text={t("step1")} />
             </span>
@@ -180,63 +195,66 @@ export function KeySetup({
               href={KEY_FORM_URL}
               target="_blank"
               rel="noreferrer"
-              className={buttonClass}>
+              className={`${buttonClass} self-start`}>
               {t("step1.button")}
+              <IconExternal size={13} />
             </a>
-          </div>
-        </li>
-        <li className="flex gap-2">
-          <span className="font-semibold text-violet-600">2.</span>
-          <span>
-            <Rich text={t("step2")} />
-          </span>
-        </li>
-        <li className="flex gap-2">
-          <span className="font-semibold text-violet-600">3.</span>
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          </Step>
+        )}
+        {showGuide && (
+          <Step n={2}>
             <span>
-              <Rich text={t("step3")} />
+              <Rich text={t("step2")} />
             </span>
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !busy && save()}
-              placeholder={t("key.placeholder")}
-              autoComplete="off"
-              spellCheck={false}
-              aria-label={t("key.label")}
-              className="min-w-0 rounded border border-slate-200 px-2 py-1 font-mono text-xs text-slate-700 placeholder:font-sans placeholder:text-slate-500"
-            />
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={save}
-                disabled={busy || input.trim() === ""}
-                className={primaryButtonClass}>
-                {busy
-                  ? t("key.checking")
-                  : firstRun
-                    ? t("key.saveFirst")
-                    : t("key.save")}
+          </Step>
+        )}
+        <Step n={showGuide ? 3 : undefined}>
+          <span>
+            <Rich text={t("step3")} />
+          </span>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && !busy && save()}
+            placeholder={t("key.placeholder")}
+            autoComplete="off"
+            spellCheck={false}
+            aria-label={t("key.label")}
+            className={`${inputClass} font-mono text-xs placeholder:font-sans`}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={save}
+              disabled={busy || input.trim() === ""}
+              className={primaryButtonClass}>
+              {busy
+                ? t("key.checking")
+                : firstRun
+                  ? t("key.saveFirst")
+                  : t("key.save")}
+            </button>
+            {hasKey && !firstRun && (
+              <button onClick={remove} className={buttonClass}>
+                {t("key.remove")}
               </button>
-              {hasKey && !firstRun && (
-                <button onClick={remove} className={buttonClass}>
-                  {t("key.remove")}
-                </button>
-              )}
-            </div>
+            )}
           </div>
-        </li>
+        </Step>
       </ol>
 
       {message && (
-        <p role="status" className={`text-xs ${toneClass[message.tone]}`}>
+        <p
+          role="status"
+          className={`rounded-lg px-3 py-2 text-xs ${toneClass[message.tone]}`}>
           {message.text}
         </p>
       )}
 
       {firstRun && (
-        <div className="flex flex-col items-start gap-1 border-t border-slate-100 pt-2">
-          <p className="text-xs text-slate-500">{t("setup.skipHint")}</p>
+        <div className="flex flex-col items-start gap-2 border-t border-line pt-3">
+          <p className="text-xs leading-relaxed text-muted">
+            {t("setup.skipHint")}
+          </p>
           <button onClick={() => finishSetup()} className={buttonClass}>
             {t("setup.skip")}
           </button>
@@ -244,14 +262,14 @@ export function KeySetup({
       )}
 
       {!firstRun && (
-        <div className="flex flex-col gap-1 border-t border-slate-100 pt-2 text-[11px] text-slate-500">
+        <div className="flex flex-col gap-1 border-t border-line pt-3 text-[11px] leading-relaxed text-muted">
           <p>
             {t("about.dataPrefix")}
             <a
               href="https://www.semanticscholar.org"
               target="_blank"
               rel="noreferrer"
-              className="underline">
+              className="underline hover:text-ink">
               Semantic Scholar
             </a>
             {t("about.dataAnd")}
@@ -259,7 +277,7 @@ export function KeySetup({
               href="https://www.crossref.org"
               target="_blank"
               rel="noreferrer"
-              className="underline">
+              className="underline hover:text-ink">
               Crossref
             </a>
             .
@@ -273,5 +291,18 @@ export function KeySetup({
         </div>
       )}
     </div>
+  )
+}
+
+function Step({ n, children }: { n?: number; children: ReactNode }) {
+  return (
+    <li className="flex gap-3">
+      {n !== undefined && (
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-ink">
+          {n}
+        </span>
+      )}
+      <div className="flex min-w-0 flex-1 flex-col gap-2">{children}</div>
+    </li>
   )
 }

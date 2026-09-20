@@ -69,7 +69,7 @@ export function Hint({ text }: { text: string }) {
       tabIndex={0}
       title={text}
       aria-label={text}
-      className="inline-flex h-3.5 w-3.5 shrink-0 cursor-help items-center justify-center rounded-full border border-slate-300 text-[9px] font-semibold leading-none text-slate-500 hover:border-violet-400 hover:text-violet-600">
+      className="inline-flex h-3.5 w-3.5 shrink-0 cursor-help items-center justify-center rounded-full border border-line-strong text-[9px] font-semibold leading-none text-muted hover:border-accent hover:text-accent">
       i
     </span>
   )

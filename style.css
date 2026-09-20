@@ -2,8 +2,105 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Keyboard users need to see where the focus is. */
-:focus-visible {
-  outline: 2px solid #7c3aed;
-  outline-offset: 1px;
+/* Design tokens: RGB triplets, so Tailwind can add opacity (bg-accent/10).
+   Light is a warm paper white; dark is a deep blue-grey, easy on the eyes for
+   long reading sessions. */
+:root {
+  color-scheme: light dark;
+  --paper: 250 250 248;
+  --surface: 255 255 255;
+  --sunken: 244 244 241;
+  --line: 226 226 221;
+  --line-strong: 205 205 198;
+  --ink: 23 26 38;
+  --soft: 64 70 88;
+  --muted: 107 113 130;
+  --accent: 88 52 200;
+  --accent-hi: 70 38 168;
+  --accent-soft: 241 237 252;
+  --accent-ink: 76 42 176;
+  --ok: 4 120 87;
+  --ok-soft: 222 245 235;
+  --info: 3 105 161;
+  --info-soft: 224 240 250;
+  --warn: 161 78 6;
+  --warn-soft: 254 243 220;
+  --teal: 15 118 110;
+  --teal-soft: 223 244 241;
+  --danger: 185 28 60;
+  --danger-soft: 253 232 237;
+  /* subtopic colors, shared by the group headings and the timeline */
+  --g1: 109 74 224;
+  --g2: 8 145 178;
+  --g3: 217 119 6;
+  --g4: 5 150 105;
+  --g5: 219 39 119;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: 16 18 26;
+    --surface: 24 27 38;
+    --sunken: 31 35 48;
+    --line: 44 49 66;
+    --line-strong: 66 73 94;
+    --ink: 233 235 242;
+    --soft: 182 187 202;
+    --muted: 140 146 165;
+    --accent: 152 126 255;
+    --accent-hi: 178 156 255;
+    --accent-soft: 42 36 78;
+    --accent-ink: 205 193 255;
+    --ok: 74 222 168;
+    --ok-soft: 20 52 44;
+    --info: 96 190 245;
+    --info-soft: 20 44 62;
+    --warn: 251 191 36;
+    --warn-soft: 60 46 16;
+    --teal: 94 226 210;
+    --teal-soft: 18 52 50;
+    --danger: 250 128 152;
+    --danger-soft: 62 24 34;
+    --g1: 155 130 255;
+    --g2: 56 189 248;
+    --g3: 251 191 36;
+    --g4: 52 211 153;
+    --g5: 244 114 182;
+  }
+}
+
+@layer base {
+  html,
+  body {
+    background: rgb(var(--paper));
+    color: rgb(var(--ink));
+    font-family: theme("fontFamily.sans");
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Keyboard users need to see where the focus is. */
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 1px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: rgb(var(--accent) / 0.25);
+  }
+
+  /* slim scrollbars that do not fight the layout */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--line-strong)) transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

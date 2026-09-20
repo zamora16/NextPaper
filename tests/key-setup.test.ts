@@ -221,6 +221,27 @@ describe("settings", () => {
     expect(text()).toContain("9.9.9")
   })
 
+  it("does not repeat the how-to for someone who already has a key", async () => {
+    await render({
+      settings: { setupDone: true, s2ApiKey: KEY, language: "auto" },
+      firstRun: false
+    })
+    expect(text()).not.toContain("¿Por qué una clave propia?")
+    expect(text()).not.toContain("Pide tu clave gratis")
+    // ...but can still replace it
+    expect(container.querySelector("input")).toBeTruthy()
+    expect(button("Guardar clave")).toBeTruthy()
+  })
+
+  it("explains the how-to again to someone without a key", async () => {
+    await render({
+      settings: { setupDone: true, s2ApiKey: null, language: "auto" },
+      firstRun: false
+    })
+    expect(text()).toContain("¿Por qué una clave propia?")
+    expect(text()).toContain("Pide tu clave gratis")
+  })
+
   it("can be closed", async () => {
     const onClose = vi.fn()
     await render({

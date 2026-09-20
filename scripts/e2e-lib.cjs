@@ -106,13 +106,24 @@ const waitDone = (page, timeout = 200000) =>
     () =>
       !/Corre en segundo plano|Runs in the background/.test(
         document.body.innerText
-      ) && /\d+ (de|of) \d+ papers/.test(document.body.innerText),
+      ) && /\d+ (de \d+ |of \d+ )?papers/.test(document.body.innerText),
     { timeout }
   )
 
+// Icon-only buttons have no text: they are found by their accessible name
+// (any of the given names, so a script works in both languages).
+const clickLabel = (page, ...labels) =>
+  page.evaluate((names) => {
+    const button = [...document.querySelectorAll("button")].find((b) =>
+      names.includes(b.getAttribute("aria-label"))
+    )
+    button?.click()
+    return !!button
+  }, labels)
+
 const titles = (page) =>
   page.evaluate(() =>
-    [...document.querySelectorAll("a.line-clamp-2")].map((a) => a.textContent)
+    [...document.querySelectorAll("[data-paper-title]")].map((a) => a.textContent)
   )
 
 const clickButton = (page, text, exact = true) =>
@@ -136,4 +147,4 @@ function finish(errors) {
   process.exit(failures ? 1 : 0)
 }
 
-module.exports = { launch, testApiKey, openPopup, waitDone, titles, clickButton, check, sleep, finish }
+module.exports = { launch, testApiKey, openPopup, waitDone, titles, clickButton, clickLabel, check, sleep, finish }

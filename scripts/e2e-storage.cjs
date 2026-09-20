@@ -37,14 +37,14 @@ const FILL = 45 // valid entries seeded; the cap is 40
         ["nextpaper_job_" + ref]: { phase: "done", result: { groups: [], picks: [] } },
         nextpaper_job_ORPHAN: { phase: "done" },
         // expired current-version entry
-        nextpaper_cache_v10_EXPIRED: { z: "x", cachedAt: 0 },
+        nextpaper_cache_v11_EXPIRED: { z: "x", cachedAt: 0 },
         // user data that must survive untouched
         nextpaper_library: { P1: { paperId: "P1", title: "Kept paper", savedAt: 1, status: "read", note: "keep me" } },
         nextpaper_updates: { running: false, checkedAt: 5, seen: ["a"], items: [] }
       }
       // more valid entries than the cap allows, newest first
       for (let i = 0; i < fill; i++) {
-        items["nextpaper_cache_v10_FILL" + i] = { z: "x", cachedAt: Date.now() - (i + 1) * 1000 }
+        items["nextpaper_cache_v11_FILL" + i] = { z: "x", cachedAt: Date.now() - (i + 1) * 1000 }
         items["nextpaper_job_FILL" + i] = { phase: "done" }
       }
       await chrome.storage.local.set(items)
@@ -64,11 +64,11 @@ const FILL = 45 // valid entries seeded; the cap is 40
   const has = (re) => keys.filter((k) => re.test(k))
 
   check("legacy keys removed", has(/^nextpaper_(cache_v[1-9]|emb_v1|rec_v1)_/).length === 0)
-  check("expired cache entry removed", !keys.includes("nextpaper_cache_v10_EXPIRED"))
-  const cacheKeys = has(/^nextpaper_cache_v10_/)
+  check("expired cache entry removed", !keys.includes("nextpaper_cache_v11_EXPIRED"))
+  const cacheKeys = has(/^nextpaper_cache_v11_/)
   check("cache capped at 40 entries", cacheKeys.length <= 40, `${cacheKeys.length} entries`)
   check("fresh analysis kept in cache", cacheKeys.some((k) => k.endsWith(REF)))
-  check("oldest excess entries evicted", !keys.includes("nextpaper_cache_v10_FILL44"))
+  check("oldest excess entries evicted", !keys.includes("nextpaper_cache_v11_FILL44"))
   check("orphan job removed", !keys.includes("nextpaper_job_ORPHAN"))
   check("job of evicted entry removed", !keys.includes("nextpaper_job_FILL44"))
 

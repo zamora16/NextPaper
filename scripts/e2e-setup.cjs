@@ -7,7 +7,7 @@
 // skipped. Also checks that the built extension contains no key at all.
 const fs = require("fs")
 const path = require("path")
-const { launch, testApiKey, openPopup, waitDone, clickButton, check, sleep, finish } = require("./e2e-lib.cjs")
+const { launch, testApiKey, openPopup, waitDone, clickButton, clickLabel, check, sleep, finish } = require("./e2e-lib.cjs")
 
 const REF = process.argv[2] || "DOI:10.1186/s40337-024-01004-0"
 const KEY_INPUT = "input[aria-label='Clave de API de Semantic Scholar']"
@@ -76,14 +76,14 @@ function filesUnder(dir) {
   if (realKey) {
     await typeKey(realKey)
     await clickButton(page, "Guardar y empezar")
-    await page.waitForFunction(() => document.body.innerText.includes("★ Guardados"), { timeout: 60000 })
+    await page.waitForFunction(() => document.body.innerText.includes("Guardados"), { timeout: 60000 })
     const saved = await settings()
     check("the real key was accepted and saved", saved?.s2ApiKey === realKey && saved?.setupDone === true)
     await waitDone(page)
-    check("the analysis runs with the user's key", /\d+ de \d+ papers/.test(await body()))
+    check("the analysis runs with the user's key", /\d+ (de \d+ )?papers/.test(await body()))
 
     // 4. Settings: the key is masked, and can be removed.
-    await clickButton(page, "⚙")
+    await clickLabel(page, "Ajustes")
     await sleep(500)
     text = await body()
     check("settings show the key masked, never in full", text.includes("guardada (••••••••" + realKey.slice(-4) + ")") && !text.includes(realKey))
@@ -102,11 +102,11 @@ function filesUnder(dir) {
   await second.reload()
   await second.waitForFunction(() => document.body.innerText.includes("Bienvenido a NextPaper"), { timeout: 15000 })
   await second.evaluate(() => [...document.querySelectorAll("button")].find((b) => b.textContent.includes("Continuar sin clave"))?.click())
-  await second.waitForFunction(() => document.body.innerText.includes("★ Guardados"), { timeout: 15000 })
+  await second.waitForFunction(() => document.body.innerText.includes("Guardados"), { timeout: 15000 })
   const skipped = await second.evaluate(async () => (await chrome.storage.local.get("nextpaper_settings")).nextpaper_settings)
   check("continuing without a key stores no key", skipped?.setupDone === true && skipped?.s2ApiKey === null)
   await second.reload()
-  await second.waitForFunction(() => document.body.innerText.includes("★ Guardados"), { timeout: 15000 })
+  await second.waitForFunction(() => document.body.innerText.includes("Guardados"), { timeout: 15000 })
   check("the setup is not shown again", !(await second.evaluate(() => document.body.innerText)).includes("Bienvenido a NextPaper"))
 
   await browser.close()
