@@ -9,6 +9,16 @@ export class RateLimitedError extends Error {
   }
 }
 
+// A 403 means Semantic Scholar refused the key (revoked, or mistyped in a way
+// the format check cannot see). Retrying cannot fix it.
+export class ApiKeyRejectedError extends Error {
+  constructor() {
+    super(
+      "Semantic Scholar ha rechazado tu clave de API. Revísala en Ajustes (⚙) o quítala para usar NextPaper sin clave."
+    )
+  }
+}
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const RETRY_BASE_MS = 350
@@ -32,7 +42,7 @@ export async function s2Fetch(
 ): Promise<Response> {
   const { retries = 8, method = "GET", body } = init
 
-  const headers = new Headers(authHeaders())
+  const headers = new Headers(await authHeaders())
   if (body !== undefined) headers.set("content-type", "application/json")
 
   for (let attempt = 0; ; attempt++) {

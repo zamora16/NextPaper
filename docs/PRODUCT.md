@@ -20,6 +20,7 @@ you need to triage, save and cite it — all local, free, no account, no AI call
 | "I keep losing track of what I read" | ★ save → **Guardados** with status (por leer / leyendo / leído), a personal note and **collections** (e.g. one per thesis chapter) with filters; read status also shows on cards in later searches. **Copia de seguridad** to a JSON file and **Importar** from a NextPaper backup, a `.bib`/`.ris` file or a list of DOIs/titles (also for people who already have a reference library). |
 | "Building the bibliography is tedious" | Copy one citation, an in-text citation or all visible/saved ones in **APA 7, MLA 9, Chicago, Harvard, IEEE, Vancouver, AMA, BibTeX or RIS**; download `.bib` / `.ris` (notes included). Data is enriched with **Crossref** (exact author names, issue, article number, journal abbreviation) and falls back to Semantic Scholar's. |
 | "I don't notice new papers" | **Novedades para ti**: once a day (and on demand) looks for fresh papers related to your latest saves, tags them *Nuevo* with the reason, and puts a count on the toolbar icon. |
+| "How do I set it up?" | A first-run screen explains, in three steps, how to get a **free personal Semantic Scholar key** (they e-mail it to you), checks the key before saving and lets you continue without one. Ajustes (⚙) shows it masked, lets you remove it, and credits the data sources and the license. |
 
 ## How it works from the user's side
 
@@ -42,6 +43,7 @@ you need to triage, save and cite it — all local, free, no account, no AI call
 
 ## Known limits (be honest with users about these)
 
+- **Key:** without a personal key everything works but is slower (a first analysis ~20 s instead of ~5 s in our tests) and fails more often; the setup screen says so.
 - **Speed:** a first analysis of a paper takes ~4–9 s (Semantic Scholar answers ~30% of requests with a temporary 429 that is retried); repeats are instant for 7 days.
 - **Coverage:** papers without an indexed abstract have no embedding → the `% similar` is
   approximate (`~`), or missing in topic search. Some old papers have no reference list.

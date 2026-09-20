@@ -1,6 +1,7 @@
 import { pruneStorage } from "~lib/cache"
 import { jobKey, type JobState } from "~lib/job"
 import { analyze as analyzeRef } from "~lib/pipeline"
+import { isPlausibleRef } from "~lib/ref"
 import { checkForUpdates, refreshBadge } from "~lib/updates"
 
 const inFlight = new Map<string, Promise<void>>()
@@ -59,7 +60,7 @@ function runUpdates(): Promise<void> {
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === "analyze" && typeof message.ref === "string") {
+  if (message?.type === "analyze" && isPlausibleRef(message.ref)) {
     if (!inFlight.has(message.ref)) {
       inFlight.set(
         message.ref,

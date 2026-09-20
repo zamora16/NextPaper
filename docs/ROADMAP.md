@@ -115,6 +115,20 @@ Prompt caching and the per-item cache lower this further.
   (A2, A1, A4 first — the ones with the strongest triage value), measure real usage, and
   only then consider hosting.
 
+## 4b. Production readiness (before a public release)
+
+| Item | State |
+|---|---|
+| No API key in the bundle; per-user key with a guided first-run setup | **DONE 2026-09-20** (`lib/settings.ts`, `KeySetup`, `e2e-setup`) |
+| Personal e-mail removed from the manifest; MIT license; authorship = maintainer only | **DONE 2026-09-20** |
+| Hardening: http(s)-only links, bounded refs/DOIs | **DONE 2026-09-20** |
+| Public README, `docs/PRIVACY.md`, attribution to Semantic Scholar/Crossref in Ajustes | **DONE 2026-09-20** |
+| Push to GitHub so CI runs; check the first CI run | pending |
+| Test the built extension in branded Chrome (only Edge is automated), incl. the real toolbar click | pending |
+| Store listing: English + Spanish description, 1280x800 screenshots, icon, single-purpose statement, a public URL for the privacy policy, version above 0.0.1 | pending |
+| Decide the store name (trademark search) | pending |
+| Review `npm audit` again (only build-tool advisories today; none reach the shipped bundle) | ongoing |
+
 ## 5. Suggested order
 
 1. ~~F0.1~~, ~~F0.2~~, ~~F0.3~~ done (storage, git + CI, unit tests). Next: push to a remote so CI actually runs.

@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RateLimitedError, s2Fetch } from "~lib/s2-fetch"
 
+import { installChrome } from "./helpers/chrome"
+
 let fetchMock: ReturnType<typeof vi.fn>
 const status = (code: number, headers: Record<string, string> = {}) =>
   new Response("", { status: code, headers })
@@ -20,6 +22,7 @@ const run = async (...args: Parameters<typeof s2Fetch>) => {
 }
 
 beforeEach(() => {
+  installChrome()
   vi.useFakeTimers()
   fetchMock = vi.fn()
   vi.stubGlobal("fetch", fetchMock)

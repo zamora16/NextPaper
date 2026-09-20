@@ -9,6 +9,8 @@ import {
   type Seed
 } from "~lib/semantic-scholar"
 
+import { installChrome } from "./helpers/chrome"
+
 // These tests pin the PERFORMANCE-relevant behavior of the API client: how
 // many requests an analysis makes, what runs in parallel, and how batch
 // lookups are chunked. See docs/PERFORMANCE.md for the measurements behind it.
@@ -35,7 +37,8 @@ function mockFetch(route: (call: Call) => Response) {
   )
 }
 
-beforeEach(() => vi.stubGlobal("chrome", {}))
+// s2Fetch reads the user's API key from chrome.storage
+beforeEach(() => void installChrome())
 afterEach(() => vi.unstubAllGlobals())
 
 const baseSeed: Seed = {

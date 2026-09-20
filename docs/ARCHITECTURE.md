@@ -108,7 +108,10 @@ the message and a *Reintentar* button; nothing is cached.
 | `lib/semantic-scholar.ts` | API client: `getSeed`, `collectCandidates`, `getPapers`, `getPapersAligned` (import: same order, `null` for unknown, throws on failure), `searchPapers`, `getRecommendedIds(ref, pool, limit)` (alerts use limit 15). One shared `postBatch` → **parallel chunks of 100** for both batch lookups. Ids go into the URL path through `paperPath` (a DOI with `#` or `?` would otherwise be truncated and query a different paper). `getJson` (null on failure + `console.warn`). |
 | `lib/s2-fetch.ts` | `s2Fetch` (limiter + up to 8 **short** retries on 429/5xx/network errors via `retryDelay`: 0.35 s ×1.5 up to 3 s, + ≤250 ms jitter; honors Retry-After if ever sent) and `RateLimitedError`. |
 | `lib/rate-limit.ts` | `createLimiter(maxConcurrent, minGapMs)` (start slots reserved synchronously) and the shared instance: **3 in flight, 120 ms between starts**. No fixed pause between requests — see `docs/PERFORMANCE.md`. |
-| `lib/api-key.ts` | `x-api-key` header from `process.env.PLASMO_PUBLIC_S2_API_KEY`. |
+| `lib/settings.ts` | Per-user settings in `nextpaper_settings` (`{setupDone, s2ApiKey}`): `normalizeApiKey` (format check), `checkApiKey` (one GET: 200 valid, 401/403 invalid, 429/network → "unknown", retried), `saveApiKey` / `removeApiKey` / `finishSetup` (queued read-modify-write), `getSettings` re-validates what it reads. **No key is ever bundled** (readable by anyone; the API terms forbid sharing a key; one shared 1 req/s limit would sink every user). |
+| `lib/api-key.ts` | `authHeaders()`: the user's key as `x-api-key`, or nothing (the slower anonymous pool). Read from storage on each request, so a key added or removed applies at once. |
+| `lib/url.ts`, `lib/ref.ts` | `httpUrl` (only http(s) may become an href: API data and imported files are untrusted); `isPlausibleRef` (bounded, no control characters; the worker ignores anything else). |
+| `components/KeySetup.tsx` | First-run screen (explains why and how to get the free key in 3 steps, checks the key before saving, "continue without a key") and the settings screen (masked key, remove, credits, license, version). The popup shows it before anything else and **starts no analysis behind it**. |
 | `lib/pipeline.ts` | See §2. Also `QUERY_PREFIX`, `PickKind`, `ScoredPaper`, `AnalysisResult`. |
 | `lib/kmeans.ts` | `kMeans` (k-means++ init, seeded mulberry32(42), Lloyd ≤25 iters, L2-normalized vectors ⇒ Euclidean ≈ cosine), `mergeSmallClusters`, `silhouetteScore`, `clusterAuto`. |
 | `lib/vector-math.ts` | dot, norm, cosine, normalize, euclidean, mean. |
@@ -157,7 +160,7 @@ deleted.
 
 ## 5. Semantic Scholar API facts (all verified in a real browser or by direct calls)
 
-- Base `https://api.semanticscholar.org`; header `x-api-key` (a bogus key answers 403).
+- Base `https://api.semanticscholar.org`; header `x-api-key` (a bogus key answers 403; without a key the shared anonymous pool is used: measured 2026-09-20 from one IP, single GETs pass, the 100-id embedding batch gets ~55% 429 (same as with a key) and a cold analysis in the real extension takes ~21 s instead of ~5 s, three runs). Terms: a key may not be shared (license §1.1); attribution to Semantic Scholar is required.
 - **429 is random, ~25–45% of requests at ANY pace** (1.0 s, 1.5 s, 2.5 s apart alike), with no `Retry-After` and no CORS headers. Only large simultaneous bursts (12 at once) make it worse. Cold analysis takes ~4.5–9 s with the current strategy (`docs/PERFORMANCE.md`).
 - `embedding.specter_v2` works on `/graph/v1/paper/{id}` and the batch endpoint; the
   recommendations endpoint rejects `embedding` and `tldr` (400).
@@ -210,7 +213,7 @@ deleted.
 ## 7. Known technical debt
 
 1. ~~Storage growth with no eviction~~ — fixed 2026-09-19 (see §4).
-2. Unit tests (330, `lib/` at ~98% line coverage, floors enforced by `npm run test:coverage`) cover every module in `lib/`: storage-bound ones against an in-memory `chrome.storage` (`tests/helpers/chrome.ts`, with a simulated quota), network-bound ones against a mocked `fetch`/module. Only the UI (popup, components, worker) and real request behavior rely on the e2e scripts.
+2. Unit tests (379, `lib/` at ~98% line coverage, floors enforced by `npm run test:coverage`) cover every module in `lib/`: storage-bound ones against an in-memory `chrome.storage` (`tests/helpers/chrome.ts`, with a simulated quota), network-bound ones against a mocked `fetch`/module. Only the UI (popup, components, worker) and real request behavior rely on the e2e scripts.
 3. ~~Not under version control~~ — git + CI since 2026-09-20 (no remote yet).
 4. ~~`checkForUpdates` failures swallowed~~ — recorded in `lastError` and shown in the panel (2026-09-20).
    `strict` TypeScript is on (2026-09-20); `npm run typecheck`, `format:check` and coverage run in CI.

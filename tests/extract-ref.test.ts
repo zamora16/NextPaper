@@ -24,6 +24,15 @@ describe("extractPaperRef", () => {
     expect(extractPaperRef()).toBe("DOI:10.1186/s40337-024-01004-0")
   })
 
+  // The page controls this text: an absurd "DOI" would become a request URL
+  // and a storage key.
+  it("ignores a DOI that is absurdly long", () => {
+    page(meta("citation_doi", "10.1000/" + "a".repeat(5000)))
+    expect(extractPaperRef()).toBeNull()
+    page(meta("citation_doi", "10.1000/" + "a".repeat(150)))
+    expect(extractPaperRef()).toBe("DOI:10.1000/" + "a".repeat(150))
+  })
+
   it("accepts the other common DOI meta names", () => {
     page(meta("prism.doi", "10.1000/prism"))
     expect(extractPaperRef()).toBe("DOI:10.1000/prism")

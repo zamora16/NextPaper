@@ -22,14 +22,16 @@ npm run dev                # then load build/chrome-mv3-dev via chrome://extensi
 npx tsc --noEmit           # typecheck, `strict` on (Parcel does NOT typecheck; run this every change)
 npm run format             # prettier over lib/components/tests/popup/background (CI runs format:check)
 npx plasmo build           # production build -> build/chrome-mv3-prod
-npm test                   # vitest (344 tests; `npm run test:coverage` enforces floors on lib/, ~98% lines): every module in lib/ —
+npm test                   # vitest (379 tests; `npm run test:coverage` enforces floors on lib/, ~98% lines): every module in lib/ —
                            # keywords, terms, projection, timeline, study (design/sample), rate limiter/retry, API client (mocked fetch), pipeline (assemble/dedupe/picks), extractPaperRef (jsdom)
 ```
 
-Setup: create `.env.local` with `PLASMO_PUBLIC_S2_API_KEY=<free Semantic Scholar key>`
-(https://www.semanticscholar.org/product/api#api-key-form). It is gitignored but the
-value is **bundled into the built extension**, so it is a rate-limit key, not a secret.
-The extension works without it but Semantic Scholar's anonymous limit is unusable.
+API key: the extension ships **without any key**. Each user sets their own free Semantic
+Scholar key on first run (setup screen) or later in Ajustes (⚙); it is stored in
+`chrome.storage.local` (`lib/settings.ts`). Never bundle a key (`process.env`, constants):
+it would be readable by anyone, and Semantic Scholar's terms forbid sharing a key. For the
+real-browser tests put a key in `.env.local` as `S2_API_KEY=...` (gitignored); the test
+launcher stores it in the extension the way the setup screen would.
 
 ### Real-browser tests (required for network/UI changes)
 
@@ -40,6 +42,7 @@ node scripts/e2e-explore.cjs       # analyze -> Explorar -> Volver -> topic sear
 node scripts/e2e-library.cjs       # save, status, notes, .bib/.ris export, alerts, badge
 node scripts/e2e-storage.cjs       # compression, pruning, migration, user data untouched
 node scripts/e2e-import.cjs        # import .bib, collections, backup/restore, hostile file
+node scripts/e2e-setup.cjs         # first-run setup, personal API key, no key in the bundle
 node scripts/trace-network.cjs     # request-by-request timeline of a cold analysis (performance work)
 ```
 
@@ -112,6 +115,12 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
     ambiguous, and any new one must be audited by reading its output on real abstracts — including a
     set it was not tuned on — before it ships. Tests written by the author alone are not enough.
 
+18. **No API key in the bundle, one key per user.** The key is entered by each user (setup screen /
+    Ajustes), stored only in `chrome.storage.local`, and sent only to Semantic Scholar. `npm run
+    build` must produce an extension in which the key does not appear (`scripts/e2e-setup.cjs`
+    checks it). Links from API or imported data become an `href` only through `httpUrl`; refs read
+    from a page are bounded (`extract-ref`, `isPlausibleRef`).
+
 ## Conventions
 
 - Prettier: no semicolons, double quotes, no trailing commas, 80 cols, imports sorted.
@@ -141,7 +150,8 @@ components/          PaperCard, LibraryItem (status, note, collections), Library
                      UpdatesPanel, CitationButtons + useCopyAction (copy/export with progress), Timeline (SVG)
 lib/pipeline.ts      THE core: candidates -> embeddings -> ranking -> clusters -> picks
 lib/semantic-scholar.ts   API client (seed, candidates, batch papers, search, recent)
-lib/s2-fetch.ts, rate-limit.ts, api-key.ts   HTTP discipline (see rule 1-2)
+lib/s2-fetch.ts, rate-limit.ts, api-key.ts   HTTP discipline (see rule 1-2); the key comes from lib/settings.ts (per user)
+lib/settings.ts, url.ts, ref.ts             settings + key check; http(s)-only links; bounded refs
 lib/kmeans.ts, vector-math.ts, keywords.ts   from-scratch ML (k-means++, silhouette, labels)
 lib/terms.ts, timeline.ts                    shared distinctive terms; timeline-by-subtopic data
 lib/study.ts                                 study design + sample size from the abstract (pure, derived at render time, not stored)
@@ -149,7 +159,7 @@ lib/projection.ts                            2-D PCA — tested but UNUSED (see 
 lib/citation.ts, cite.ts, crossref.ts        9 styles + in-text (pure, tested); async Crossref enrichment; Crossref client/cache
 lib/backup.ts, import.ts, export.ts          backup/merge (pure, tested), BibTeX/RIS/DOI import (pure parsers, tested), file download
 lib/library.ts, updates.ts, queue.ts, view.ts, paper-utils.ts, extract-ref.ts
-components/SavedTab.tsx, useAnalysis.ts, useStorageValue.ts, ui.ts   Guardados tab; analysis hook (job + watchdog + cached result); storage hook; class strings
+components/KeySetup.tsx, SavedTab.tsx, useAnalysis.ts, useStorageValue.ts, ui.ts   Guardados tab; analysis hook (job + watchdog + cached result); storage hook; class strings
 lib/cache.ts, compress.ts, job.ts            compressed result cache, pruning, JobState (no result inside)
 scripts/             real-browser e2e tests (see above); scripts/perf/ = API performance experiments
 ```

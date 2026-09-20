@@ -8,6 +8,8 @@ const root = (path: string) => fileURLToPath(new URL(path, import.meta.url))
 // fetch: see tests/helpers/chrome.ts). The UI (popup, components, background
 // worker) and real request behavior are covered by the real-browser scripts.
 export default defineConfig({
+  // Same JSX transform as the Plasmo build (no `import React` in components).
+  esbuild: { jsx: "automatic" },
   resolve: {
     alias: {
       "~lib": root("./lib"),

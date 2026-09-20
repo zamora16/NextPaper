@@ -7,6 +7,7 @@ import type { ReadStatus } from "~lib/library"
 import { isReview } from "~lib/paper-utils"
 import type { ScoredPaper } from "~lib/pipeline"
 import { designLabel, formatSample, studyOf } from "~lib/study"
+import { httpUrl } from "~lib/url"
 
 function Tag({
   children,
@@ -49,6 +50,7 @@ export function PaperCard({
   const extraCount = paper.authors.length - visibleAuthors.length
   const influential = paper.influentialCitationCount ?? 0
   const study = studyOf(paper)
+  const pdfUrl = httpUrl(paper.openAccessPdf?.url)
 
   const cite = useCopyAction(() => citeOne(paper, citationStyle))
   const inText = useCopyAction(
@@ -65,7 +67,7 @@ export function PaperCard({
       }`}>
       <div className="flex items-start justify-between gap-2">
         <a
-          href={paper.url}
+          href={httpUrl(paper.url)}
           target="_blank"
           rel="noreferrer"
           className="line-clamp-2 text-sm font-medium text-slate-900 hover:underline">
@@ -184,9 +186,9 @@ export function PaperCard({
             Explorar
           </button>
         )}
-        {paper.openAccessPdf?.url && (
+        {pdfUrl && (
           <a
-            href={paper.openAccessPdf.url}
+            href={pdfUrl}
             target="_blank"
             rel="noreferrer"
             className="rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100">

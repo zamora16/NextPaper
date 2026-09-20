@@ -1,4 +1,4 @@
-import { RateLimitedError, s2Fetch } from "~lib/s2-fetch"
+import { ApiKeyRejectedError, RateLimitedError, s2Fetch } from "~lib/s2-fetch"
 
 export interface Author {
   authorId: string
@@ -108,6 +108,7 @@ export async function getSeed(ref: string): Promise<Seed> {
     `${BASE}/graph/v1/paper/${paperPath(ref)}?fields=title,abstract,year,fieldsOfStudy,${EMBEDDING},references.paperId,citations.paperId,citations.citationCount,citations.year`
   )
 
+  if (response.status === 403) throw new ApiKeyRejectedError()
   if (response.status === 404) throw new PaperNotFoundError()
   if (response.status === 429) throw new RateLimitedError()
   if (!response.ok) throw new Error("No se pudo conectar con Semantic Scholar.")

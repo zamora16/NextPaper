@@ -96,6 +96,7 @@ export function installChrome(): FakeChrome {
       }
     },
     runtime: {
+      getManifest: () => ({ version: "9.9.9" }),
       sendMessage: (message: unknown) => {
         state.messages.push(message)
         return Promise.resolve({ started: true })

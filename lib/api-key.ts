@@ -1,10 +1,8 @@
-// Optional: set PLASMO_PUBLIC_S2_API_KEY in a .env.local file to raise the
-// Semantic Scholar rate limit above the shared anonymous pool. Get a free
-// key at https://www.semanticscholar.org/product/api#api-key-form
-// Note this ends up in the built extension bundle, visible to anyone who
-// inspects it — acceptable for a free, rate-limit-only key, not a secret.
-const API_KEY = process.env.PLASMO_PUBLIC_S2_API_KEY
+import { getSettings } from "~lib/settings"
 
-export function authHeaders(): HeadersInit | undefined {
-  return API_KEY ? { "x-api-key": API_KEY } : undefined
+// The header for Semantic Scholar requests: the user's own key when they set
+// one (see settings.ts), otherwise none (the slower anonymous pool).
+export async function authHeaders(): Promise<HeadersInit | undefined> {
+  const { s2ApiKey } = await getSettings()
+  return s2ApiKey ? { "x-api-key": s2ApiKey } : undefined
 }

@@ -54,6 +54,9 @@ const tmp = (name, content) => {
     await input.uploadFile(file)
   }
 
+  // The popup reads its settings before drawing anything.
+  await page.waitForFunction(() => document.body.innerText.includes("★ Guardados"), { timeout: 15000 })
+
   // 1. New user: empty library still offers import
   await clickButton(page, "Guardados", false)
   await sleep(500)
@@ -98,6 +101,7 @@ const tmp = (name, content) => {
 
   await page.evaluate(() => chrome.storage.local.remove("nextpaper_library"))
   await page.reload()
+  await page.waitForFunction(() => document.body.innerText.includes("★ Guardados"), { timeout: 15000 })
   await clickButton(page, "Guardados", false)
   await sleep(500)
   check("library is empty after the wipe", (await library()).length === 0)

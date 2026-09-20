@@ -1,4 +1,5 @@
 import type { ReadStatus, SavedPaper } from "~lib/library"
+import { httpUrl } from "~lib/url"
 
 // Pure logic for library backups (no chrome.* here, so it is unit-tested).
 export const BACKUP_VERSION = 1
@@ -30,8 +31,7 @@ const MAX_AUTHORS = 200
 
 // A backup file is untrusted input: only http(s) links survive, so a crafted
 // file cannot plant a javascript: URL behind a card's link.
-const safeUrl = (value: unknown): string | undefined =>
-  typeof value === "string" && /^https?:\/\//i.test(value) ? value : undefined
+const safeUrl = httpUrl
 
 // The interface renders these fields as they are, and React throws when asked
 // to render an object, so every field is rebuilt with its expected type

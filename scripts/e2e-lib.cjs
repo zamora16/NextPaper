@@ -33,7 +33,23 @@ function check(name, ok, detail = "") {
   if (!ok) failures++
 }
 
-async function launch() {
+// The extension ships WITHOUT any API key: each user sets their own on first
+// run. For the tests, a key is read from S2_API_KEY (or the old
+// PLASMO_PUBLIC_S2_API_KEY) in the environment or in .env.local, and stored in
+// the extension the way the setup screen would.
+function testApiKey() {
+  const fromEnv = process.env.S2_API_KEY || process.env.PLASMO_PUBLIC_S2_API_KEY
+  if (fromEnv) return fromEnv.trim()
+  try {
+    const text = fs.readFileSync(path.resolve(__dirname, "../.env.local"), "utf8")
+    const match = text.match(/^(?:S2_API_KEY|PLASMO_PUBLIC_S2_API_KEY)\s*=\s*(.+)$/m)
+    return match ? match[1].trim().replace(/^["']|["']$/g, "") : null
+  } catch {
+    return null
+  }
+}
+
+async function launch({ seedSettings = true } = {}) {
   if (!fs.existsSync(path.join(EXT, "manifest.json"))) {
     console.error("Build not found. Run: npx plasmo build")
     process.exit(1)
@@ -55,6 +71,17 @@ async function launch() {
     timeout: 20000
   })
   const extId = new URL(worker.url()).host
+
+  if (seedSettings) {
+    const key = testApiKey()
+    const page = await browser.newPage()
+    await page.goto(`chrome-extension://${extId}/popup.html`)
+    await page.evaluate(
+      (settings) => chrome.storage.local.set({ nextpaper_settings: settings }),
+      { setupDone: true, s2ApiKey: key }
+    )
+    await page.close()
+  }
   return { browser, extId }
 }
 
@@ -106,4 +133,4 @@ function finish(errors) {
   process.exit(failures ? 1 : 0)
 }
 
-module.exports = { launch, openPopup, waitDone, titles, clickButton, check, sleep, finish }
+module.exports = { launch, testApiKey, openPopup, waitDone, titles, clickButton, check, sleep, finish }

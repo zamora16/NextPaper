@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react"
 import "~style.css"
 
 import { CopyCitationsButton } from "~components/CitationButtons"
+import { KeySetup } from "~components/KeySetup"
 import { PaperCard } from "~components/PaperCard"
 import { SavedTab } from "~components/SavedTab"
 import { Timeline } from "~components/Timeline"
@@ -18,6 +19,7 @@ import {
   type SavedPaper
 } from "~lib/library"
 import type { PickKind, ScoredPaper } from "~lib/pipeline"
+import { getSettings, SETTINGS_KEY, type Settings } from "~lib/settings"
 import { buildTimeline } from "~lib/timeline"
 import {
   getUpdates,
@@ -64,7 +66,7 @@ async function getActiveTabPaperRef(): Promise<string | null> {
 function IndexPopup() {
   const [ref, setRef] = useState<string | null | undefined>(undefined)
   const [citationStyle, setCitationStyle] = useState<CitationStyle>("apa")
-  const [tab, setTab] = useState<"related" | "saved">("related")
+  const [tab, setTab] = useState<"related" | "saved" | "settings">("related")
   const [filter, setFilter] = useState<Filter>("all")
   const [sort, setSort] = useState<Sort>("relevance")
   const [design, setDesign] = useState<DesignFilter>("all")
@@ -82,7 +84,15 @@ function IndexPopup() {
   const [queryInput, setQueryInput] = useState("")
   const current = trail.length ? trail[trail.length - 1] : null
   const activeRef = current ? current.ref : ref
-  const { job, result, retry } = useAnalysis(activeRef)
+  const settings = useStorageValue<Settings | null>(
+    SETTINGS_KEY,
+    getSettings,
+    null
+  )
+  // No analysis (and no request) before the first-run setup is answered.
+  const { job, result, retry } = useAnalysis(
+    settings?.setupDone ? activeRef : null
+  )
   const [newIds, setNewIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
@@ -205,11 +215,30 @@ function IndexPopup() {
     </label>
   )
 
+  // Nothing to show until the stored settings are read; on first run the
+  // setup screen comes before anything else (no analysis starts behind it).
+  if (settings === null) return <div className="w-[26rem] p-4" />
+  if (!settings.setupDone) {
+    return (
+      <div className="flex w-[26rem] flex-col gap-3 p-4 font-sans">
+        <h1 className="text-lg font-semibold text-slate-900">NextPaper</h1>
+        <KeySetup settings={settings} firstRun />
+      </div>
+    )
+  }
+
   return (
     <div className="flex w-[26rem] flex-col gap-3 p-4 font-sans">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-slate-900">NextPaper</h1>
         <div className="flex gap-1">
+          <button
+            onClick={() => setTab(tab === "settings" ? "related" : "settings")}
+            title="Ajustes: clave de Semantic Scholar y acerca de"
+            aria-label="Ajustes"
+            className={pillClass(tab === "settings")}>
+            ⚙
+          </button>
           <button
             onClick={() => setTab("related")}
             className={pillClass(tab === "related")}>
@@ -229,6 +258,14 @@ function IndexPopup() {
           </button>
         </div>
       </div>
+
+      {tab === "settings" && (
+        <KeySetup
+          settings={settings}
+          firstRun={false}
+          onClose={() => setTab("related")}
+        />
+      )}
 
       {tab === "saved" && (
         <SavedTab
@@ -302,6 +339,17 @@ function IndexPopup() {
           {job.phase === "error" && (
             <div className="flex flex-col items-start gap-2">
               <p className="text-sm text-red-600">{job.message}</p>
+              {!settings.s2ApiKey && (
+                <p className="text-xs text-slate-500">
+                  Sin clave propia, Semantic Scholar limita más las peticiones.{" "}
+                  <button
+                    onClick={() => setTab("settings")}
+                    className="font-medium text-violet-600 hover:underline">
+                    Añade la tuya en Ajustes
+                  </button>
+                  .
+                </p>
+              )}
               <button
                 onClick={retry}
                 className="rounded border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-100">

@@ -21,7 +21,10 @@ export function extractPaperRef(): string | null {
 
   const cleanDoi = (raw: string): string | null => {
     const match = raw.match(doiPattern)
-    return match ? match[0].replace(/[.,;)]+$/, "") : null
+    const doi = match ? match[0].replace(/[.,;)]+$/, "") : null
+    // The page controls this text: real DOIs are far shorter than 200
+    // characters, and an absurd one would become a URL and a storage key.
+    return doi && doi.length <= 200 ? doi : null
   }
 
   const doi = cleanDoi(
