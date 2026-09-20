@@ -127,7 +127,7 @@ describe("analyzing a paper", () => {
     realisticSet()
     const result = await analyze("DOI:10.1/x")
     expect(JSON.stringify(result)).not.toContain("embedding")
-    const cached = chrome.data.get("nextpaper_cache_v9_DOI:10.1/x") as {
+    const cached = chrome.data.get("nextpaper_cache_v10_DOI:10.1/x") as {
       z: string
     }
     expect(cached.z.length).toBeLessThan(3000)
@@ -245,25 +245,6 @@ describe("analyzing a paper", () => {
     const { picks } = await analyze("R")
     expect(picks.map((p) => p.kind)).toContain("foundational")
     expect(picks.find((p) => p.kind === "review")).toBeUndefined()
-  })
-
-  it("explains what each result shares with the paper, when there is something distinctive", async () => {
-    const list = realisticSet()
-    seedRequest.mockResolvedValue(
-      seed({
-        title: "Avatar embodiment",
-        abstract:
-          "Avatar embodiment changes body ownership. Avatar embodiment is studied here."
-      }) as any
-    )
-    batch.mockResolvedValue(list as any)
-    const papers = (await analyze("R")).groups.flatMap((g) => g.papers)
-    const shared = papers.find((p) => p.paperId === "a3")!.sharedTerms ?? []
-    expect(shared.join(" ")).toMatch(/avatar|embodiment/i)
-    // a paper with nothing in common gets no invented explanation
-    expect(papers.find((p) => p.paperId === "b1")!.sharedTerms ?? []).toEqual(
-      []
-    )
   })
 
   describe("when the open paper has no embedding (no abstract indexed)", () => {
@@ -392,9 +373,8 @@ describe("analyzing a topic", () => {
     expect(result.groups.length).toBeGreaterThanOrEqual(2)
     const papers = result.groups.flatMap((g) => g.papers)
     expect(papers).toHaveLength(8)
-    // every result contains the query words: no "% similar", no "Coincide en"
+    // every result contains the query words: no "% similar"
     expect(papers.every((p) => p.similarity === null)).toBe(true)
-    expect(papers.every((p) => p.sharedTerms === undefined)).toBe(true)
     expect(papers.every((p) => p.relation === null)).toBe(true)
     expect(result.seedYear).toBeUndefined()
   })

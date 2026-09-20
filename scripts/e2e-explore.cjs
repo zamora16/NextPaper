@@ -28,12 +28,6 @@ const SEED_TITLE = new RegExp(
   check("seed paper itself not in results", !list.some((t) => SEED_TITLE.test(t)))
   const firstTitle = list[0]
 
-  // "Coincide en": each card says what it shares with the open paper
-  const sharedLines = await page.evaluate(() =>
-    [...document.querySelectorAll("p")].filter((p) => p.textContent.startsWith("Coincide en:")).length
-  )
-  check("cards explain what they share with the paper", sharedLines >= 3, sharedLines + " cards")
-
   // Study-card chips and the design filter
   const chips = await page.evaluate(
     () => [...document.querySelectorAll("span[title^='Diseño detectado']")].length

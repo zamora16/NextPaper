@@ -14,22 +14,24 @@ import type { ScoredPaper } from "~lib/pipeline"
 
 import { installChrome, type FakeChrome } from "./helpers/chrome"
 
-// A result card as the analysis produced it: similarity, relation and shared
-// terms describe the relationship to the paper that was open at the time.
-const card = (id: string, over: Partial<ScoredPaper> = {}): ScoredPaper => ({
-  paperId: id,
-  title: `Paper ${id}`,
-  authors: [{ authorId: "1", name: "Ada Lovelace" }],
-  year: 2020,
-  citationCount: 5,
-  venue: "J Test",
-  url: `https://example.org/${id}`,
-  similarity: 0.91,
-  approximate: false,
-  relation: "reference",
-  sharedTerms: ["body", "image"],
-  ...over
-})
+// A result card as the analysis produced it: similarity and relation describe
+// the relationship to the paper that was open at the time. `sharedTerms` no
+// longer exists, but items saved by older versions still carry it.
+const card = (id: string, over: Partial<ScoredPaper> = {}): ScoredPaper =>
+  ({
+    paperId: id,
+    title: `Paper ${id}`,
+    authors: [{ authorId: "1", name: "Ada Lovelace" }],
+    year: 2020,
+    citationCount: 5,
+    venue: "J Test",
+    url: `https://example.org/${id}`,
+    similarity: 0.91,
+    approximate: false,
+    relation: "reference",
+    sharedTerms: ["body", "image"],
+    ...over
+  }) as unknown as ScoredPaper
 
 let chrome: FakeChrome
 beforeEach(() => {

@@ -8,7 +8,7 @@ The interface is in Spanish.
 
 - **Related papers** for the article you have open (from its references, its citing papers, title search and Semantic Scholar's recommendations), ranked by SPECTER2 embedding similarity and clustered into subtopics (k-means written from scratch, `k` chosen by silhouette score).
 - **Where to start**: a classic, the most relevant review and the most recent work.
-- **Triage**: one-sentence summary, abstract, citation counts, *why it appears* (the distinctive words it shares with your paper), study design and sample size read from the abstract, a timeline of the subtopics, and free-PDF links.
+- **Triage**: one-sentence summary, abstract, citation counts, study design and sample size read from the abstract, a timeline of the subtopics, and free-PDF links.
 - **Snowballing**: *Explorar* runs the same analysis on any result; the search box analyzes a free-text topic.
 - **Library**: save papers with a reading status, notes and collections; back up and restore; import from BibTeX, RIS or a list of DOIs.
 - **Citations** in APA 7, MLA 9, Chicago, Harvard, IEEE, Vancouver, AMA, BibTeX and RIS (plus in-text), enriched with Crossref; export `.bib` / `.ris` for Zotero or Mendeley.

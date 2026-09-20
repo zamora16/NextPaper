@@ -30,20 +30,21 @@ const FILL = 45 // valid entries seeded; the cap is 40
         nextpaper_cache_v6_OLD: { z: big, cachedAt: Date.now() },
         nextpaper_cache_v7_OLD: { z: big, cachedAt: Date.now() },
         nextpaper_cache_v8_OLD: { z: big, cachedAt: Date.now() },
+        nextpaper_cache_v9_OLD: { z: big, cachedAt: Date.now() },
         nextpaper_emb_v1_PAPER: { v: [0.1, 0.2] },
         nextpaper_rec_v1_REF: { papers: [], cachedAt: Date.now() },
         // job saved by the old code: result embedded, no cache entry
         ["nextpaper_job_" + ref]: { phase: "done", result: { groups: [], picks: [] } },
         nextpaper_job_ORPHAN: { phase: "done" },
         // expired current-version entry
-        nextpaper_cache_v9_EXPIRED: { z: "x", cachedAt: 0 },
+        nextpaper_cache_v10_EXPIRED: { z: "x", cachedAt: 0 },
         // user data that must survive untouched
         nextpaper_library: { P1: { paperId: "P1", title: "Kept paper", savedAt: 1, status: "read", note: "keep me" } },
         nextpaper_updates: { running: false, checkedAt: 5, seen: ["a"], items: [] }
       }
       // more valid entries than the cap allows, newest first
       for (let i = 0; i < fill; i++) {
-        items["nextpaper_cache_v9_FILL" + i] = { z: "x", cachedAt: Date.now() - (i + 1) * 1000 }
+        items["nextpaper_cache_v10_FILL" + i] = { z: "x", cachedAt: Date.now() - (i + 1) * 1000 }
         items["nextpaper_job_FILL" + i] = { phase: "done" }
       }
       await chrome.storage.local.set(items)
@@ -62,12 +63,12 @@ const FILL = 45 // valid entries seeded; the cap is 40
   const keys = await page.evaluate(async () => Object.keys(await chrome.storage.local.get()))
   const has = (re) => keys.filter((k) => re.test(k))
 
-  check("legacy keys removed", has(/^nextpaper_(cache_v[1-8]|emb_v1|rec_v1)_/).length === 0)
-  check("expired cache entry removed", !keys.includes("nextpaper_cache_v9_EXPIRED"))
-  const cacheKeys = has(/^nextpaper_cache_v9_/)
+  check("legacy keys removed", has(/^nextpaper_(cache_v[1-9]|emb_v1|rec_v1)_/).length === 0)
+  check("expired cache entry removed", !keys.includes("nextpaper_cache_v10_EXPIRED"))
+  const cacheKeys = has(/^nextpaper_cache_v10_/)
   check("cache capped at 40 entries", cacheKeys.length <= 40, `${cacheKeys.length} entries`)
   check("fresh analysis kept in cache", cacheKeys.some((k) => k.endsWith(REF)))
-  check("oldest excess entries evicted", !keys.includes("nextpaper_cache_v9_FILL44"))
+  check("oldest excess entries evicted", !keys.includes("nextpaper_cache_v10_FILL44"))
   check("orphan job removed", !keys.includes("nextpaper_job_ORPHAN"))
   check("job of evicted entry removed", !keys.includes("nextpaper_job_FILL44"))
 

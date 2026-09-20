@@ -70,13 +70,7 @@ State as of 2026-09-19. Verified against the code and by real-browser e2e runs
 11. **Timeline data**: `AnalysisResult.seedYear` (the open paper's year) is stored; the chart itself is
     derived in the popup by `buildTimeline(groups, seedYear)` (`lib/timeline.ts`) from data every
     `ScoredPaper` already has (year, citations, group) — nothing extra is stored per paper.
-12. **Shared terms** (paper mode only, `attachSharedTerms` → `lib/terms.ts`): the ≤3 distinctive
-    words each result shares with the open paper, stored as `ScoredPaper.sharedTerms`. Only terms
-    the open paper *emphasizes* are eligible (its title words + words repeated in its abstract);
-    words present in >60% of the candidates are dropped as generic (only when there are ≥8
-    candidates); a long list of function/academic-filler words is excluded. Not used in topic
-    mode: every result contains the query words, so there is nothing informative to say.
-    Result cached as `AnalysisResult {groups, picks, map?}`.
+12. Result cached as `AnalysisResult {groups, picks, seedYear}` (the old "shared terms" per card were removed on 2026-09-21: they did not help users decide).
 
 ### Topic mode (`analyzeQuery`)
 
@@ -116,9 +110,7 @@ the message and a *Reintentar* button; nothing is cached.
 | `lib/kmeans.ts` | `kMeans` (k-means++ init, seeded mulberry32(42), Lloyd ≤25 iters, L2-normalized vectors ⇒ Euclidean ≈ cosine), `mergeSmallClusters`, `silhouetteScore`, `clusterAuto`. |
 | `lib/vector-math.ts` | dot, norm, cosine, normalize, euclidean, mean. |
 | `lib/keywords.ts` | `labelClusters` (EN/ES stopwords, words >3 chars). |
-| `lib/projection.ts` | `project2D(vectors)`: PCA to 2-D via the Gram matrix. **Currently unused** by the product (the scatter map built on it was removed, see decision log); kept with its tests as a building block for a future full-window view (ROADMAP F3.4). |
 | `lib/timeline.ts` | `buildTimeline(groups, seedYear?)`: per-subtopic lanes with year span/median, axis domain widened to include the open paper, round ticks, count of undated papers; `null` with fewer than 4 dated papers. |
-| `lib/terms.ts` | `sharedTerms(reference, docs, maxTerms, referenceTitle?)`: IDF-weighted distinctive terms shared with the reference; naive singularization; generic-word list. |
 | `lib/study.ts` | **Pure** study-card heuristics: `extractStudy` → `{design, sample}`; `studyOf` memoizes per paper object (WeakMap); **derived at render time, not stored** (no cache bump, works on old saved papers). **Precision over coverage.** Design: `DESIGNS` is ordered (first match wins: protocol → meta → systematic → rct → trial → psychometric → experimental → review → case-control → cohort → mixed → cross-sectional → qualitative → case); a pattern matches the **title** or an abstract sentence that talks about the study itself (`SELF` cues) and is not about earlier work (`BACKGROUND`); `titlePattern` is title-only; text beats `publicationTypes`; conflicting pairs (cohort vs cross-sectional, qualitative vs survey words) give no design; Unicode hyphens are normalized. Sample: a figure is reported only if it is the single figure, or the one introduced as the whole sample (`TOTAL_CUE`) with no other figure above half of it; group sizes (`n =`, "in each group", joined figures), invited pools, shares ("(80%)"), repeated measurements, spelled-out counts and "aged 18 and 65" ranges make it return nothing; reviews use only the studies *included* and give nothing when two counts conflict. Regressions in `tests/study.test.ts`, all from real abstracts. |
 | `lib/citation.ts` | **Pure** formatter (`formatCitation(paper, style, meta?)`, `inTextCitation`): APA 7, MLA 9, Chicago author-date, Harvard (Cite Them Right), IEEE, Vancouver, AMA, BibTeX, RIS. `toRef` normalizes Semantic Scholar + optional Crossref data (Crossref wins); without Crossref, author names are parsed heuristically (last word = family). `citationKey` = author+year+first title word. Unit-tested (`tests/citation.test.ts`). |
 | `lib/crossref.ts` | Crossref client: `getCrossref(doi)` → structured authors, issue, article number, month, ISO/NLM journal abbreviation. Own 300 ms queue; cache `nextpaper_crossref_v1_<doi>` (30 d hit / 7 d miss, ≤500 entries). Optional `PLASMO_PUBLIC_CROSSREF_MAILTO` for the polite pool (never set by default). |
@@ -132,7 +124,7 @@ the message and a *Reintentar* button; nothing is cached.
 | `lib/view.ts` | Filters (`reference`, `citation`, `review`, `open`), an independent design filter (`DesignFilter`, `designOptions` = designs present with counts) and sorts (`relevance` keeps groups; `citations`/`year` flatten). |
 | `lib/paper-utils.ts` | `isReview`: title patterns or a review design declared in the text (`studyOf`); Semantic Scholar's `Review` type is **not trusted** (it tagged 109 of 430 papers whose text declares a trial, cohort or survey; `MetaAnalysis` is consistent and kept through `study.ts`). `plainPaper`: a paper with no analysis context and no embedding. |
 | `lib/extract-ref.ts` | Self-contained page extractor (see Rules in `CONTRIBUTING.md`). |
-| `lib/cache.ts` | Compressed result cache (`v9`, 7-day TTL), `pruneStorage` (expiry, 40-entry cap, legacy keys, orphan jobs; runs after each analysis and at worker start) and a clear-and-retry on write failure. |
+| `lib/cache.ts` | Compressed result cache (`v10`, 7-day TTL), `pruneStorage` (expiry, 40-entry cap, legacy keys, orphan jobs; runs after each analysis and at worker start) and a clear-and-retry on write failure. |
 | `lib/compress.ts` | `compressJson` / `decompressJson`: native gzip (`CompressionStream`) + base64. |
 | `lib/job.ts` | `JobState` (`loading` \| `done` \| `error`; **no result inside**), `JOB_PREFIX`, `jobKey`. |
 
@@ -141,7 +133,7 @@ the message and a *Reintentar* button; nothing is cached.
 | Key | Value | Lifetime / bound |
 |---|---|---|
 | `nextpaper_job_<ref>` | `JobState`: `{phase:"loading",step?}` \| `{phase:"done"}` \| `{phase:"error",message}` (a few bytes) | Pruned when its cache entry disappears |
-| `nextpaper_cache_v9_<ref>` | `{z, cachedAt}` where `z` = base64(gzip(JSON of `AnalysisResult`)) | 7-day TTL **and** newest 40 entries only; removed by `pruneStorage` |
+| `nextpaper_cache_v10_<ref>` | `{z, cachedAt}` where `z` = base64(gzip(JSON of `AnalysisResult`)) | 7-day TTL **and** newest 40 entries only; removed by `pruneStorage` |
 | `nextpaper_library` | `Record<paperId, SavedPaper>` (`ScoredPaper` + `savedAt`, `status`, `note`, `collections`) | permanent, never pruned |
 | `nextpaper_crossref_v1_<doi>` | `{m: CrossrefMeta \| null, at}` (`null` = Crossref has no record, e.g. arXiv DOIs) | 30 d hit / 7 d miss, newest 500 kept (`pruneStorage`) |
 | `nextpaper_updates` | `{running, checkedAt, lastError, seen[≤600], items[≤40]}` | permanent, bounded |
@@ -151,7 +143,7 @@ deleted on sight (`LEGACY_KEYS`), as are job states written in the old shape (wi
 embedded `result`). If the popup finds a `done` job with no cached result it re-analyzes
 once (self-healing).
 
-Measured 2026-09-19 (`node scripts/e2e-storage.cjs`): one analysis ≈ **14.8 KB** (with shared terms) (was ≈112 KB
+Measured 2026-09-19 (`node scripts/e2e-storage.cjs`): one analysis ≈ **14.8 KB** (was ≈112 KB
 before compression and de-duplication) ⇒ with the 40-entry cap the cache stays under
 ~0.6 MB. The `unlimitedStorage` permission removes the hard 10 MB quota as a safety net for
 a very large library (no install warning). If a write still fails, all cache entries are
@@ -198,7 +190,6 @@ deleted.
 | One batched embeddings request | Per-paper GETs cost 13+ requests and tripped the rate limit constantly. |
 | From-scratch k-means + silhouette | n ≤ 24 vectors; explainable, dependency-free, and the ML the user wants to show in a portfolio. |
 | Timeline by subtopic instead of a semantic scatter map | The PCA scatter (built first) was **removed after review as low-value**: dots are unlabeled, the axes mean nothing readable, and the only thing it showed (which papers share a topic) the groups already say. A per-subtopic timeline answers real questions from data we already have: which lines of work are classic vs recent, where the heavily cited papers sit, how the open paper sits in time relative to each line. A semantic map could earn its place only in a large, labelled, zoomable view (workspace page, ROADMAP F3.4) — `lib/projection.ts` is kept for that. |
-| Shared terms limited to what the open paper emphasizes | First version reported any shared word and produced noise ("promote · capable"): in a homogeneous result set the topic words are dropped as generic and only filler remained. |
 | Embeddings not stored | 768 floats × N would blow the storage quota. |
 | Result stored once, gzip-compressed, in a bounded cache | It used to be stored twice (job + cache) uncompressed: ≈112 KB per analysis ⇒ the 10 MB quota would fill after ~93 analyses and then even library saves would fail. Now ≈14.6 KB, capped at 40 entries, plus `unlimitedStorage` as a safety net. |
 | Tailwind 3 | Plasmo's Parcel can't resolve Tailwind 4's `node:module`. |
@@ -224,5 +215,5 @@ deleted.
 8. Only Edge was automated; PubMed/PMC/MDPI extraction and the real toolbar click
    (`activeTab`) are untested by automation.
 9. UI is Spanish-only; abstracts/tl;dr are English.
-10. The timeline needs a publication year: papers without one are left out (their count is shown), and it is hidden with fewer than 4 dated papers. Shared terms are word-level (no phrases, naive singularization) and can still be weak for very short abstracts.
+10. The timeline needs a publication year: papers without one are left out (their count is shown), and it is hidden with fewer than 4 dated papers.
 11. The daily alarm was verified only through the on-demand "Buscar ahora" path.

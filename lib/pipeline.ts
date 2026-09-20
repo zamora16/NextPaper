@@ -13,7 +13,6 @@ import {
   type PaperWithEmbedding,
   type RecommendedPaper
 } from "~lib/semantic-scholar"
-import { sharedTerms } from "~lib/terms"
 import { cosineSimilarity, meanVector } from "~lib/vector-math"
 
 export type Relation = "reference" | "citation" | null
@@ -24,8 +23,6 @@ export interface ScoredPaper extends RecommendedPaper {
   // against the centroid of its likely-relevant neighbors instead.
   approximate: boolean
   relation: Relation
-  // Distinctive words this paper shares with the open paper (or the search).
-  sharedTerms?: string[]
 }
 
 export interface PaperGroup {
@@ -249,34 +246,6 @@ export function assemble(
   return { groups, picks: choosePicks(shortlist, toScored) }
 }
 
-// Adds the distinctive words each result shares with the open paper. The whole
-// candidate set is the corpus, so words common to most candidates (the topic
-// itself) are not reported — only what sets a paper apart. Not used for topic
-// searches: every result contains the query words, so there is nothing to say.
-function attachSharedTerms(
-  result: AnalysisResult,
-  reference: { title: string; abstract: string | null },
-  candidates: { paper: PaperWithEmbedding }[]
-) {
-  const terms = sharedTerms(
-    `${reference.title} ${reference.abstract ?? ""}`,
-    candidates.map(({ paper }) => ({
-      id: paper.paperId,
-      text: [paper.title, paper.tldr?.text, paper.abstract]
-        .filter(Boolean)
-        .join(" ")
-    })),
-    3,
-    reference.title
-  )
-  const apply = (paper: ScoredPaper) => {
-    const found = terms.get(paper.paperId)
-    if (found) paper.sharedTerms = found
-  }
-  result.groups.forEach((g) => g.papers.forEach(apply))
-  result.picks.forEach((pick) => apply(pick.paper))
-}
-
 // Candidates come from the paper's references, citations, title search and
 // Semantic Scholar's own recommendations; every candidate's SPECTER2 embedding
 // is fetched in one batch, ranked by cosine similarity to the seed and
@@ -334,7 +303,6 @@ async function analyzePaper(
       maxClusters: 4,
       showScore: true
     })
-    attachSharedTerms(result, seed, embedded)
   }
   result.seedYear = seed.year
 

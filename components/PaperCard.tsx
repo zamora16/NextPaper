@@ -95,17 +95,6 @@ export function PaperCard({
         </p>
       )}
 
-      {paper.sharedTerms && paper.sharedTerms.length > 0 && (
-        <p
-          className="mt-1 text-[11px] text-slate-500"
-          title="Palabras distintivas que este paper comparte con el que lees">
-          Coincide en:{" "}
-          <span className="font-medium text-slate-600">
-            {paper.sharedTerms.join(" · ")}
-          </span>
-        </p>
-      )}
-
       {paper.abstract && (
         <>
           <button

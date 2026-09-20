@@ -23,7 +23,7 @@ npx tsc --noEmit           # typecheck, `strict` on (Parcel does NOT typecheck; 
 npm run format             # prettier over lib/components/tests/popup/background (CI runs format:check)
 npx plasmo build           # production build -> build/chrome-mv3-prod
 npm test                   # vitest (379 tests; `npm run test:coverage` enforces floors on lib/, ~98% lines): every module in lib/ —
-                           # keywords, terms, projection, timeline, study (design/sample), rate limiter/retry, API client (mocked fetch), pipeline (assemble/dedupe/picks), extractPaperRef (jsdom)
+                           # keywords, timeline, study (design/sample), rate limiter/retry, API client (mocked fetch), pipeline (assemble/dedupe/picks), extractPaperRef (jsdom)
 ```
 
 API key: the extension ships **without any key**. Each user sets their own free Semantic
@@ -74,7 +74,7 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
    outside the function body.
 6. **Never store embeddings** (768 floats each). `strip()` in `lib/pipeline.ts` drops
    them; cached results and library items must stay small.
-7. **Bump the cache prefix** (`KEY_PREFIX` in `lib/cache.ts`, currently `v9`) whenever the
+7. **Bump the cache prefix** (`KEY_PREFIX` in `lib/cache.ts`, currently `v10`) whenever the
    `AnalysisResult` shape or the retrieval/ranking strategy changes, or users get stale
    results from the old strategy. Also add the old prefix to `LEGACY_KEYS` so it gets
    cleaned up. Library items (`nextpaper_library`) persist forever: schema changes there
@@ -111,7 +111,7 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
     not) in code, UI, README or manifest text.
 17. **Precision over coverage for anything inferred.** If we are not sure a piece of information is
     true, do not show it: a missing chip is better than a wrong one (the maintainer's explicit priority).
-    Heuristics (`lib/study.ts`, shared terms, cluster labels) must return nothing when the text is
+    Heuristics (`lib/study.ts`, cluster labels) must return nothing when the text is
     ambiguous, and any new one must be audited by reading its output on real abstracts — including a
     set it was not tuned on — before it ships. Tests written by the author alone are not enough.
 18. **No API key in the bundle, one key per user.** The key is entered by each user (setup screen /
@@ -152,9 +152,8 @@ lib/semantic-scholar.ts   API client (seed, candidates, batch papers, search, re
 lib/s2-fetch.ts, rate-limit.ts, api-key.ts   HTTP discipline (see rule 1-2); the key comes from lib/settings.ts (per user)
 lib/settings.ts, url.ts, ref.ts             settings + key check; http(s)-only links; bounded refs
 lib/kmeans.ts, vector-math.ts, keywords.ts   from-scratch ML (k-means++, silhouette, labels)
-lib/terms.ts, timeline.ts                    shared distinctive terms; timeline-by-subtopic data
+lib/timeline.ts                              timeline-by-subtopic data
 lib/study.ts                                 study design + sample size from the abstract (pure, derived at render time, not stored)
-lib/projection.ts                            2-D PCA — tested but UNUSED (see docs/ARCHITECTURE.md decision log)
 lib/citation.ts, cite.ts, crossref.ts        9 styles + in-text (pure, tested); async Crossref enrichment; Crossref client/cache
 lib/backup.ts, import.ts, export.ts          backup/merge (pure, tested), BibTeX/RIS/DOI import (pure parsers, tested), file download
 lib/library.ts, updates.ts, queue.ts, view.ts, paper-utils.ts, extract-ref.ts
