@@ -3,9 +3,9 @@
 Chrome extension (Plasmo + React 18 + TypeScript + Tailwind 3) that helps
 researchers find, triage, organize and cite related literature while they read.
 **Everything runs locally in the extension: no server, no LLM, no per-use cost.**
-Data comes from the Semantic Scholar API (free). The user (Angel) also treats
-this as a data-science portfolio piece, so real, explainable ML (embeddings,
-cosine ranking, from-scratch k-means, silhouette) is a feature, not overhead.
+Data comes from the Semantic Scholar API (free). It is also a data-science portfolio
+piece, so real, explainable ML (embeddings, cosine ranking, from-scratch k-means,
+silhouette) is a feature, not overhead.
 
 Read these before changing anything non-trivial:
 
@@ -107,14 +107,13 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
     citations may need network calls first, and browsers reject clipboard writes when too
     much time passed since the click; the hook falls back to a "Pulsa para copiar" step.
     Do not add the `clipboardWrite` permission (it shows an install warning).
-16. **Never name or copy competitor products** (the user asked explicitly: inspiration is
-    fine, mentions and clones are not) in code, UI, README or manifest text.
+16. **Do not name or copy other products** (inspiration is fine, mentions and clones are
+    not) in code, UI, README or manifest text.
 17. **Precision over coverage for anything inferred.** If we are not sure a piece of information is
-    true, do not show it: a missing chip is better than a wrong one (the user's explicit priority).
+    true, do not show it: a missing chip is better than a wrong one (the maintainer's explicit priority).
     Heuristics (`lib/study.ts`, shared terms, cluster labels) must return nothing when the text is
     ambiguous, and any new one must be audited by reading its output on real abstracts — including a
     set it was not tuned on — before it ships. Tests written by the author alone are not enough.
-
 18. **No API key in the bundle, one key per user.** The key is entered by each user (setup screen /
     Ajustes), stored only in `chrome.storage.local`, and sent only to Semantic Scholar. `npm run
     build` must produce an extension in which the key does not appear (`scripts/e2e-setup.cjs`
@@ -132,10 +131,10 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
   `background.ts`. There is intentionally **no static content script** (it would need
   broad host permissions); the popup injects the extractor on demand (`activeTab` +
   `scripting`).
-- Node 22 / Windows / Git Bash. When writing files from a shell, avoid heredocs with
+- Developed on Node 22 / Windows / Git Bash. When writing files from a shell, avoid heredocs with
   quotes or backticks — they silently break the whole command. Use the editor tools.
-- The project is under git (branch `main`, no remote yet); CI in `.github/workflows/ci.yml` runs
-  `typecheck`, `format:check`, `test:coverage` (floors on `lib/`) and `plasmo build`. Commit small, working steps.
+- CI (`.github/workflows/ci.yml`) runs `typecheck`, `format:check`, `test:coverage` (floors on
+  `lib/`) and `plasmo build`. Commit small, working steps.
 - Tests of storage-bound modules use the in-memory `chrome` in `tests/helpers/chrome.ts`. **Do not generate
   regexes or code with escapes through shell/Node scripts** (backslashes get eaten or turned into control
   characters, twice this broke a regex silently): use the editor tools.
