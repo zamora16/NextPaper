@@ -1,0 +1,142 @@
+# NextPaper — development guide
+
+Chrome extension (Plasmo + React 18 + TypeScript + Tailwind 3) that helps
+researchers find, triage, organize and cite related literature while they read.
+**Everything runs locally in the extension: no server, no LLM, no per-use cost.**
+Data comes from the Semantic Scholar API (free). The user (Angel) also treats
+this as a data-science portfolio piece, so real, explainable ML (embeddings,
+cosine ranking, from-scratch k-means, silhouette) is a feature, not overhead.
+
+Read these before changing anything non-trivial:
+
+- `docs/ARCHITECTURE.md` — data flow, module map, storage schema, API facts, decision log
+- `docs/PERFORMANCE.md` — measured request behavior, why the pipeline is shaped this way, rules to keep it fast
+- `docs/PRODUCT.md` — what users get today and the known limits
+- `docs/ROADMAP.md` — prioritized improvement ideas (free layer first, optional low-token AI layer)
+
+## Commands
+
+```bash
+npm install
+npm run dev                # then load build/chrome-mv3-dev via chrome://extensions
+npx tsc --noEmit           # typecheck (Parcel does NOT typecheck; run this every change)
+npx plasmo build           # production build -> build/chrome-mv3-prod
+npm test                   # vitest (132 tests): pure modules — citation, import/backup, kmeans, view,
+                           # keywords, terms, projection, timeline, rate limiter/retry, API client (mocked fetch), pipeline (assemble/dedupe/picks), extractPaperRef (jsdom)
+```
+
+Setup: create `.env.local` with `PLASMO_PUBLIC_S2_API_KEY=<free Semantic Scholar key>`
+(https://www.semanticscholar.org/product/api#api-key-form). It is gitignored but the
+value is **bundled into the built extension**, so it is a rate-limit key, not a secret.
+The extension works without it but Semantic Scholar's anonymous limit is unusable.
+
+### Real-browser tests (required for network/UI changes)
+
+```bash
+npm i --no-save puppeteer-core     # once; does not touch package.json
+npx plasmo build
+node scripts/e2e-explore.cjs       # analyze -> Explorar -> Volver -> topic search
+node scripts/e2e-library.cjs       # save, status, notes, .bib/.ris export, alerts, badge
+node scripts/e2e-storage.cjs       # compression, pruning, migration, user data untouched
+node scripts/e2e-import.cjs        # import .bib, collections, backup/restore, hostile file
+node scripts/trace-network.cjs     # request-by-request timeline of a cold analysis (performance work)
+```
+
+They load the built extension in **Edge** (`BROWSER_PATH` overrides the path) and print
+PASS/FAIL lines; exit code 1 on failure. Each takes 1–3 minutes because the API rate
+limits erratically. **Do not rely on Node-only tests** for anything that touches the
+network: Node has no CORS, and CORS is exactly what broke this project before.
+Branded Chrome 137+ ignores `--load-extension`, hence Edge. PubMed/PMC/MDPI return 403 to
+automated browsers, and the real toolbar click that grants `activeTab` cannot be
+simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
+
+## Rules that must not be broken (each one was learned the hard way)
+
+1. **All Semantic Scholar traffic goes through `s2Fetch`** (`lib/s2-fetch.ts`): a concurrency
+   limiter (3 in flight, 120 ms gap) plus short retries on 429/5xx. Never call `fetch` on the API
+   directly. **Do not add fixed delays between requests** and do not remove the parallelism: the API's
+   429s are random (25–45% at any pace), so pauses only made analyses 3–4x slower. Read
+   `docs/PERFORMANCE.md` before touching this, and re-measure with `node scripts/trace-network.cjs`.
+2. **Keep `host_permissions` for `https://api.semanticscholar.org/*` and
+   `https://api.crossref.org/*`** in the `manifest` block of `package.json`. Without it the browser applies CORS: the API's 429 responses
+   carry no CORS headers (they surface as "Failed to fetch") and the batch endpoint
+   rejects cross-origin POST. Never move API calls into a page/content script.
+3. **Guard every array from the API**: `?.data?.map(...) ?? []`. S2 returns
+   `"data": null` for some papers (publisher-restricted references).
+4. **The recommendations endpoint rejects `tldr` and `embedding`** (HTTP 400). Use it for
+   ids only (`fields=paperId`) and fetch metadata through the batch endpoint.
+5. **`extractPaperRef` (`lib/extract-ref.ts`) must stay fully self-contained** — it is
+   serialized into the page by `chrome.scripting.executeScript`; no imports, no helpers
+   outside the function body.
+6. **Never store embeddings** (768 floats each). `strip()` in `lib/pipeline.ts` drops
+   them; cached results and library items must stay small.
+7. **Bump the cache prefix** (`KEY_PREFIX` in `lib/cache.ts`, currently `v8`) whenever the
+   `AnalysisResult` shape or the retrieval/ranking strategy changes, or users get stale
+   results from the old strategy. Also add the old prefix to `LEGACY_KEYS` so it gets
+   cleaned up. Library items (`nextpaper_library`) persist forever: schema changes there
+   must be backward compatible (see defaults in `getLibrary`).
+8. **Storage discipline.** Finished results live ONLY in the compressed cache
+   (`lib/cache.ts` + `lib/compress.ts`); `JobState` never carries a result. Every cache
+   write must stay bounded: `pruneStorage` runs after each analysis and at worker start
+   (expiry, 40-entry cap, legacy keys, orphan jobs) and must never touch
+   `nextpaper_library` or `nextpaper_updates`. A new persistent key needs a bound or a
+   pruning rule (the Crossref cache is bounded to 500 entries / 30 days in
+   `pruneStorage`). Re-check with `node scripts/e2e-storage.cjs`.
+9. **Library writes go through the promise queue** in `lib/library.ts`. Concurrent
+   read-modify-write on one storage key lost saves once.
+10. **The analysis must survive the popup closing.** It runs in `background.ts`; the popup
+   only observes `JobState`. The worker keeps itself alive (`syncKeepAlive`) and the popup
+   re-sends `analyze` every 25 s while a job is "loading" (watchdog). Keep both.
+11. **`all-cs` recommendation pool only for computer-science seeds.** It is CS-biased and
+    returns irrelevant e-health/ML papers for other fields.
+12. **No AI/LLM calls and no server in the default path.** Retrieval, ranking and
+    clustering must stay deterministic and free. If AI features are ever added, follow the
+    guardrails in `docs/ROADMAP.md` (opt-in, on-demand, tiny inputs, cached, BYOK).
+13. **Citation formatters are pure and unit-tested** (`lib/citation.ts`, `tests/citation.test.ts`
+    with expectations derived by hand from each style's rules). Change a style only together
+    with its tests. Async enrichment with Crossref lives in `lib/cite.ts`; Crossref data
+    wins over Semantic Scholar's, and every style must still work without it.
+14. **Files the user imports are untrusted input.** `parseBackup`/`normalizeSaved`
+    (`lib/backup.ts`) validate shape and keep only http(s) URLs; never render or link raw
+    imported fields. Import merges, it never overwrites the user's own status/notes.
+15. **Copy-to-clipboard goes through `useCopyAction`** (`components/useCopyAction.ts`):
+    citations may need network calls first, and browsers reject clipboard writes when too
+    much time passed since the click; the hook falls back to a "Pulsa para copiar" step.
+    Do not add the `clipboardWrite` permission (it shows an install warning).
+16. **Never name or copy competitor products** (the user asked explicitly: inspiration is
+    fine, mentions and clones are not) in code, UI, README or manifest text.
+
+## Conventions
+
+- Prettier: no semicolons, double quotes, no trailing commas, 80 cols, imports sorted.
+- UI strings are Spanish; code, identifiers and comments are English. Comments only for
+  non-obvious *why* (hidden constraints, API quirks) — one short line, no docstrings.
+- Path alias `~` = project root (e.g. `~lib/pipeline`, `~components/PaperCard`).
+- Tailwind 3 (not 4: Plasmo's Parcel cannot resolve Tailwind 4's `node:module` import).
+- Plasmo entry points are file-name conventions at the repo root: `popup.tsx`,
+  `background.ts`. There is intentionally **no static content script** (it would need
+  broad host permissions); the popup injects the extractor on demand (`activeTab` +
+  `scripting`).
+- Node 22 / Windows / Git Bash. When writing files from a shell, avoid heredocs with
+  quotes or backticks — they silently break the whole command. Use the editor tools.
+- The project is **not under git yet**. Suggest `git init` before large refactors.
+
+## Where things are
+
+```
+popup.tsx            UI shell: tabs, search, trail (Explorar), filters/sort, saved tab
+background.ts        service worker: runs analyses, daily alerts alarm, badge, keep-alive
+components/          PaperCard, LibraryItem (status, note, collections), LibraryTools (backup/import),
+                     UpdatesPanel, CitationButtons + useCopyAction (copy/export with progress), Timeline (SVG)
+lib/pipeline.ts      THE core: candidates -> embeddings -> ranking -> clusters -> picks
+lib/semantic-scholar.ts   API client (seed, candidates, batch papers, search, recent)
+lib/s2-fetch.ts, rate-limit.ts, api-key.ts   HTTP discipline (see rule 1-2)
+lib/kmeans.ts, vector-math.ts, keywords.ts   from-scratch ML (k-means++, silhouette, labels)
+lib/terms.ts, timeline.ts                    shared distinctive terms; timeline-by-subtopic data
+lib/projection.ts                            2-D PCA — tested but UNUSED (see docs/ARCHITECTURE.md decision log)
+lib/citation.ts, cite.ts, crossref.ts        9 styles + in-text (pure, tested); async Crossref enrichment; Crossref client/cache
+lib/backup.ts, import.ts, export.ts          backup/merge (pure, tested), BibTeX/RIS/DOI import (pure parsers, tested), file download
+lib/library.ts, updates.ts, view.ts, paper-utils.ts, extract-ref.ts
+lib/cache.ts, compress.ts, job.ts            compressed result cache, pruning, JobState (no result inside)
+scripts/             real-browser e2e tests (see above); scripts/perf/ = API performance experiments
+```
