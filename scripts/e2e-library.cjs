@@ -61,6 +61,15 @@ const REF = process.argv[2] || "DOI:10.1186/s40337-024-01004-0"
   const cleared = await page.evaluate(() => chrome.action.getBadgeText({}))
   check("badge cleared after opening Novedades", cleared === "")
   check("there are three tabs, Novedades among them", await page.evaluate(() => [...document.querySelectorAll('[role="tab"]')].map((b) => b.textContent).join("|").match(/Relacionados.*Guardados.*Novedades/) !== null))
+  if (unviewed > 0) {
+    check("Borrar todo is offered when there are updates", await clickButton(page, "Borrar todo"))
+    await sleep(800)
+    const after = await page.evaluate(
+      async () => (await chrome.storage.local.get("nextpaper_updates")).nextpaper_updates
+    )
+    check("clearing empties the list but remembers what was shown", after.items.length === 0 && after.seen.length > 0)
+    check("the button disappears once the list is empty", !(await clickButton(page, "Borrar todo")))
+  }
   await clickButton(page, "Guardados", false)
   await sleep(500)
 

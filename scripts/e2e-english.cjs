@@ -5,7 +5,7 @@
 const { launch, openPopup, waitDone, clickButton, check, sleep, finish } = require("./e2e-lib.cjs")
 
 const REF = process.argv[2] || "DOI:10.1186/s40337-024-01004-0"
-const SPANISH = /Guardados|Novedades|Relacionados|Buscar por tema|Ver cronolog|Empieza por aqu/
+const SPANISH = /Guardados|Novedades|Relacionados|Buscar art|Ver cronolog|Empieza por aqu/
 
 ;(async () => {
   const { browser, extId } = await launch({ lang: "en" })

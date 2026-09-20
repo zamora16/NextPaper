@@ -28,10 +28,10 @@ export const en = {
   "lang.hint": "The language of NextPaper's interface",
 
   // search and navigation
-  "search.placeholder": "Search a topic, e.g. body image and eating disorders",
+  "search.placeholder": "Search papers by topic",
   "search.button": "Search",
   "search.hint":
-    "Type a research topic to find and group papers about it, without needing an open article",
+    "Find and group papers about a topic, without needing an open article",
   exploring: "Exploring:",
   back: "← Back",
   "back.hint": "Go back to the previous analysis",
@@ -248,6 +248,9 @@ export const en = {
   "updates.because": "Because you saved: {title}",
   "updates.new": "New",
   "updates.dismiss": "Dismiss",
+  "updates.clear": "Clear all",
+  "updates.clear.hint":
+    "Remove every update from this list. They will not be suggested again.",
   "ago.now": "just now",
   "ago.minutes": "{n} min ago",
   "ago.hours": "{n} h ago",

@@ -80,6 +80,12 @@ export async function dismissUpdate(paperId: string): Promise<void> {
   await refreshBadge()
 }
 
+// `seen` is kept, so a cleared paper is not alerted again.
+export async function clearUpdates(): Promise<void> {
+  await change(() => ({ items: [] }))
+  await refreshBadge()
+}
+
 // For each recently saved paper, looks for fresh related papers the user has
 // not been shown yet. Runs in the background worker (daily alarm or on demand).
 export async function checkForUpdates(): Promise<void> {

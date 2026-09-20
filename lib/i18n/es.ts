@@ -26,11 +26,10 @@ export const es: Record<Key, string> = {
   "lang.hint": "El idioma de la interfaz de NextPaper",
 
   // search and navigation
-  "search.placeholder":
-    "Buscar por tema: p. ej. body image and eating disorders",
+  "search.placeholder": "Buscar artículos por tema",
   "search.button": "Buscar",
   "search.hint":
-    "Escribe un tema de investigación para encontrar y agrupar papers sobre él, sin necesidad de tener un artículo abierto",
+    "Encuentra y agrupa papers sobre un tema, sin necesidad de tener un artículo abierto",
   exploring: "Explorando:",
   back: "← Volver",
   "back.hint": "Volver al análisis anterior",
@@ -249,6 +248,9 @@ export const es: Record<Key, string> = {
   "updates.because": "Porque guardaste: {title}",
   "updates.new": "Nuevo",
   "updates.dismiss": "Descartar",
+  "updates.clear": "Borrar todo",
+  "updates.clear.hint":
+    "Quita todas las novedades de la lista. No se volverán a sugerir.",
   "ago.now": "hace un momento",
   "ago.minutes": "hace {n} min",
   "ago.hours": "hace {n} h",

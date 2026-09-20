@@ -4,6 +4,7 @@ import { LIBRARY_KEY } from "~lib/library"
 import { getPapers, getRecommendedIds } from "~lib/semantic-scholar"
 import {
   checkForUpdates,
+  clearUpdates,
   dismissUpdate,
   getUpdates,
   markUpdatesViewed,
@@ -237,6 +238,22 @@ describe("the toolbar badge", () => {
       "n2"
     ])
     expect(chrome.badge.text).toBe("1")
+  })
+
+  it("clearing removes every alert and the badge, and they do not come back", async () => {
+    library("s1")
+    recommend({ s1: ["n1", "n2"] })
+    await checkForUpdates()
+    expect(chrome.badge.text).toBe("2")
+
+    await clearUpdates()
+    const state = await getUpdates()
+    expect(state.items).toEqual([])
+    expect(state.seen).toEqual(expect.arrayContaining(["n1", "n2"]))
+    expect(chrome.badge.text).toBe("")
+
+    await checkForUpdates() // the same recommendations again
+    expect((await getUpdates()).items).toEqual([])
   })
 })
 

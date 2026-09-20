@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 import { Hint, useT, type Translate } from "~components/i18n"
 import type { TKey } from "~lib/i18n"
 import type { ScoredPaper } from "~lib/pipeline"
-import { dismissUpdate, type UpdatesState } from "~lib/updates"
+import { clearUpdates, dismissUpdate, type UpdatesState } from "~lib/updates"
 
 function ago(timestamp: number, t: Translate): string {
   const minutes = Math.round((Date.now() - timestamp) / 60000)
@@ -42,13 +42,25 @@ export function UpdatesTab({
           {t("updates.title")} · {items.length}
           <Hint text={t("tab.updates.hint")} />
         </p>
-        <button
-          disabled={running || !hasSaved}
-          onClick={() => chrome.runtime.sendMessage({ type: "check-updates" })}
-          title={t("updates.check.hint")}
-          className="rounded border border-violet-200 bg-white px-2 py-0.5 text-xs font-medium text-violet-700 hover:bg-violet-50 disabled:opacity-60">
-          {running ? t("updates.checking") : t("updates.check")}
-        </button>
+        <span className="flex gap-1.5">
+          {items.length > 0 && (
+            <button
+              onClick={clearUpdates}
+              title={t("updates.clear.hint")}
+              className="rounded border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-100">
+              {t("updates.clear")}
+            </button>
+          )}
+          <button
+            disabled={running || !hasSaved}
+            onClick={() =>
+              chrome.runtime.sendMessage({ type: "check-updates" })
+            }
+            title={t("updates.check.hint")}
+            className="rounded border border-violet-200 bg-white px-2 py-0.5 text-xs font-medium text-violet-700 hover:bg-violet-50 disabled:opacity-60">
+            {running ? t("updates.checking") : t("updates.check")}
+          </button>
+        </span>
       </div>
 
       {!hasSaved ? (

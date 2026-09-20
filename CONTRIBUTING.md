@@ -22,7 +22,7 @@ npm run dev                # then load build/chrome-mv3-dev via chrome://extensi
 npx tsc --noEmit           # typecheck, `strict` on (Parcel does NOT typecheck; run this every change)
 npm run format             # prettier over lib/components/tests/popup/background (CI runs format:check)
 npx plasmo build           # production build -> build/chrome-mv3-prod
-npm test                   # vitest (392 tests; `npm run test:coverage` enforces floors on lib/, ~98% lines): every module in lib/ —
+npm test                   # vitest (393 tests; `npm run test:coverage` enforces floors on lib/, ~98% lines): every module in lib/ —
                            # keywords, timeline, study (design/sample), rate limiter/retry, API client (mocked fetch), pipeline (assemble/dedupe/picks), extractPaperRef (jsdom)
 ```
 
