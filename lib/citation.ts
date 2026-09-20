@@ -15,16 +15,16 @@ export type CitationStyle =
 // Saved papers can carry a personal note, exported to BibTeX/RIS.
 export type Citable = RecommendedPaper & { note?: string }
 
-export const CITATION_STYLES: { id: CitationStyle; label: string }[] = [
-  { id: "apa", label: "APA 7" },
-  { id: "mla", label: "MLA 9" },
-  { id: "chicago", label: "Chicago (autor-fecha)" },
-  { id: "harvard", label: "Harvard" },
-  { id: "ieee", label: "IEEE" },
-  { id: "vancouver", label: "Vancouver" },
-  { id: "ama", label: "AMA" },
-  { id: "bibtex", label: "BibTeX" },
-  { id: "ris", label: "RIS (Zotero, Mendeley)" }
+export const CITATION_STYLES: CitationStyle[] = [
+  "apa",
+  "mla",
+  "chicago",
+  "harvard",
+  "ieee",
+  "vancouver",
+  "ama",
+  "bibtex",
+  "ris"
 ]
 
 interface Person {

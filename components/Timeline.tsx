@@ -1,3 +1,4 @@
+import { groupLabel, useT } from "~components/i18n"
 import type { TimelineData } from "~lib/timeline"
 
 const COLORS = ["#7c3aed", "#0ea5e9", "#f59e0b", "#10b981", "#f43f5e"]
@@ -25,6 +26,7 @@ export function Timeline({
   selectedId: string | null
   onSelect: (paperId: string) => void
 }) {
+  const t = useT()
   const height = TOP + data.lanes.length * LANE_HEIGHT + AXIS_HEIGHT
   const span = data.maxYear - data.minYear
   const x = (year: number) =>
@@ -33,10 +35,11 @@ export function Timeline({
 
   return (
     <div className="flex flex-col gap-1.5">
+      <p className="text-[11px] text-slate-500">{t("timeline.legend")}</p>
       <svg
         viewBox={`0 0 ${WIDTH} ${height}`}
         role="img"
-        aria-label="Cronología de los papers por subtema"
+        aria-label={t("timeline.aria")}
         className="w-full rounded-lg border border-slate-200 bg-slate-50">
         {data.ticks.map((tick) => (
           <g key={tick}>
@@ -63,6 +66,7 @@ export function Timeline({
           const color = COLORS[laneIndex % COLORS.length]
           const top = laneTop(laneIndex)
           const centerY = top + LABEL_HEIGHT + (LANE_HEIGHT - LABEL_HEIGHT) / 2
+          const label = groupLabel(lane.label, t)
           return (
             <g key={lane.label}>
               <text
@@ -71,9 +75,7 @@ export function Timeline({
                 fontSize="10"
                 fontWeight="600"
                 fill={color}>
-                {lane.label.length > 44
-                  ? lane.label.slice(0, 43) + "…"
-                  : lane.label}
+                {label.length > 44 ? label.slice(0, 43) + "…" : label}
               </text>
               <line
                 x1={PAD_X}
@@ -102,14 +104,24 @@ export function Timeline({
                     strokeWidth={selected ? 2.5 : 1}
                     tabIndex={0}
                     role="button"
+                    aria-label={t("timeline.tooltip", {
+                      title: dot.title,
+                      year: dot.year,
+                      citations: t("card.citations", { n: dot.citationCount })
+                    })}
                     className="cursor-pointer"
                     onClick={() => onSelect(dot.paperId)}
                     onKeyDown={(e) =>
                       e.key === "Enter" && onSelect(dot.paperId)
                     }>
                     <title>
-                      {dot.title} ({dot.year}) ·{" "}
-                      {dot.citationCount.toLocaleString()} citas
+                      {t("timeline.tooltip", {
+                        title: dot.title,
+                        year: dot.year,
+                        citations: t("card.citations", {
+                          n: dot.citationCount
+                        })
+                      })}
                     </title>
                   </circle>
                 )
@@ -136,7 +148,7 @@ export function Timeline({
               fontWeight="600"
               textAnchor="middle"
               fill="#0f172a">
-              ★ tu paper ({seedYear})
+              {t("timeline.you", { year: seedYear })}
             </text>
           </g>
         )}
@@ -152,17 +164,17 @@ export function Timeline({
               style={{ background: COLORS[index % COLORS.length] }}
             />
             <span className="line-clamp-1">
-              {lane.label} · {lane.dots.length} ·{" "}
+              {groupLabel(lane.label, t)} · {lane.dots.length} ·{" "}
               {lane.minYear === lane.maxYear
                 ? lane.minYear
                 : `${lane.minYear}–${lane.maxYear}`}{" "}
-              (mediana {lane.medianYear})
+              ({t("timeline.median", { year: lane.medianYear })})
             </span>
           </span>
         ))}
         {data.undated > 0 && (
-          <span className="text-[11px] text-slate-400">
-            {data.undated} sin año no aparecen.
+          <span className="text-[11px] text-slate-500">
+            {t("timeline.undated", { n: data.undated })}
           </span>
         )}
       </div>

@@ -1,11 +1,12 @@
 import { useMemo, useState, type ReactNode } from "react"
 
 import { CopyCitationsButton, ExportButton } from "~components/CitationButtons"
+import { useT } from "~components/i18n"
 import { LibraryItem } from "~components/LibraryItem"
 import { LibraryTools } from "~components/LibraryTools"
 import { pillClass } from "~components/ui"
-import { UpdatesPanel } from "~components/UpdatesPanel"
 import type { CitationStyle } from "~lib/citation"
+import type { TKey } from "~lib/i18n"
 import {
   collectionCounts,
   deleteCollection,
@@ -14,27 +15,27 @@ import {
   type SavedPaper
 } from "~lib/library"
 import type { ScoredPaper } from "~lib/pipeline"
-import type { UpdatesState } from "~lib/updates"
 
-// "Guardados": the library with its status and collection filters, alerts,
-// backup/import and bulk citation export.
+const STATUS_LABEL: Record<ReadStatus, TKey> = {
+  unread: "status.unread",
+  reading: "status.reading",
+  read: "status.read.plain"
+}
+
+// "Saved": the library with its status and collection filters, backup/import
+// and bulk citation export. (New papers found for the user have their own tab.)
 export function SavedTab({
   library,
-  updates,
-  newIds,
   citationStyle,
   styleSelect,
-  savedIds,
   renderCard
 }: {
   library: SavedPaper[]
-  updates: UpdatesState | null
-  newIds: Set<string>
   citationStyle: CitationStyle
   styleSelect: ReactNode
-  savedIds: Set<string>
   renderCard: (paper: ScoredPaper) => ReactNode
 }) {
+  const t = useT()
   const [statusFilter, setStatusFilter] = useState<ReadStatus | "all">("all")
   const [collectionFilter, setCollectionFilter] = useState<string | "all">(
     "all"
@@ -57,43 +58,32 @@ export function SavedTab({
     [library, statusFilter, activeCollection]
   )
 
-  const statusFilters: { id: ReadStatus | "all"; label: string }[] = [
-    { id: "all", label: "Todos" },
-    ...STATUSES
-  ]
+  const statusFilters: (ReadStatus | "all")[] = ["all", ...STATUSES]
 
   return (
     <div className="flex max-h-[32rem] flex-col gap-3 overflow-y-auto">
       {library.length === 0 && (
-        <p className="text-sm text-slate-500">
-          Aún no has guardado nada. Pulsa la ☆ de cualquier paper para guardarlo
-          aquí, o importa tus referencias desde otra herramienta.
-        </p>
+        <p className="text-sm text-slate-500">{t("saved.empty")}</p>
       )}
 
       <LibraryTools library={library} />
 
       {library.length > 0 && (
         <>
-          {updates && (
-            <UpdatesPanel
-              updates={updates}
-              savedIds={savedIds}
-              newIds={newIds}
-              renderCard={renderCard}
-            />
-          )}
-
           <div className="flex flex-wrap gap-1">
-            {statusFilters.map((s) => (
+            {statusFilters.map((status) => (
               <button
-                key={s.id}
-                onClick={() => setStatusFilter(s.id)}
-                className={pillClass(statusFilter === s.id)}>
-                {s.label} ·{" "}
-                {s.id === "all"
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                aria-pressed={statusFilter === status}
+                className={pillClass(statusFilter === status)}>
+                {status === "all"
+                  ? t("saved.status.all")
+                  : t(STATUS_LABEL[status])}{" "}
+                ·{" "}
+                {status === "all"
                   ? library.length
-                  : library.filter((p) => p.status === s.id).length}
+                  : library.filter((p) => p.status === status).length}
               </button>
             ))}
           </div>
@@ -102,13 +92,15 @@ export function SavedTab({
             <div className="flex flex-wrap items-center gap-1">
               <button
                 onClick={() => setCollectionFilter("all")}
+                aria-pressed={activeCollection === "all"}
                 className={pillClass(activeCollection === "all")}>
-                Todas las colecciones
+                {t("saved.collections.all")}
               </button>
               {collections.map((c) => (
                 <button
                   key={c.name}
                   onClick={() => setCollectionFilter(c.name)}
+                  aria-pressed={activeCollection === c.name}
                   className={pillClass(activeCollection === c.name)}>
                   {c.name} · {c.count}
                 </button>
@@ -116,9 +108,9 @@ export function SavedTab({
               {activeCollection !== "all" && (
                 <button
                   onClick={() => deleteCollection(activeCollection)}
-                  title="Quita la colección de todos los papers; los papers se conservan"
-                  className="text-[11px] font-medium text-red-500 hover:underline">
-                  Eliminar colección
+                  title={t("saved.collection.delete.hint")}
+                  className="text-[11px] font-medium text-red-600 hover:underline">
+                  {t("saved.collection.delete")}
                 </button>
               )}
             </div>
@@ -134,9 +126,7 @@ export function SavedTab({
           </div>
 
           {visible.length === 0 && (
-            <p className="text-sm text-slate-500">
-              Ningún paper guardado con este filtro.
-            </p>
+            <p className="text-sm text-slate-500">{t("saved.none")}</p>
           )}
 
           {visible.map((paper) => (

@@ -1,5 +1,7 @@
 import { useRef, useState } from "react"
 
+import { useT } from "~components/i18n"
+
 export type CopyPhase = "idle" | "busy" | "ready" | "copied"
 
 async function tryCopy(text: string): Promise<boolean> {
@@ -21,6 +23,7 @@ export function useCopyAction(
     onProgress: (done: number, total: number) => void
   ) => Promise<string>
 ) {
+  const t = useT()
   const [phase, setPhase] = useState<CopyPhase>("idle")
   const [progress, setProgress] = useState<[number, number] | null>(null)
   const prepared = useRef("")
@@ -51,14 +54,15 @@ export function useCopyAction(
     await finish()
   }
 
+  // What the button says: `idle` in the resting state.
   const label = (idle: string) => {
     if (phase === "busy") {
       return progress && progress[1] > 1
-        ? `Preparando ${progress[0]}/${progress[1]}`
-        : "Preparando..."
+        ? t("copy.progress", { done: progress[0], total: progress[1] })
+        : t("copy.preparing")
     }
-    if (phase === "ready") return "Pulsa para copiar"
-    if (phase === "copied") return "Copiado"
+    if (phase === "ready") return t("copy.ready")
+    if (phase === "copied") return t("copy.copied")
     return idle
   }
 

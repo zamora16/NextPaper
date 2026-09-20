@@ -1,4 +1,5 @@
 import { pruneStorage } from "~lib/cache"
+import { errorCode } from "~lib/errors"
 import { jobKey, type JobState } from "~lib/job"
 import { analyze as analyzeRef } from "~lib/pipeline"
 import { isPlausibleRef } from "~lib/ref"
@@ -20,10 +21,7 @@ async function analyze(ref: string): Promise<void> {
     await analyzeRef(ref, (step) => setJob(ref, { phase: "loading", step }))
     await setJob(ref, { phase: "done" })
   } catch (err) {
-    await setJob(ref, {
-      phase: "error",
-      message: err instanceof Error ? err.message : "Error desconocido."
-    })
+    await setJob(ref, { phase: "error", error: errorCode(err) })
   }
   await pruneStorage(inFlight.keys()).catch(() => {})
 }

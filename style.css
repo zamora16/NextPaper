@@ -1,3 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Keyboard users need to see where the focus is. */
+:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 1px;
+}

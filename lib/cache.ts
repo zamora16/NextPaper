@@ -5,6 +5,7 @@ import {
   CROSSREF_PREFIX,
   CROSSREF_TTL_MS
 } from "~lib/crossref"
+import { StorageFullError } from "~lib/errors"
 import { JOB_PREFIX } from "~lib/job"
 import type { AnalysisResult } from "~lib/pipeline"
 
@@ -111,9 +112,7 @@ export async function setCachedResult(
     try {
       await write()
     } catch {
-      throw new Error(
-        "No hay espacio suficiente en el almacenamiento de la extension."
-      )
+      throw new StorageFullError()
     }
   }
 }

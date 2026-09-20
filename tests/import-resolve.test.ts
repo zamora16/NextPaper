@@ -130,11 +130,14 @@ describe("resolving titles", () => {
   it("reports progress", async () => {
     aligned.mockResolvedValue([paper("p1", "One")])
     search.mockResolvedValue([])
-    const steps: string[] = []
+    const steps: unknown[] = []
     await resolveReferences(
       { dois: ["10.1/a"], titles: ["A long enough title to search"] },
       (s) => steps.push(s)
     )
-    expect(steps).toEqual(["Buscando 1 DOI...", "Buscando 1 títulos..."])
+    expect(steps).toEqual([
+      { code: "dois", n: 1 },
+      { code: "titles", n: 1 }
+    ])
   })
 })

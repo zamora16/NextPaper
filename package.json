@@ -2,7 +2,7 @@
   "name": "nextpaper",
   "displayName": "NextPaper",
   "version": "0.0.1",
-  "description": "Literatura relacionada mientras lees: recomendaciones rankeadas por similitud semantica, agrupadas y listas para citar.",
+  "description": "Find, triage and cite related literature while you read: papers ranked by semantic similarity, grouped by subtopic and ready to cite.",
   "author": "Angel Zamora <angelzamora1616@gmail.com>",
   "license": "MIT",
   "scripts": {

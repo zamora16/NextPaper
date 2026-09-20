@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { getCachedResult } from "~lib/cache"
-import { analyze } from "~lib/pipeline"
+import type { Step } from "~lib/job"
+import { analyze, RELATED_GROUP } from "~lib/pipeline"
 import { RateLimitedError } from "~lib/s2-fetch"
 import {
   collectCandidates,
@@ -285,7 +286,7 @@ describe("analyzing a paper", () => {
       )
       const result = await analyze("R")
       expect(result.groups).toHaveLength(1)
-      expect(result.groups[0].label).toBe("Relacionados")
+      expect(result.groups[0].label).toBe(RELATED_GROUP)
       expect(result.groups[0].papers.map((p) => p.paperId)).toEqual([
         "x3",
         "x2",
@@ -350,13 +351,13 @@ describe("analyzing a paper", () => {
       await expect(analyze("R")).resolves.toBeDefined()
     })
 
-    it("reports progress in Spanish, step by step", async () => {
+    it("reports progress as language-neutral step codes", async () => {
       realisticSet()
-      const steps: string[] = []
+      const steps: Step[] = []
       await analyze("R", (s) => steps.push(s))
       expect(steps).toHaveLength(3)
-      expect(steps[0]).toMatch(/Leyendo/)
-      expect(steps[2]).toMatch(/8 candidatos/)
+      expect(steps[0]).toEqual({ code: "reading" })
+      expect(steps[2]).toEqual({ code: "scoring", n: 8 })
     })
   })
 })

@@ -55,11 +55,14 @@ const REF = process.argv[2] || "DOI:10.1186/s40337-024-01004-0"
   const badge = await page.evaluate(() => chrome.action.getBadgeText({}))
   check("toolbar badge equals unseen alerts", badge === (unviewed ? String(unviewed) : ""), `badge "${badge}", unseen ${unviewed}`)
 
-  // Saved tab: opening it marks alerts as seen and clears the badge.
-  await clickButton(page, "Guardados", false)
+  // Updates tab: opening it marks alerts as seen and clears the badge.
+  await clickButton(page, "Novedades", false)
   await sleep(1000)
   const cleared = await page.evaluate(() => chrome.action.getBadgeText({}))
-  check("badge cleared after opening Guardados", cleared === "")
+  check("badge cleared after opening Novedades", cleared === "")
+  check("there are three tabs, Novedades among them", await page.evaluate(() => [...document.querySelectorAll('[role="tab"]')].map((b) => b.textContent).join("|").match(/Relacionados.*Guardados.*Novedades/) !== null))
+  await clickButton(page, "Guardados", false)
+  await sleep(500)
 
   // The cards were saved from an analysis (with similarity, relation and shared
   // terms), but nothing is "open" here: those would describe a paper that is no

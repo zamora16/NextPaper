@@ -5,7 +5,8 @@ import {
   choosePicks,
   dedupe,
   makeStrip,
-  normalizeTitle
+  normalizeTitle,
+  RELATED_GROUP
 } from "~lib/pipeline"
 import type { CandidateSource, PaperWithEmbedding } from "~lib/semantic-scholar"
 
@@ -152,7 +153,7 @@ describe("assemble", () => {
       showScore: true
     })
     expect(few.groups).toHaveLength(1)
-    expect(few.groups[0].label).toBe("Relacionados")
+    expect(few.groups[0].label).toBe(RELATED_GROUP)
   })
 })
 

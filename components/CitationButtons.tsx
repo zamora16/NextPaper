@@ -1,12 +1,13 @@
 import { useState } from "react"
 
+import { useT } from "~components/i18n"
 import { buttonClass } from "~components/ui"
 import { useCopyAction } from "~components/useCopyAction"
 import type { Citable, CitationStyle } from "~lib/citation"
 import { citeMany } from "~lib/cite"
 import { downloadFile } from "~lib/export"
 
-// "Copiar N citas": every paper in the chosen style, joined by blank lines.
+// "Copy N citations": every paper in the chosen style, joined by blank lines.
 export function CopyCitationsButton({
   papers,
   style
@@ -14,6 +15,7 @@ export function CopyCitationsButton({
   papers: Citable[]
   style: CitationStyle
 }) {
+  const t = useT()
   const action = useCopyAction((onProgress) =>
     citeMany(papers, style, onProgress)
   )
@@ -21,16 +23,17 @@ export function CopyCitationsButton({
     <button
       onClick={action.run}
       disabled={action.phase === "busy" || papers.length === 0}
+      title={t("copyCitations.hint")}
       className={buttonClass}>
-      {action.label(`Copiar ${papers.length} citas`)}
+      {action.label(t("copyCitations", { n: papers.length }))}
     </button>
   )
 }
 
 const FILES = {
-  bibtex: { name: "nextpaper-guardados.bib", mime: "application/x-bibtex" },
+  bibtex: { name: "nextpaper-saved.bib", mime: "application/x-bibtex" },
   ris: {
-    name: "nextpaper-guardados.ris",
+    name: "nextpaper-saved.ris",
     mime: "application/x-research-info-systems"
   }
 } as const
@@ -43,6 +46,7 @@ export function ExportButton({
   papers: Citable[]
   format: keyof typeof FILES
 }) {
+  const t = useT()
   const [progress, setProgress] = useState<[number, number] | null>(null)
 
   const run = async () => {
@@ -62,9 +66,10 @@ export function ExportButton({
     <button
       onClick={run}
       disabled={progress !== null || papers.length === 0}
+      title={t(format === "bibtex" ? "export.bib.hint" : "export.ris.hint")}
       className={buttonClass}>
       {progress && progress[1] > 1
-        ? `Preparando ${progress[0]}/${progress[1]}`
+        ? t("copy.progress", { done: progress[0], total: progress[1] })
         : `.${format === "bibtex" ? "bib" : "ris"}`}
     </button>
   )

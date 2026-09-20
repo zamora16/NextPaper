@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import type { PaperGroup, ScoredPaper } from "~lib/pipeline"
-import {
-  designLabel,
-  extractStudy,
-  formatSample,
-  parseCount,
-  studyOf
-} from "~lib/study"
+import { extractStudy, parseCount, studyOf } from "~lib/study"
 import { applyView, designOptions } from "~lib/view"
 
 // Precision over coverage: a wrong chip is worse than none. Many cases below
@@ -105,11 +99,6 @@ describe("design: what counts", () => {
   it("says nothing when unsure", () => {
     expect(design("Thoughts on attention", "An essay about focus.")).toBeNull()
     expect(study("Title only", null)).toEqual({ design: null, sample: null })
-  })
-
-  it("labels every design", () => {
-    expect(designLabel("rct")).toBe("Ensayo aleatorizado")
-    expect(designLabel("mixed")).toBe("Métodos mixtos")
   })
 })
 
@@ -574,13 +563,6 @@ describe("sample: studies in a review", () => {
 
   it("does not take a sample from the title alone", () => {
     expect(study("A trial of 500 patients", null).sample).toBeNull()
-  })
-})
-
-describe("formatSample", () => {
-  it("formats participants and studies", () => {
-    expect(formatSample({ n: 245, unit: "participants" })).toBe("n = 245")
-    expect(formatSample({ n: 24, unit: "studies" })).toBe("24 estudios")
   })
 })
 

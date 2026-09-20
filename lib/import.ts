@@ -141,6 +141,11 @@ export function similarTitles(a: string, b: string): boolean {
   return total > 0 && shared / total >= 0.75
 }
 
+// What the lookup is doing; the interface words it in the user's language.
+export type ImportStep =
+  | { code: "dois"; n: number }
+  | { code: "titles"; n: number }
+
 export interface Resolved {
   papers: RecommendedPaper[]
   notFound: string[]
@@ -150,13 +155,13 @@ export interface Resolved {
 
 export async function resolveReferences(
   parsed: ParsedReferences,
-  onStep: (step: string) => void = () => {}
+  onStep: (step: ImportStep) => void = () => {}
 ): Promise<Resolved> {
   const papers = new Map<string, RecommendedPaper>()
   const notFound: string[] = []
 
   if (parsed.dois.length > 0) {
-    onStep(`Buscando ${parsed.dois.length} DOI...`)
+    onStep({ code: "dois", n: parsed.dois.length })
     const aligned = await getPapersAligned(
       parsed.dois.map((doi) => `DOI:${doi}`)
     )
@@ -168,7 +173,7 @@ export async function resolveReferences(
 
   const titles = parsed.titles.slice(0, MAX_TITLES)
   const matches: { title: string; id: string }[] = []
-  if (titles.length > 0) onStep(`Buscando ${titles.length} títulos...`)
+  if (titles.length > 0) onStep({ code: "titles", n: titles.length })
   // All searches at once: the request limiter keeps a few in flight.
   const found = await Promise.all(titles.map((title) => searchPapers(title, 1)))
   titles.forEach((title, index) => {

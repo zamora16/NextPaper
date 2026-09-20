@@ -7,7 +7,7 @@ import {
   mergeSmallClusters,
   silhouetteScore
 } from "~lib/kmeans"
-import type { PaperGroup, ScoredPaper } from "~lib/pipeline"
+import { ALL_GROUP, type PaperGroup, type ScoredPaper } from "~lib/pipeline"
 import {
   cosineSimilarity,
   euclideanDistance,
@@ -228,7 +228,7 @@ describe("applyView", () => {
     ])
     const byCitations = applyView(groups, "all", "citations")
     expect(byCitations).toHaveLength(1)
-    expect(byCitations[0].label).toBe("Todos")
+    expect(byCitations[0].label).toBe(ALL_GROUP)
     expect(ids(byCitations)).toEqual(["b1", "a2", "a1"])
     expect(ids(applyView(groups, "all", "year"))).toEqual(["a2", "b1", "a1"])
   })

@@ -1,8 +1,9 @@
 import { getCachedResult, setCachedResult } from "~lib/cache"
+import { RateLimitedError } from "~lib/errors"
+import type { Step } from "~lib/job"
 import { labelClusters } from "~lib/keywords"
 import { clusterAuto } from "~lib/kmeans"
 import { isReview } from "~lib/paper-utils"
-import { RateLimitedError } from "~lib/s2-fetch"
 import {
   collectCandidates,
   getPapers,
@@ -24,6 +25,12 @@ export interface ScoredPaper extends RecommendedPaper {
   approximate: boolean
   relation: Relation
 }
+
+// Groups made of real subtopics carry their words as the label. These two are
+// stand-ins the interface shows in the user's language (a stored translated
+// label would stay in the language that was active when it was cached).
+export const RELATED_GROUP = "@related"
+export const ALL_GROUP = "@all"
 
 export interface PaperGroup {
   label: string
@@ -182,7 +189,7 @@ function flatFallback(
     picks: [],
     groups: [
       {
-        label: "Relacionados",
+        label: RELATED_GROUP,
         papers: [...papers]
           .sort((a, b) => b.citationCount - a.citationCount)
           .slice(0, topN)
@@ -214,7 +221,7 @@ export function assemble(
 
   if (top.length < 4) {
     return {
-      groups: [{ label: "Relacionados", papers: top.map(toScored) }],
+      groups: [{ label: RELATED_GROUP, papers: top.map(toScored) }],
       picks: choosePicks(shortlist, toScored)
     }
   }
@@ -252,22 +259,22 @@ export function assemble(
 // clustered with k-means.
 async function analyzePaper(
   ref: string,
-  onStep: (step: string) => void
+  onStep: (step: Step) => void
 ): Promise<AnalysisResult> {
   const cached = await getCachedResult(ref)
   if (cached) return cached
 
-  onStep("Leyendo el paper...")
+  onStep({ code: "reading" })
   // The recommendations accept the same id as the seed request, so they start
   // together with it. They never reject (failures resolve to null).
   const recentEarly = getRecommendedIds(ref, "recent").catch(() => null)
   const seed = await getSeed(ref)
 
-  onStep("Reuniendo referencias, citas y recomendaciones...")
+  onStep({ code: "gathering" })
   const sources = await collectCandidates(seed, recentEarly)
   if (sources.size === 0) throw new RateLimitedError()
 
-  onStep(`Calculando similitud de ${sources.size} candidatos...`)
+  onStep({ code: "scoring", n: sources.size })
   const fetched = await getPapers([...sources.keys()])
   if (fetched.length === 0) throw new RateLimitedError()
 
@@ -314,14 +321,14 @@ async function analyzePaper(
 // the same embedding-based grouping so a topic reads as a map of subtopics.
 async function analyzeQuery(
   ref: string,
-  onStep: (step: string) => void
+  onStep: (step: Step) => void
 ): Promise<AnalysisResult> {
   const cached = await getCachedResult(ref)
   if (cached) return cached
 
   const query = ref.slice(QUERY_PREFIX.length)
 
-  onStep("Buscando papers sobre el tema...")
+  onStep({ code: "searching" })
   const ids = await searchPapers(query)
   if (!ids) throw new RateLimitedError()
   if (ids.length === 0) {
@@ -331,7 +338,7 @@ async function analyzeQuery(
     return empty
   }
 
-  onStep(`Analizando ${ids.length} resultados...`)
+  onStep({ code: "analyzing", n: ids.length })
   const fetched = await getPapers(ids)
   if (fetched.length === 0) throw new RateLimitedError()
 
@@ -368,7 +375,7 @@ async function analyzeQuery(
 
 export function analyze(
   ref: string,
-  onStep: (step: string) => void = () => {}
+  onStep: (step: Step) => void = () => {}
 ): Promise<AnalysisResult> {
   return ref.startsWith(QUERY_PREFIX)
     ? analyzeQuery(ref, onStep)

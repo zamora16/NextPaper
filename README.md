@@ -2,7 +2,7 @@
 
 **Related literature while you read.** Open any paper in your browser and NextPaper shows the most relevant related work — ranked by semantic similarity, grouped by subtopic, with everything you need to triage, save and cite it. It runs entirely in your browser: no server, no account, no tracking, no AI calls, no cost.
 
-The interface is in Spanish.
+The interface is available in **English and Spanish** (it follows your browser language; you can change it in Settings).
 
 ## What it does
 

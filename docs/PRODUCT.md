@@ -1,6 +1,6 @@
 # Product: what NextPaper gives the user today
 
-State as of 2026-09-19. UI language is Spanish.
+State as of 2026-09-20. The UI is available in English and Spanish.
 
 **One line:** while you read a paper (or type a topic), NextPaper shows the most relevant
 related literature, ranked by semantic similarity, grouped by subtopic, with everything
@@ -17,9 +17,9 @@ you need to triage, save and cite it — all local, free, no account, no AI call
 | "There are too many results" | Automatic subtopic groups (k-means, k by silhouette) with labels; filters (Referencias, Lo citan, Revisiones, PDF libre); sort by relevance / most cited / most recent; **Ver cronología**: one lane per subtopic with the papers placed by year (size = citations, dashed line = the paper you are reading; click a dot to jump to its card) — shows which lines of work are classic vs recent and where the heavily cited papers sit. |
 | "I want to follow the trail" | **Explorar** on any card runs the same analysis on that paper (snowballing) with a breadcrumb and instant *Volver*. |
 | "I don't have a seed paper yet" | Topic search box: up to 100 results grouped into subtopics. |
-| "I keep losing track of what I read" | ★ save → **Guardados** with status (por leer / leyendo / leído), a personal note and **collections** (e.g. one per thesis chapter) with filters; read status also shows on cards in later searches. **Copia de seguridad** to a JSON file and **Importar** from a NextPaper backup, a `.bib`/`.ris` file or a list of DOIs/titles (also for people who already have a reference library). |
+| "I keep losing track of what I read" | ★ save → **Saved (Guardados)** with status (por leer / leyendo / leído), a personal note and **collections** (e.g. one per thesis chapter) with filters; read status also shows on cards in later searches. **Copia de seguridad** to a JSON file and **Importar** from a NextPaper backup, a `.bib`/`.ris` file or a list of DOIs/titles (also for people who already have a reference library). |
 | "Building the bibliography is tedious" | Copy one citation, an in-text citation or all visible/saved ones in **APA 7, MLA 9, Chicago, Harvard, IEEE, Vancouver, AMA, BibTeX or RIS**; download `.bib` / `.ris` (notes included). Data is enriched with **Crossref** (exact author names, issue, article number, journal abbreviation) and falls back to Semantic Scholar's. |
-| "I don't notice new papers" | **Novedades para ti**: once a day (and on demand) looks for fresh papers related to your latest saves, tags them *Nuevo* with the reason, and puts a count on the toolbar icon. |
+| "I don't notice new papers" | **Updates (Novedades)**, in its own tab so it does not push your saved papers down: once a day (and on demand) looks for fresh papers related to your latest saves, tags them *Nuevo* with the reason, and puts a count on the toolbar icon. |
 | "How do I set it up?" | A first-run screen explains, in three steps, how to get a **free personal Semantic Scholar key** (they e-mail it to you), checks the key before saving and lets you continue without one. Ajustes (⚙) shows it masked, lets you remove it, and credits the data sources and the license. |
 
 ## How it works from the user's side
@@ -59,6 +59,6 @@ you need to triage, save and cite it — all local, free, no account, no AI call
 - **"Revisión" tag, filter and pick:** decided from the title or the abstract ("systematic review", "this review", meta-analysis...), not from Semantic Scholar's own `Review` label, which is wrong for many primary studies. A real review that never says so in its title or abstract will not be tagged.
 - **Cluster labels** are word-frequency based and sometimes uninformative.
 - **Timeline:** it needs publication years (papers without one are omitted; it is hidden with fewer than 4 dated papers).
-- **Language:** UI in Spanish only; abstracts and tl;dr in English.
+- **Language:** UI in English or Spanish (follows the browser, changeable in Settings); abstracts and tl;dr are always in English, as the API provides them.
 - **Automation gaps:** PubMed/PMC/MDPI extraction, Chrome (only Edge automated) and the
   real toolbar click have not been verified by automated tests.

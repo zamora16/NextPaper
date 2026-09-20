@@ -1,3 +1,4 @@
+import { isLangPreference, type LangPreference } from "~lib/i18n"
 import { createQueue } from "~lib/queue"
 
 // Each person uses their own free Semantic Scholar API key. It is never
@@ -14,9 +15,15 @@ export interface Settings {
   // The first-run screen was answered (with or without a key).
   setupDone: boolean
   s2ApiKey: string | null
+  // "auto" follows the browser language.
+  language: LangPreference
 }
 
-const DEFAULTS: Settings = { setupDone: false, s2ApiKey: null }
+const DEFAULTS: Settings = {
+  setupDone: false,
+  s2ApiKey: null,
+  language: "auto"
+}
 
 // Keys are ~40 letters/digits. Anything else (spaces, a pasted sentence, the
 // "x-api-key:" header name) is a mistake worth catching before saving.
@@ -39,7 +46,8 @@ export async function getSettings(): Promise<Settings> {
     setupDone: stored?.setupDone === true,
     // Stored values are re-validated: a hand-edited or corrupt entry must not
     // become a header.
-    s2ApiKey: normalizeApiKey(stored?.s2ApiKey)
+    s2ApiKey: normalizeApiKey(stored?.s2ApiKey),
+    language: isLangPreference(stored?.language) ? stored.language : "auto"
   }
 }
 
@@ -57,7 +65,10 @@ export const saveApiKey = (key: string) =>
 
 export const removeApiKey = () => change(() => ({ s2ApiKey: null }))
 
-// "Continuar sin clave": the first-run screen will not be shown again.
+export const saveLanguage = (language: LangPreference) =>
+  change(() => ({ language }))
+
+// "Continue without a key": the first-run screen will not be shown again.
 export const finishSetup = () => change(() => ({ setupDone: true }))
 
 export type KeyCheck = "valid" | "invalid" | "unknown"

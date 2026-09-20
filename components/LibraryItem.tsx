@@ -1,6 +1,14 @@
 import { useState, type ReactNode } from "react"
 
+import { Hint, useT } from "~components/i18n"
+import type { TKey } from "~lib/i18n"
 import { STATUSES, updateSaved, type SavedPaper } from "~lib/library"
+
+const STATUS_LABEL: Record<(typeof STATUSES)[number], TKey> = {
+  unread: "status.unread",
+  reading: "status.reading",
+  read: "status.read.plain"
+}
 
 export function LibraryItem({
   paper,
@@ -11,6 +19,7 @@ export function LibraryItem({
   card: ReactNode
   knownCollections: string[]
 }) {
+  const t = useT()
   const [note, setNote] = useState(paper.note)
   const [noteOpen, setNoteOpen] = useState(paper.note.length > 0)
   const [draft, setDraft] = useState("")
@@ -28,22 +37,28 @@ export function LibraryItem({
       {card}
 
       <div className="flex flex-wrap items-center gap-1 px-1">
-        {STATUSES.map((s) => (
+        {STATUSES.map((status) => (
           <button
-            key={s.id}
-            onClick={() => updateSaved(paper.paperId, { status: s.id })}
+            key={status}
+            onClick={() => updateSaved(paper.paperId, { status })}
+            aria-pressed={paper.status === status}
             className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${
-              paper.status === s.id
+              paper.status === status
                 ? "border-violet-300 bg-violet-50 text-violet-700"
                 : "border-slate-200 text-slate-500 hover:bg-slate-50"
             }`}>
-            {s.label}
+            {t(STATUS_LABEL[status])}
           </button>
         ))}
         <button
           onClick={() => setNoteOpen((open) => !open)}
+          aria-expanded={noteOpen}
           className="ml-auto text-[11px] font-medium text-slate-500 hover:text-slate-700 hover:underline">
-          {noteOpen ? "Ocultar nota" : note ? "Ver nota" : "Añadir nota"}
+          {noteOpen
+            ? t("item.note.hide")
+            : note
+              ? t("item.note.view")
+              : t("item.note.add")}
         </button>
       </div>
 
@@ -54,13 +69,14 @@ export function LibraryItem({
             className="flex items-center gap-1 rounded bg-sky-50 px-1.5 py-px text-[11px] font-medium text-sky-700">
             {name}
             <button
-              title={`Quitar de ${name}`}
+              title={t("item.collection.remove", { name })}
+              aria-label={t("item.collection.remove", { name })}
               onClick={() =>
                 updateSaved(paper.paperId, {
                   collections: paper.collections.filter((c) => c !== name)
                 })
               }
-              className="text-sky-400 hover:text-sky-700">
+              className="text-sky-500 hover:text-sky-700">
               ×
             </button>
           </span>
@@ -71,9 +87,11 @@ export function LibraryItem({
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && addCollection()}
           onBlur={addCollection}
-          placeholder="+ colección"
-          className="w-24 rounded border border-transparent px-1 py-px text-[11px] text-slate-600 placeholder:text-slate-400 hover:border-slate-200 focus:border-slate-300"
+          placeholder={t("item.collection.add")}
+          aria-label={t("item.collection.add")}
+          className="w-24 rounded border border-transparent px-1 py-px text-[11px] text-slate-600 placeholder:text-slate-500 hover:border-slate-200 focus:border-slate-300"
         />
+        <Hint text={t("item.collection.hint")} />
         <datalist id={listId}>
           {knownCollections
             .filter((name) => !paper.collections.includes(name))
@@ -88,9 +106,10 @@ export function LibraryItem({
           value={note}
           onChange={(e) => setNote(e.target.value)}
           onBlur={() => updateSaved(paper.paperId, { note })}
-          placeholder="Por qué es relevante, qué citar de aquí, dudas..."
+          placeholder={t("item.note.placeholder")}
+          aria-label={t("item.note.add")}
           rows={2}
-          className="mx-1 rounded border border-slate-200 p-1.5 text-xs text-slate-700 placeholder:text-slate-400"
+          className="mx-1 rounded border border-slate-200 p-1.5 text-xs text-slate-700 placeholder:text-slate-500"
         />
       )}
     </div>

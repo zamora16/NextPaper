@@ -1,6 +1,6 @@
 # Architecture
 
-State as of 2026-09-19. Verified against the code and by real-browser e2e runs
+State as of 2026-09-20. Verified against the code and by real-browser e2e runs
 (`scripts/`). If you change behavior, update this file in the same change.
 
 ## 1. Runtime overview
@@ -80,16 +80,18 @@ clusters, `showScore: false` (no seed, so no similarity %).
 
 ### Fallbacks
 
-`flatFallback` (one "Relacionados" group ordered by citations) when fewer than 2 candidates
+`flatFallback` (one `RELATED_GROUP` group ordered by citations) when fewer than 2 candidates
 have embeddings. If all candidate/batch requests fail → `RateLimitedError` → popup shows
-the message and a *Reintentar* button; nothing is cached.
+the translated message and a *Retry* button; nothing is cached.
 
 ## 3. Modules
 
 | File | Responsibility |
 |---|---|
 | `popup.tsx` | UI shell (~440 lines): tabs, topic search, `trail` (Explorar breadcrumb), filters/design filter/sort, picks, timeline, bulk copy. Uses `useAnalysis` (the analysis) and `useStorageValue` (library, alerts). |
-| `components/SavedTab.tsx` | The whole *Guardados* tab: status/collection filters, alerts panel, backup/import, bulk citation export, one `LibraryItem` per paper. |
+| `components/SavedTab.tsx` | The *Guardados / Saved* tab: status/collection filters, backup/import, bulk citation export, one `LibraryItem` per paper. Alerts are **not** here (they used to be, and pushed the saved papers down): they have their own tab. |
+| `components/i18n.tsx`, `lib/i18n/*` | `I18nProvider`/`useT`/`useLang`, `Hint` (the small "i" that explains a control on hover, focusable, with `aria-label`), `Rich` (`**bold**`), `groupLabel`. `en.ts` is the source of truth, `es.ts` has the same keys (type-enforced). `resolveLang(pref, navigator.language)`; preference (`auto`/`es`/`en`) is in `nextpaper_settings.language`. |
+| `lib/errors.ts` | Typed errors + `ErrorCode`/`errorCode(err)`. Job state, updates and the UI carry the code and translate at render time. |
 | `components/useAnalysis.ts` | `useAnalysis(ref)` → `{job, result, retry}`: asks the worker to analyze `ref`, follows its `JobState`, re-asks every 25 s while "loading" (watchdog, rule 10), reads the finished result from the cache and re-analyzes once when a "done" job has no cached result (self-healing). After a retry the next start does not re-read the stale stored state (it used to flash the old error for a moment). Unit-tested in jsdom (`tests/use-analysis.test.ts`). |
 | `components/useStorageValue.ts`, `components/ui.ts` | Hook that mirrors a `chrome.storage.local` key (read + re-read on change); shared class strings (`buttonClass`, `pillClass`). |
 | `background.ts` | Message handler (`analyze`, `check-updates`), `inFlight` dedupe, `syncKeepAlive`, alarm `nextpaper-updates` (first after 5 min, then 24 h), badge refresh on start. |
@@ -98,11 +100,11 @@ the message and a *Reintentar* button; nothing is cached.
 | `components/LibraryItem.tsx` | Reading status chips, collection chips + add box, note textarea (saved on blur). |
 | `components/LibraryTools.tsx` | "Copia de seguridad" and "Importar..." (one picker: NextPaper backup or BibTeX/RIS/DOI list); always visible, even with an empty library. |
 | `components/CitationButtons.tsx`, `useCopyAction.ts` | `CopyCitationsButton`, `ExportButton` with progress, and the copy phases hook (busy → copied, or "Pulsa para copiar" fallback). |
-| `components/UpdatesPanel.tsx` | "Novedades para ti": items with "Porque guardaste…", *Nuevo* tag, dismiss, "Buscar ahora". |
+| `components/UpdatesTab.tsx` | The *Novedades / Updates* tab (own tab with an unseen-count badge; opening it marks the alerts as seen): items with "because you saved…", *New* tag, dismiss, "Check now". |
 | `lib/semantic-scholar.ts` | API client: `getSeed`, `collectCandidates`, `getPapers`, `getPapersAligned` (import: same order, `null` for unknown, throws on failure), `searchPapers`, `getRecommendedIds(ref, pool, limit)` (alerts use limit 15). One shared `postBatch` → **parallel chunks of 100** for both batch lookups. Ids go into the URL path through `paperPath` (a DOI with `#` or `?` would otherwise be truncated and query a different paper). `getJson` (null on failure + `console.warn`). |
 | `lib/s2-fetch.ts` | `s2Fetch` (limiter + up to 8 **short** retries on 429/5xx/network errors via `retryDelay`: 0.35 s ×1.5 up to 3 s, + ≤250 ms jitter; honors Retry-After if ever sent) and `RateLimitedError`. |
 | `lib/rate-limit.ts` | `createLimiter(maxConcurrent, minGapMs)` (start slots reserved synchronously) and the shared instance: **3 in flight, 120 ms between starts**. No fixed pause between requests — see `docs/PERFORMANCE.md`. |
-| `lib/settings.ts` | Per-user settings in `nextpaper_settings` (`{setupDone, s2ApiKey}`): `normalizeApiKey` (format check), `checkApiKey` (one GET: 200 valid, 401/403 invalid, 429/network → "unknown", retried), `saveApiKey` / `removeApiKey` / `finishSetup` (queued read-modify-write), `getSettings` re-validates what it reads. **No key is ever bundled** (readable by anyone; the API terms forbid sharing a key; one shared 1 req/s limit would sink every user). |
+| `lib/settings.ts` | Per-user settings in `nextpaper_settings` (`{setupDone, s2ApiKey, language}`): `normalizeApiKey` (format check), `checkApiKey` (one GET: 200 valid, 401/403 invalid, 429/network → "unknown", retried), `saveApiKey` / `removeApiKey` / `finishSetup` (queued read-modify-write), `getSettings` re-validates what it reads. **No key is ever bundled** (readable by anyone; the API terms forbid sharing a key; one shared 1 req/s limit would sink every user). |
 | `lib/api-key.ts` | `authHeaders()`: the user's key as `x-api-key`, or nothing (the slower anonymous pool). Read from storage on each request, so a key added or removed applies at once. |
 | `lib/url.ts`, `lib/ref.ts` | `httpUrl` (only http(s) may become an href: API data and imported files are untrusted); `isPlausibleRef` (bounded, no control characters; the worker ignores anything else). |
 | `components/KeySetup.tsx` | First-run screen (explains why and how to get the free key in 3 steps, checks the key before saving, "continue without a key") and the settings screen (masked key, remove, credits, license, version). The popup shows it before anything else and **starts no analysis behind it**. |
@@ -120,7 +122,7 @@ the message and a *Reintentar* button; nothing is cached.
 | `lib/import.ts` | Import from BibTeX / RIS / plain DOI-or-title lists: pure `parseReferences`, `similarTitles`, and `resolveReferences` (DOIs via one aligned batch; ≤25 titles via search + title-similarity check). |
 | `lib/library.ts` | Saved papers with `status`, `note`, `collections`; writes queued (`toggleSaved`, `updateSaved`, `deleteCollection`, `addPapers`, `restoreItems`); `collectionCounts`. Saved papers go through `plainPaper`, so **similarity / relation / shared terms of the analysis they came from are not kept** (in Guardados nothing is "open"); `getLibrary` also cleans items saved by older versions. |
 | `lib/queue.ts` | `createQueue()`: runs async tasks one at a time (a failed task does not block the next). Orders work **within one JS context** only; popup and worker are separate, so cross-context state re-reads right before saving (see `updates.ts`). |
-| `lib/updates.ts` | Daily alerts: for the 8 latest saves, `recent`-pool ids (≤5 new each) → one batch for metadata; `seen` prevents repeats; badge = unseen count. Every change re-reads the state right before writing (a check lasts seconds; dismissing or viewing meanwhile used to be undone). `lastError` records why a check failed and `UpdatesPanel` shows it. |
+| `lib/updates.ts` | Daily alerts: for the 8 latest saves, `recent`-pool ids (≤5 new each) → one batch for metadata; `seen` prevents repeats; badge = unseen count. Every change re-reads the state right before writing (a check lasts seconds; dismissing or viewing meanwhile used to be undone). `lastError` (an `ErrorCode`) records why a check failed and `UpdatesTab` shows it. |
 | `lib/view.ts` | Filters (`reference`, `citation`, `review`, `open`), an independent design filter (`DesignFilter`, `designOptions` = designs present with counts) and sorts (`relevance` keeps groups; `citations`/`year` flatten). |
 | `lib/paper-utils.ts` | `isReview`: title patterns or a review design declared in the text (`studyOf`); Semantic Scholar's `Review` type is **not trusted** (it tagged 109 of 430 papers whose text declares a trial, cohort or survey; `MetaAnalysis` is consistent and kept through `study.ts`). `plainPaper`: a paper with no analysis context and no embedding. |
 | `lib/extract-ref.ts` | Self-contained page extractor (see Rules in `CONTRIBUTING.md`). |
@@ -132,7 +134,7 @@ the message and a *Reintentar* button; nothing is cached.
 
 | Key | Value | Lifetime / bound |
 |---|---|---|
-| `nextpaper_job_<ref>` | `JobState`: `{phase:"loading",step?}` \| `{phase:"done"}` \| `{phase:"error",message}` (a few bytes) | Pruned when its cache entry disappears |
+| `nextpaper_job_<ref>` | `JobState`: `{phase:"loading",step?}` | `{phase:"done"}` | `{phase:"error",error: ErrorCode}` (a few bytes, language-neutral) | Pruned when its cache entry disappears |
 | `nextpaper_cache_v10_<ref>` | `{z, cachedAt}` where `z` = base64(gzip(JSON of `AnalysisResult`)) | 7-day TTL **and** newest 40 entries only; removed by `pruneStorage` |
 | `nextpaper_library` | `Record<paperId, SavedPaper>` (`ScoredPaper` + `savedAt`, `status`, `note`, `collections`) | permanent, never pruned |
 | `nextpaper_crossref_v1_<doi>` | `{m: CrossrefMeta \| null, at}` (`null` = Crossref has no record, e.g. arXiv DOIs) | 30 d hit / 7 d miss, newest 500 kept (`pruneStorage`) |
@@ -199,12 +201,14 @@ deleted.
 | Copy phases instead of `clipboardWrite` | Clipboard writes after a network wait can be rejected; the permission would add an install warning. |
 | One import picker for backups and references | Fewer buttons; content sniffing (`parseBackup` first, then BibTeX/RIS/plain) avoids asking the user what the file is. |
 | Heuristic author-name parsing | S2 gives free-text names ("S. Mölbert", "Michael J. Black"); wrong for compound surnames. A fix needs a structured source (Crossref) — see ROADMAP. |
+| Language-neutral data + dictionaries (codes, not sentences, in storage) | Job state and cached results outlive a language switch; storing translated text would show the old language until a re-analysis. Codes are translated at render. |
+| Tooltips as native `title` + focusable `Hint` | A custom popover would be clipped by the scrolling result list; the native tooltip never is, and the `aria-label` gives screen-reader users the same text. |
 | `?ref=` popup param | The only way to drive the popup in automation (no toolbar click ⇒ no `activeTab`). |
 
 ## 7. Known technical debt
 
 1. ~~Storage growth with no eviction~~ — fixed 2026-09-19 (see §4).
-2. Unit tests (379, `lib/` at ~98% line coverage, floors enforced by `npm run test:coverage`) cover every module in `lib/`: storage-bound ones against an in-memory `chrome.storage` (`tests/helpers/chrome.ts`, with a simulated quota), network-bound ones against a mocked `fetch`/module. Only the UI (popup, components, worker) and real request behavior rely on the e2e scripts.
+2. Unit tests (392, `lib/` at ~98% line coverage, floors enforced by `npm run test:coverage`) cover every module in `lib/`: storage-bound ones against an in-memory `chrome.storage` (`tests/helpers/chrome.ts`, with a simulated quota), network-bound ones against a mocked `fetch`/module. Only the UI (popup, components, worker) and real request behavior rely on the e2e scripts.
 3. ~~Not under version control~~ — git + CI since 2026-09-20 (no remote yet).
 4. ~~`checkForUpdates` failures swallowed~~ — recorded in `lastError` and shown in the panel (2026-09-20).
    `strict` TypeScript is on (2026-09-20); `npm run typecheck`, `format:check` and coverage run in CI.
@@ -214,6 +218,6 @@ deleted.
    translations of one scale).
 8. Only Edge was automated; PubMed/PMC/MDPI extraction and the real toolbar click
    (`activeTab`) are untested by automation.
-9. UI is Spanish-only; abstracts/tl;dr are English.
+9. Abstracts and tl;dr are English whatever the UI language (they come from the API). Study-design rules read English plus some Spanish.
 10. The timeline needs a publication year: papers without one are left out (their count is shown), and it is hidden with fewer than 4 dated papers.
 11. The daily alarm was verified only through the on-demand "Buscar ahora" path.

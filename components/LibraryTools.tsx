@@ -1,18 +1,27 @@
 import { useRef, useState } from "react"
 
+import { useT, type Translate } from "~components/i18n"
 import { buttonClass } from "~components/ui"
 import { buildBackup, parseBackup } from "~lib/backup"
+import { errorCode } from "~lib/errors"
 import { downloadFile } from "~lib/export"
-import { parseReferences, resolveReferences } from "~lib/import"
+import {
+  parseReferences,
+  resolveReferences,
+  type ImportStep
+} from "~lib/import"
 import { addPapers, restoreItems, type SavedPaper } from "~lib/library"
 
-const plural = (n: number, one: string, many: string) =>
-  `${n} ${n === 1 ? one : many}`
+const stepText = (t: Translate, step: ImportStep) =>
+  step.code === "dois"
+    ? t("tools.step.dois", { n: step.n })
+    : t("tools.step.titles", { n: step.n })
 
 // Backup / restore of the whole library, and import from other tools.
 // One file picker handles both: a NextPaper backup is restored, anything else
 // is read as BibTeX, RIS or a list of DOIs / titles.
 export function LibraryTools({ library }: { library: SavedPaper[] }) {
+  const t = useT()
   const input = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -20,18 +29,20 @@ export function LibraryTools({ library }: { library: SavedPaper[] }) {
   const backup = () => {
     const date = new Date().toISOString().slice(0, 10)
     downloadFile(
-      `nextpaper-copia-${date}.json`,
+      `nextpaper-backup-${date}.json`,
       JSON.stringify(buildBackup(library), null, 2),
       "application/json"
     )
     setMessage(
-      `Copia de seguridad guardada (${plural(library.length, "paper", "papers")}).`
+      t("tools.backupDone", {
+        papers: t("papers", { n: library.length })
+      })
     )
   }
 
   const importFile = async (file: File) => {
     setMessage(null)
-    setBusy("Leyendo archivo...")
+    setBusy(t("tools.reading"))
     try {
       const text = await file.text()
 
@@ -39,10 +50,8 @@ export function LibraryTools({ library }: { library: SavedPaper[] }) {
       if (restored) {
         const { added, updated } = await restoreItems(restored)
         setMessage(
-          `Copia restaurada: ${plural(added, "paper nuevo", "papers nuevos")}` +
-            (updated
-              ? `, ${plural(updated, "actualizado", "actualizados")}`
-              : "") +
+          t("tools.restored", { added: t("newPapers", { n: added }) }) +
+            (updated ? `, ${t("updatedPapers", { n: updated })}` : "") +
             "."
         )
         return
@@ -50,33 +59,32 @@ export function LibraryTools({ library }: { library: SavedPaper[] }) {
 
       const parsed = parseReferences(text)
       if (parsed.dois.length + parsed.titles.length === 0) {
-        setMessage(
-          "No se encontraron referencias (DOI o títulos) en el archivo."
-        )
+        setMessage(t("tools.noRefs"))
         return
       }
 
       const { papers, notFound, skipped } = await resolveReferences(
         parsed,
-        setBusy
+        (step) => setBusy(stepText(t, step))
       )
-      const { added, alreadySaved } = await addPapers(papers, "Importados")
+      const collection = t("tools.collectionName")
+      const { added, alreadySaved } = await addPapers(papers, collection)
 
       setMessage(
-        `Importados ${plural(added, "paper", "papers")} en la colección «Importados»` +
-          (alreadySaved ? `; ${alreadySaved} ya estaban guardados` : "") +
-          (notFound.length ? `; ${notFound.length} no se encontraron` : "") +
-          (skipped
-            ? `; ${skipped} títulos sin buscar (máximo 25 por archivo)`
+        t("tools.imported", { papers: t("papers", { n: added }), collection }) +
+          (alreadySaved
+            ? `; ${t("tools.alreadySaved", { n: alreadySaved })}`
             : "") +
+          (notFound.length
+            ? `; ${t("tools.notFound", { n: notFound.length })}`
+            : "") +
+          (skipped ? `; ${t("tools.skipped", { n: skipped })}` : "") +
           "."
       )
     } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "No se pudo importar el archivo."
-      )
+      // a known cause (Semantic Scholar busy, key rejected...) is said as such
+      const code = errorCode(error)
+      setMessage(code === "unknown" ? t("tools.failed") : t(`error.${code}`))
     } finally {
       setBusy(null)
       if (input.current) input.current.value = ""
@@ -89,15 +97,16 @@ export function LibraryTools({ library }: { library: SavedPaper[] }) {
         <button
           onClick={backup}
           disabled={library.length === 0}
+          title={t("tools.backup.hint")}
           className={buttonClass}>
-          Copia de seguridad
+          {t("tools.backup")}
         </button>
         <button
           onClick={() => input.current?.click()}
           disabled={busy !== null}
-          title="Restaurar una copia de NextPaper, o importar un .bib, .ris o una lista de DOI"
+          title={t("tools.import.hint")}
           className={buttonClass}>
-          {busy ?? "Importar..."}
+          {busy ?? t("tools.import")}
         </button>
         <input
           ref={input}

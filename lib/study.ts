@@ -23,7 +23,6 @@ export type DesignId =
 
 interface DesignRule {
   id: DesignId
-  label: string
   // Matched against the title and against abstract sentences that talk about
   // the study itself (see SELF).
   pattern: RegExp
@@ -39,7 +38,6 @@ interface DesignRule {
 export const DESIGNS: DesignRule[] = [
   {
     id: "protocol",
-    label: "Protocolo de estudio",
     pattern:
       /\bprotocol for a (randomi[sz]ed|clinical|trial|study|pilot|systematic|scoping)|\bthis (paper|article) (describes|presents|outlines) the (\w+ ){0,3}protocol\b/i,
     // "according to a prespecified trial protocol" is a results paper.
@@ -48,7 +46,6 @@ export const DESIGNS: DesignRule[] = [
   },
   {
     id: "meta",
-    label: "Metaanálisis",
     // "no meta-analysis was performed" and "a systematic review of
     // meta-analyses" are not meta-analyses.
     pattern:
@@ -56,20 +53,17 @@ export const DESIGNS: DesignRule[] = [
   },
   {
     id: "systematic",
-    label: "Revisión sistemática",
     pattern:
       // "systematically review" is a verb, not the design.
       /systematic review|revisi[oó]n sistem[aá]tica|umbrella review/i
   },
   {
     id: "rct",
-    label: "Ensayo aleatorizado",
     pattern:
       /(?<!non-?|non |quasi-?)randomi[sz]ed,?\s+(?:[\w-]+,?\s+){0,5}?(trial|study)\b|\bRCT\b|randomly (assigned|allocated)|ensayo (cl[ií]nico )?aleatori[zs]ado/i
   },
   {
     id: "trial",
-    label: "Ensayo clínico",
     // "clinical trial screening / progress / results" is talk about trials,
     // not the design of this study.
     pattern:
@@ -77,7 +71,6 @@ export const DESIGNS: DesignRule[] = [
   },
   {
     id: "psychometric",
-    label: "Validación psicométrica",
     // "tested for validity and reliability" or a factor analysis appear in many
     // ordinary surveys, so they are not enough.
     pattern:
@@ -85,7 +78,6 @@ export const DESIGNS: DesignRule[] = [
   },
   {
     id: "experimental",
-    label: "Experimental / piloto",
     // "experimental design" alone is usually a topic; it counts only when the
     // study says it used one.
     pattern:
@@ -93,7 +85,6 @@ export const DESIGNS: DesignRule[] = [
   },
   {
     id: "review",
-    label: "Revisión",
     pattern:
       /scoping review|narrative review|integrative review|critical review|\b(this|present|current) (\w+ )?review\b|revisi[oó]n (narrativa|bibliogr[aá]fica|de la literatura)/i,
     titlePattern:
@@ -101,12 +92,10 @@ export const DESIGNS: DesignRule[] = [
   },
   {
     id: "case-control",
-    label: "Casos y controles",
     pattern: /case[- ]control|casos y controles/i
   },
   {
     id: "cohort",
-    label: "Cohortes / longitudinal",
     // Only explicit study phrases: the bare word "cohort" also names a data
     // source ("cross-sectional data from a cohort").
     pattern:
@@ -114,18 +103,15 @@ export const DESIGNS: DesignRule[] = [
   },
   {
     id: "mixed",
-    label: "Métodos mixtos",
     pattern: /mixed[- ]methods?|m[eé]todos? mixtos?/i
   },
   {
     id: "cross-sectional",
-    label: "Transversal / encuesta",
     pattern:
       /cross-?sectional (survey|study|design|analysis|research|online)|survey study|estudio transversal|encuesta transversal/i
   },
   {
     id: "qualitative",
-    label: "Cualitativo",
     // Needs a research-method cue: "qualitative agreement" or "quantitative
     // and qualitative data" is not a design. Focus groups and thematic
     // analysis also serve surveys and mixed studies, so they are left out.
@@ -134,15 +120,11 @@ export const DESIGNS: DesignRule[] = [
   },
   {
     id: "case",
-    label: "Caso clínico",
     // "case study" is deliberately absent: in education, business or ML it is
     // not a clinical case.
     pattern: /case reports?|case series|caso cl[ií]nico/i
   }
 ]
-
-const LABELS = new Map(DESIGNS.map((d) => [d.id, d.label]))
-export const designLabel = (id: DesignId) => LABELS.get(id) ?? id
 
 // publicationTypes from Semantic Scholar only fill in when the text says
 // nothing, and only for types that map cleanly onto a design.
@@ -452,10 +434,4 @@ export function studyOf(
     memo.set(paper, info)
   }
   return info
-}
-
-export function formatSample(sample: NonNullable<StudyInfo["sample"]>): string {
-  return sample.unit === "studies"
-    ? `${sample.n} estudios`
-    : `n = ${sample.n.toLocaleString()}`
 }

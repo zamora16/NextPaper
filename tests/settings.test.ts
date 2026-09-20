@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { authHeaders } from "~lib/api-key"
+import { errorCode } from "~lib/errors"
 import { isPlausibleRef, MAX_REF_LENGTH } from "~lib/ref"
 import { ApiKeyRejectedError, s2Fetch } from "~lib/s2-fetch"
 import { getSeed } from "~lib/semantic-scholar"
@@ -12,6 +13,7 @@ import {
   normalizeApiKey,
   removeApiKey,
   saveApiKey,
+  saveLanguage,
   SETTINGS_KEY
 } from "~lib/settings"
 import { httpUrl } from "~lib/url"
@@ -56,23 +58,39 @@ describe("maskKey", () => {
 
 describe("settings storage", () => {
   it("starts with no key and the first-run screen pending", async () => {
-    expect(await getSettings()).toEqual({ setupDone: false, s2ApiKey: null })
+    expect(await getSettings()).toEqual({
+      setupDone: false,
+      s2ApiKey: null,
+      language: "auto"
+    })
   })
 
   it("saving a key also finishes the setup", async () => {
     await saveApiKey(KEY)
-    expect(await getSettings()).toEqual({ setupDone: true, s2ApiKey: KEY })
+    expect(await getSettings()).toEqual({
+      setupDone: true,
+      s2ApiKey: KEY,
+      language: "auto"
+    })
   })
 
   it("'continue without a key' finishes the setup and keeps no key", async () => {
     await finishSetup()
-    expect(await getSettings()).toEqual({ setupDone: true, s2ApiKey: null })
+    expect(await getSettings()).toEqual({
+      setupDone: true,
+      s2ApiKey: null,
+      language: "auto"
+    })
   })
 
   it("removing the key keeps the setup done (the first-run screen does not come back)", async () => {
     await saveApiKey(KEY)
     await removeApiKey()
-    expect(await getSettings()).toEqual({ setupDone: true, s2ApiKey: null })
+    expect(await getSettings()).toEqual({
+      setupDone: true,
+      s2ApiKey: null,
+      language: "auto"
+    })
   })
 
   it("does not trust what is stored: a corrupt or edited value never becomes a key", async () => {
@@ -80,7 +98,11 @@ describe("settings storage", () => {
       setupDone: "yes",
       s2ApiKey: "bad key\r\nx-injected: 1"
     })
-    expect(await getSettings()).toEqual({ setupDone: false, s2ApiKey: null })
+    expect(await getSettings()).toEqual({
+      setupDone: false,
+      s2ApiKey: null,
+      language: "auto"
+    })
   })
 
   it("survives storage pruning: it is a key pruneStorage does not know", async () => {
@@ -92,7 +114,34 @@ describe("settings storage", () => {
 
   it("keeps concurrent changes (queued read-modify-write)", async () => {
     await Promise.all([finishSetup(), saveApiKey(KEY)])
-    expect(await getSettings()).toEqual({ setupDone: true, s2ApiKey: KEY })
+    expect(await getSettings()).toEqual({
+      setupDone: true,
+      s2ApiKey: KEY,
+      language: "auto"
+    })
+  })
+})
+
+describe("language preference", () => {
+  it("is automatic until the user chooses one", async () => {
+    expect((await getSettings()).language).toBe("auto")
+  })
+
+  it("is saved without touching the key or the setup", async () => {
+    await saveApiKey(KEY)
+    await saveLanguage("en")
+    expect(await getSettings()).toEqual({
+      setupDone: true,
+      s2ApiKey: KEY,
+      language: "en"
+    })
+    await saveLanguage("auto")
+    expect((await getSettings()).language).toBe("auto")
+  })
+
+  it("ignores a stored value that is not a language", async () => {
+    chrome.data.set(SETTINGS_KEY, { setupDone: true, language: "klingon" })
+    expect((await getSettings()).language).toBe("auto")
   })
 })
 
@@ -183,8 +232,8 @@ describe("the key in requests", () => {
     )
     const error = await getSeed("DOI:10.1/x").catch((e) => e)
     expect(error).toBeInstanceOf(ApiKeyRejectedError)
-    expect(error.message).toMatch(/clave/i)
-    expect(error.message).toMatch(/Ajustes/)
+    // what the user reads is chosen from the code, in their language
+    expect(errorCode(error)).toBe("key_rejected")
   })
 })
 

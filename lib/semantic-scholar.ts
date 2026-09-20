@@ -1,4 +1,10 @@
-import { ApiKeyRejectedError, RateLimitedError, s2Fetch } from "~lib/s2-fetch"
+import {
+  ApiKeyRejectedError,
+  PaperNotFoundError,
+  RateLimitedError,
+  UnavailableError
+} from "~lib/errors"
+import { s2Fetch } from "~lib/s2-fetch"
 
 export interface Author {
   authorId: string
@@ -75,11 +81,7 @@ const BATCH_CHUNK = 100
 const paperPath = (ref: string) =>
   encodeURI(ref).replace(/[?#]/g, (char) => encodeURIComponent(char))
 
-export class PaperNotFoundError extends Error {
-  constructor() {
-    super("Este paper no esta indexado en Semantic Scholar todavia.")
-  }
-}
+export { PaperNotFoundError }
 
 async function getJson<T>(
   url: string,
@@ -111,7 +113,7 @@ export async function getSeed(ref: string): Promise<Seed> {
   if (response.status === 403) throw new ApiKeyRejectedError()
   if (response.status === 404) throw new PaperNotFoundError()
   if (response.status === 429) throw new RateLimitedError()
-  if (!response.ok) throw new Error("No se pudo conectar con Semantic Scholar.")
+  if (!response.ok) throw new UnavailableError()
 
   const data = await response.json()
   return {

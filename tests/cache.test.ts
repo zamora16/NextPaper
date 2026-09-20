@@ -8,6 +8,7 @@ import {
 } from "~lib/cache"
 import { compressJson } from "~lib/compress"
 import { CROSSREF_PREFIX } from "~lib/crossref"
+import { StorageFullError } from "~lib/errors"
 import { JOB_PREFIX } from "~lib/job"
 import { LIBRARY_KEY } from "~lib/library"
 import type { AnalysisResult } from "~lib/pipeline"
@@ -103,7 +104,9 @@ describe("running out of space", () => {
 
   it("gives a clear error when even that is not enough", async () => {
     chrome.quotaBytes = 10
-    await expect(setCachedResult("R", result())).rejects.toThrow(/espacio/i)
+    await expect(setCachedResult("R", result())).rejects.toBeInstanceOf(
+      StorageFullError
+    )
   })
 })
 

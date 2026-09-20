@@ -49,7 +49,8 @@ function testApiKey() {
   }
 }
 
-async function launch({ seedSettings = true } = {}) {
+// `lang` sets the browser UI language, which the "automatic" setting follows.
+async function launch({ seedSettings = true, lang = "es" } = {}) {
   if (!fs.existsSync(path.join(EXT, "manifest.json"))) {
     console.error("Build not found. Run: npx plasmo build")
     process.exit(1)
@@ -62,6 +63,7 @@ async function launch({ seedSettings = true } = {}) {
     args: [
       `--disable-extensions-except=${EXT}`,
       `--load-extension=${EXT}`,
+      `--lang=${lang}`,
       "--no-sandbox"
     ],
     defaultViewport: { width: 440, height: 1000 }
@@ -78,7 +80,7 @@ async function launch({ seedSettings = true } = {}) {
     await page.goto(`chrome-extension://${extId}/popup.html`)
     await page.evaluate(
       (settings) => chrome.storage.local.set({ nextpaper_settings: settings }),
-      { setupDone: true, s2ApiKey: key }
+      { setupDone: true, s2ApiKey: key, language: lang }
     )
     await page.close()
   }
@@ -102,8 +104,9 @@ async function openPopup(browser, extId, ref) {
 const waitDone = (page, timeout = 200000) =>
   page.waitForFunction(
     () =>
-      !document.body.innerText.includes("Corre en segundo plano") &&
-      /\d+ de \d+ papers/.test(document.body.innerText),
+      !/Corre en segundo plano|Runs in the background/.test(
+        document.body.innerText
+      ) && /\d+ (de|of) \d+ papers/.test(document.body.innerText),
     { timeout }
   )
 

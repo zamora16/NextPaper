@@ -1,12 +1,14 @@
 import { useState } from "react"
 
+import { useT } from "~components/i18n"
 import { useCopyAction } from "~components/useCopyAction"
 import { supportsInText, type CitationStyle } from "~lib/citation"
 import { citeOne, inTextOne } from "~lib/cite"
+import type { TKey } from "~lib/i18n"
 import type { ReadStatus } from "~lib/library"
 import { isReview } from "~lib/paper-utils"
 import type { ScoredPaper } from "~lib/pipeline"
-import { designLabel, formatSample, studyOf } from "~lib/study"
+import { studyOf } from "~lib/study"
 import { httpUrl } from "~lib/url"
 
 function Tag({
@@ -27,6 +29,9 @@ function Tag({
   )
 }
 
+const actionClass =
+  "rounded border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-60"
+
 export function PaperCard({
   paper,
   citationStyle,
@@ -44,6 +49,7 @@ export function PaperCard({
   onToggleSave: () => void
   onExplore?: () => void
 }) {
+  const t = useT()
   const [showAbstract, setShowAbstract] = useState(false)
 
   const visibleAuthors = paper.authors.slice(0, 3).map((a) => a.name)
@@ -75,9 +81,11 @@ export function PaperCard({
         </a>
         <button
           onClick={onToggleSave}
-          title={saved ? "Quitar de guardados" : "Guardar para leer después"}
+          title={saved ? t("card.unsave") : t("card.save")}
+          aria-label={saved ? t("card.unsave") : t("card.save")}
+          aria-pressed={saved}
           className={`shrink-0 text-base leading-none ${
-            saved ? "text-amber-500" : "text-slate-300 hover:text-amber-400"
+            saved ? "text-amber-500" : "text-slate-500 hover:text-amber-500"
           }`}>
           {saved ? "★" : "☆"}
         </button>
@@ -85,7 +93,8 @@ export function PaperCard({
 
       <p className="mt-1 text-xs text-slate-500">
         {visibleAuthors.join(", ")}
-        {extraCount > 0 ? ` +${extraCount}` : ""} · {paper.year ?? "s.f."}
+        {extraCount > 0 ? ` +${extraCount}` : ""} ·{" "}
+        {paper.year ?? t("card.noYear")}
         {paper.venue ? ` · ${paper.venue}` : ""}
       </p>
 
@@ -99,8 +108,9 @@ export function PaperCard({
         <>
           <button
             onClick={() => setShowAbstract((prev) => !prev)}
+            aria-expanded={showAbstract}
             className="mt-1 text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline">
-            {showAbstract ? "Ocultar abstract" : "Ver abstract"}
+            {showAbstract ? t("card.abstract.hide") : t("card.abstract.show")}
           </button>
           {showAbstract && (
             <p className="mt-1 text-xs text-slate-600">{paper.abstract}</p>
@@ -113,66 +123,76 @@ export function PaperCard({
           className="bg-blue-50 text-blue-700"
           title={
             influential > 0
-              ? `${influential.toLocaleString()} citas influyentes`
-              : undefined
+              ? `${t("card.citations.hint")} · ${t("card.influential", { n: influential.toLocaleString() })}`
+              : t("card.citations.hint")
           }>
-          {paper.citationCount.toLocaleString()} citas
+          {t("card.citations", { n: paper.citationCount })}
         </Tag>
         {paper.similarity !== null && (
           <Tag
             className="bg-violet-50 text-violet-700"
             title={
               paper.approximate
-                ? "Aproximada: el paper que lees no tiene embedding, se compara con sus vecinos más probables"
-                : "Similitud coseno entre embeddings SPECTER2"
+                ? t("card.similar.approx.hint")
+                : t("card.similar.hint")
             }>
             {paper.approximate ? "~" : ""}
-            {Math.round(paper.similarity * 100)}% similar
+            {t("card.similar", { n: Math.round(paper.similarity * 100) })}
           </Tag>
         )}
         {paper.relation && (
           <Tag
             title={
               paper.relation === "reference"
-                ? "El paper que lees cita a este"
-                : "Este paper cita al que lees"
+                ? t("card.relation.reference.hint")
+                : t("card.relation.citation.hint")
             }>
-            {paper.relation === "reference" ? "Referencia" : "Lo cita"}
+            {paper.relation === "reference"
+              ? t("card.relation.reference")
+              : t("card.relation.citation")}
           </Tag>
         )}
         {isReview(paper) && (
-          <Tag className="bg-amber-50 text-amber-700">Revisión</Tag>
+          <Tag
+            className="bg-amber-50 text-amber-700"
+            title={t("card.review.hint")}>
+            {t("card.review")}
+          </Tag>
         )}
         {study.design && !(study.design === "review" && isReview(paper)) && (
           <Tag
             className="bg-teal-50 text-teal-700"
-            title="Diseño detectado en el título y el abstract con reglas; puede fallar">
-            {designLabel(study.design)}
+            title={t("card.design.hint")}>
+            {t(`design.${study.design}` as TKey)}
           </Tag>
         )}
         {study.sample && (
           <Tag
             className="bg-teal-50 text-teal-700"
-            title="Tamaño de muestra leído del abstract con reglas; puede fallar">
-            {formatSample(study.sample)}
+            title={t("card.sample.hint")}>
+            {study.sample.unit === "studies"
+              ? t("card.sample.studies", { n: study.sample.n })
+              : `n = ${study.sample.n.toLocaleString()}`}
           </Tag>
         )}
         {status === "read" && (
-          <Tag className="bg-emerald-50 text-emerald-700">✓ Leído</Tag>
+          <Tag className="bg-emerald-50 text-emerald-700">
+            {t("status.read")}
+          </Tag>
         )}
         {status === "reading" && (
-          <Tag className="bg-sky-50 text-sky-700">Leyendo</Tag>
+          <Tag className="bg-sky-50 text-sky-700">{t("status.reading")}</Tag>
         )}
-        {status === "unread" && <Tag>Por leer</Tag>}
+        {status === "unread" && <Tag>{t("status.unread")}</Tag>}
       </div>
 
       <div className="mt-2 flex justify-end gap-1.5">
         {onExplore && (
           <button
             onClick={onExplore}
-            title="Analizar este paper: ver sus referencias, citas y papers similares"
+            title={t("card.explore.hint")}
             className="rounded border border-violet-200 px-2 py-0.5 text-xs font-medium text-violet-700 hover:bg-violet-50">
-            Explorar
+            {t("card.explore")}
           </button>
         )}
         {pdfUrl && (
@@ -180,24 +200,26 @@ export function PaperCard({
             href={pdfUrl}
             target="_blank"
             rel="noreferrer"
+            title={t("card.pdf.hint")}
             className="rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
-            PDF gratis
+            {t("card.pdf")}
           </a>
         )}
         {supportsInText(citationStyle) && (
           <button
             onClick={inText.run}
             disabled={inText.phase === "busy"}
-            title="Copiar la cita en el texto, p. ej. (Autor, 2020)"
-            className="rounded border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-60">
-            {inText.label("En texto")}
+            title={t("card.inText.hint")}
+            className={actionClass}>
+            {inText.label(t("card.inText"))}
           </button>
         )}
         <button
           onClick={cite.run}
           disabled={cite.phase === "busy"}
-          className="rounded border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-100">
-          {cite.label("Citar")}
+          title={t("card.cite.hint")}
+          className={actionClass}>
+          {cite.label(t("card.cite"))}
         </button>
       </div>
     </div>

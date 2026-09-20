@@ -22,7 +22,7 @@ npm run dev                # then load build/chrome-mv3-dev via chrome://extensi
 npx tsc --noEmit           # typecheck, `strict` on (Parcel does NOT typecheck; run this every change)
 npm run format             # prettier over lib/components/tests/popup/background (CI runs format:check)
 npx plasmo build           # production build -> build/chrome-mv3-prod
-npm test                   # vitest (379 tests; `npm run test:coverage` enforces floors on lib/, ~98% lines): every module in lib/ —
+npm test                   # vitest (392 tests; `npm run test:coverage` enforces floors on lib/, ~98% lines): every module in lib/ —
                            # keywords, timeline, study (design/sample), rate limiter/retry, API client (mocked fetch), pipeline (assemble/dedupe/picks), extractPaperRef (jsdom)
 ```
 
@@ -43,6 +43,7 @@ node scripts/e2e-library.cjs       # save, status, notes, .bib/.ris export, aler
 node scripts/e2e-storage.cjs       # compression, pruning, migration, user data untouched
 node scripts/e2e-import.cjs        # import .bib, collections, backup/restore, hostile file
 node scripts/e2e-setup.cjs         # first-run setup, personal API key, no key in the bundle
+node scripts/e2e-english.cjs       # English UI, three tabs, hover hints, language switch
 node scripts/trace-network.cjs     # request-by-request timeline of a cold analysis (performance work)
 ```
 
@@ -119,11 +120,18 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
     build` must produce an extension in which the key does not appear (`scripts/e2e-setup.cjs`
     checks it). Links from API or imported data become an `href` only through `httpUrl`; refs read
     from a page are bounded (`extract-ref`, `isPlausibleRef`).
+19. **The interface is bilingual (Spanish / English) and language-neutral underneath.** Every visible
+    string lives in `lib/i18n/en.ts` (source of truth) and `es.ts` (same keys, enforced by the type and
+    `tests/i18n.test.ts`: same placeholders, same plural forms). Never put a translated sentence into
+    stored or cached data: job state, updates and results carry **codes** (`ErrorCode`, `Step`, the
+    `RELATED_GROUP` / `ALL_GROUP` sentinels) and are translated when rendered, so switching language
+    needs no re-analysis. Keys ending in `.hint` are the hover explanations (`<Hint>` or `title`);
+    a new control gets one. Use `useT()`; icon-only buttons need an `aria-label`.
 
 ## Conventions
 
 - Prettier: no semicolons, double quotes, no trailing commas, 80 cols, imports sorted.
-- UI strings are Spanish; code, identifiers and comments are English. Comments only for
+- UI strings are in the dictionaries (Spanish and English); code, identifiers and comments are English. Comments only for
   non-obvious *why* (hidden constraints, API quirks) — one short line, no docstrings.
 - Path alias `~` = project root (e.g. `~lib/pipeline`, `~components/PaperCard`).
 - Tailwind 3 (not 4: Plasmo's Parcel cannot resolve Tailwind 4's `node:module` import).
@@ -146,7 +154,7 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
 popup.tsx            UI shell: tabs, search, trail (Explorar), filters/sort, saved tab
 background.ts        service worker: runs analyses, daily alerts alarm, badge, keep-alive
 components/          PaperCard, LibraryItem (status, note, collections), LibraryTools (backup/import),
-                     UpdatesPanel, CitationButtons + useCopyAction (copy/export with progress), Timeline (SVG)
+                     UpdatesTab, SavedTab, CitationButtons + useCopyAction (copy/export with progress), Timeline (SVG)
 lib/pipeline.ts      THE core: candidates -> embeddings -> ranking -> clusters -> picks
 lib/semantic-scholar.ts   API client (seed, candidates, batch papers, search, recent)
 lib/s2-fetch.ts, rate-limit.ts, api-key.ts   HTTP discipline (see rule 1-2); the key comes from lib/settings.ts (per user)
@@ -157,7 +165,8 @@ lib/study.ts                                 study design + sample size from the
 lib/citation.ts, cite.ts, crossref.ts        9 styles + in-text (pure, tested); async Crossref enrichment; Crossref client/cache
 lib/backup.ts, import.ts, export.ts          backup/merge (pure, tested), BibTeX/RIS/DOI import (pure parsers, tested), file download
 lib/library.ts, updates.ts, queue.ts, view.ts, paper-utils.ts, extract-ref.ts
-components/KeySetup.tsx, SavedTab.tsx, useAnalysis.ts, useStorageValue.ts, ui.ts   Guardados tab; analysis hook (job + watchdog + cached result); storage hook; class strings
+components/KeySetup.tsx, useAnalysis.ts, useStorageValue.ts, ui.ts   setup/settings screen; analysis hook (job + watchdog + cached result); storage hook; class strings
+components/i18n.tsx, lib/i18n/{en,es,index}.ts, lib/errors.ts   interface language (see rule 19); typed errors and their codes
 lib/cache.ts, compress.ts, job.ts            compressed result cache, pruning, JobState (no result inside)
 scripts/             real-browser e2e tests (see above); scripts/perf/ = API performance experiments
 ```

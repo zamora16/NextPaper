@@ -1,23 +1,8 @@
 import { authHeaders } from "~lib/api-key"
+import { ApiKeyRejectedError, RateLimitedError } from "~lib/errors"
 import { throttle } from "~lib/rate-limit"
 
-export class RateLimitedError extends Error {
-  constructor() {
-    super(
-      "Semantic Scholar esta limitando las peticiones. Vuelve a intentarlo en un momento."
-    )
-  }
-}
-
-// A 403 means Semantic Scholar refused the key (revoked, or mistyped in a way
-// the format check cannot see). Retrying cannot fix it.
-export class ApiKeyRejectedError extends Error {
-  constructor() {
-    super(
-      "Semantic Scholar ha rechazado tu clave de API. Revísala en Ajustes (⚙) o quítala para usar NextPaper sin clave."
-    )
-  }
-}
+export { ApiKeyRejectedError, RateLimitedError }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 

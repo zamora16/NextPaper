@@ -196,7 +196,7 @@ describe("when something fails", () => {
 
     const state = await getUpdates()
     expect(state.running).toBe(false)
-    expect(state.lastError).toMatch(/novedades/i)
+    expect(state.lastError).toBe("no_data")
     expect(state.seen).toEqual([]) // n1 was not marked as seen
 
     recommend({ s1: ["n1"] })
@@ -212,7 +212,7 @@ describe("when something fails", () => {
     await expect(checkForUpdates()).rejects.toThrow("boom")
     const state = await getUpdates()
     expect(state.running).toBe(false)
-    expect(state.lastError).toBe("boom")
+    expect(state.lastError).toBe("unknown")
   })
 })
 

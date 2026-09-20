@@ -1,3 +1,4 @@
+import { errorCode, NoDataError, type ErrorCode } from "~lib/errors"
 import { getLibrary } from "~lib/library"
 import { plainPaper } from "~lib/paper-utils"
 import type { ScoredPaper } from "~lib/pipeline"
@@ -24,7 +25,7 @@ export interface UpdatesState {
   checkedAt: number | null
   // Why the last check failed, or null when it worked. Shown in the panel: a
   // check that fails silently looks exactly like "nothing new".
-  lastError: string | null
+  lastError: ErrorCode | null
   // Every paper already surfaced (or skipped), so nothing is alerted twice.
   seen: string[]
   items: UpdateItem[]
@@ -123,7 +124,7 @@ export async function checkForUpdates(): Promise<void> {
         )
       : []
     if (found.length > 0 && papers.length === 0) {
-      throw new Error("No se pudieron obtener los datos de las novedades.")
+      throw new NoDataError()
     }
 
     const byId = new Map(papers.map((p) => [p.paperId, p]))
@@ -153,8 +154,7 @@ export async function checkForUpdates(): Promise<void> {
       }
     })
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Error desconocido."
-    await change(() => ({ running: false, lastError: message }))
+    await change(() => ({ running: false, lastError: errorCode(err) }))
     throw err
   } finally {
     await refreshBadge()

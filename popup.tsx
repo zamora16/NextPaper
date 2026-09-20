@@ -3,15 +3,19 @@ import { useEffect, useMemo, useState, type FormEvent } from "react"
 import "~style.css"
 
 import { CopyCitationsButton } from "~components/CitationButtons"
+import { groupLabel, Hint, I18nProvider, useT } from "~components/i18n"
 import { KeySetup } from "~components/KeySetup"
 import { PaperCard } from "~components/PaperCard"
 import { SavedTab } from "~components/SavedTab"
 import { Timeline } from "~components/Timeline"
 import { pillClass } from "~components/ui"
+import { UpdatesTab } from "~components/UpdatesTab"
 import { useAnalysis } from "~components/useAnalysis"
 import { useStorageValue } from "~components/useStorageValue"
 import { CITATION_STYLES, type CitationStyle } from "~lib/citation"
 import { extractPaperRef } from "~lib/extract-ref"
+import { resolveLang, type TKey } from "~lib/i18n"
+import type { Step } from "~lib/job"
 import {
   getLibrary,
   LIBRARY_KEY,
@@ -37,10 +41,10 @@ import {
   type Sort
 } from "~lib/view"
 
-const PICK_LABELS: Record<PickKind, string> = {
-  foundational: "Clásico para empezar",
-  review: "Revisión relevante",
-  recent: "Lo más reciente"
+const PICK_LABEL: Record<PickKind, TKey> = {
+  foundational: "pick.foundational",
+  review: "pick.review",
+  recent: "pick.recent"
 }
 
 async function getActiveTabPaperRef(): Promise<string | null> {
@@ -63,10 +67,13 @@ async function getActiveTabPaperRef(): Promise<string | null> {
   }
 }
 
-function IndexPopup() {
+type Tab = "related" | "saved" | "updates" | "settings"
+
+function PopupBody({ settings }: { settings: Settings }) {
+  const t = useT()
   const [ref, setRef] = useState<string | null | undefined>(undefined)
   const [citationStyle, setCitationStyle] = useState<CitationStyle>("apa")
-  const [tab, setTab] = useState<"related" | "saved" | "settings">("related")
+  const [tab, setTab] = useState<Tab>("related")
   const [filter, setFilter] = useState<Filter>("all")
   const [sort, setSort] = useState<Sort>("relevance")
   const [design, setDesign] = useState<DesignFilter>("all")
@@ -84,14 +91,9 @@ function IndexPopup() {
   const [queryInput, setQueryInput] = useState("")
   const current = trail.length ? trail[trail.length - 1] : null
   const activeRef = current ? current.ref : ref
-  const settings = useStorageValue<Settings | null>(
-    SETTINGS_KEY,
-    getSettings,
-    null
-  )
   // No analysis (and no request) before the first-run setup is answered.
   const { job, result, retry } = useAnalysis(
-    settings?.setupDone ? activeRef : null
+    settings.setupDone ? activeRef : null
   )
   const [newIds, setNewIds] = useState<Set<string>>(new Set())
 
@@ -99,10 +101,10 @@ function IndexPopup() {
     getActiveTabPaperRef().then(setRef)
   }, [])
 
-  // Opening the saved tab counts as seeing the alerts: remember which ones
-  // were new (to tag them) and clear the toolbar badge.
+  // Opening the updates tab counts as seeing them: remember which ones were new
+  // (to tag them) and clear the toolbar badge.
   useEffect(() => {
-    if (tab !== "saved" || !updates) return
+    if (tab !== "updates" || !updates) return
     const fresh = updates.items.filter((i) => !i.viewed)
     if (fresh.length === 0) return
     setNewIds(
@@ -117,7 +119,7 @@ function IndexPopup() {
   }, [activeRef])
 
   const explore = (target: { ref: string; label: string }) => {
-    setTrail((t) => [...t, target])
+    setTrail((trail) => [...trail, target])
     setTab("related")
     setFilter("all")
     setSort("relevance")
@@ -139,7 +141,8 @@ function IndexPopup() {
     event.preventDefault()
     const query = queryInput.trim().replace(/\s+/g, " ")
     if (query.length < 3) return
-    explore({ ref: `QUERY:${query.toLowerCase()}`, label: `Tema: ${query}` })
+    // The label is user text (their own query): it needs no translation.
+    explore({ ref: `QUERY:${query.toLowerCase()}`, label: query })
     setQueryInput("")
   }
 
@@ -186,6 +189,11 @@ function IndexPopup() {
     sort === "relevance" &&
     activeDesign === "all"
 
+  const stepText = (step: Step | undefined) =>
+    step && typeof step === "object"
+      ? t(`step.${step.code}` as TKey, "n" in step ? { n: step.n } : undefined)
+      : t("step.default")
+
   const renderCard = (paper: ScoredPaper) => (
     <PaperCard
       key={paper.paperId}
@@ -200,63 +208,67 @@ function IndexPopup() {
   )
 
   const styleSelect = (
-    <label className="flex items-center gap-1.5 text-xs text-slate-500">
-      Citar como
-      <select
-        value={citationStyle}
-        onChange={(e) => setCitationStyle(e.target.value as CitationStyle)}
-        className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs text-slate-700">
-        {CITATION_STYLES.map((style) => (
-          <option key={style.id} value={style.id}>
-            {style.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <span className="flex items-center gap-1.5">
+      <label className="flex items-center gap-1.5 text-xs text-slate-500">
+        {t("citeAs")}
+        <select
+          value={citationStyle}
+          onChange={(e) => setCitationStyle(e.target.value as CitationStyle)}
+          className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs text-slate-700">
+          {CITATION_STYLES.map((style) => (
+            <option key={style} value={style}>
+              {t(`style.${style}` as TKey)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <Hint text={t("citeAs.hint")} />
+    </span>
   )
 
-  // Nothing to show until the stored settings are read; on first run the
-  // setup screen comes before anything else (no analysis starts behind it).
-  if (settings === null) return <div className="w-[26rem] p-4" />
-  if (!settings.setupDone) {
-    return (
-      <div className="flex w-[26rem] flex-col gap-3 p-4 font-sans">
-        <h1 className="text-lg font-semibold text-slate-900">NextPaper</h1>
-        <KeySetup settings={settings} firstRun />
-      </div>
-    )
-  }
+  const tabs: { id: Exclude<Tab, "settings">; label: string; hint: TKey }[] = [
+    { id: "related", label: t("tab.related"), hint: "tab.related.hint" },
+    {
+      id: "saved",
+      label: `★ ${t("tab.saved")} · ${library.length}`,
+      hint: "tab.saved.hint"
+    },
+    { id: "updates", label: t("tab.updates"), hint: "tab.updates.hint" }
+  ]
 
   return (
     <div className="flex w-[26rem] flex-col gap-3 p-4 font-sans">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-slate-900">NextPaper</h1>
-        <div className="flex gap-1">
+        <button
+          onClick={() => setTab(tab === "settings" ? "related" : "settings")}
+          title={t("tab.settings.hint")}
+          aria-label={t("tab.settings")}
+          aria-pressed={tab === "settings"}
+          className={pillClass(tab === "settings")}>
+          ⚙
+        </button>
+      </div>
+
+      <div role="tablist" className="flex gap-1">
+        {tabs.map(({ id, label, hint }) => (
           <button
-            onClick={() => setTab(tab === "settings" ? "related" : "settings")}
-            title="Ajustes: clave de Semantic Scholar y acerca de"
-            aria-label="Ajustes"
-            className={pillClass(tab === "settings")}>
-            ⚙
-          </button>
-          <button
-            onClick={() => setTab("related")}
-            className={pillClass(tab === "related")}>
-            Relacionados
-          </button>
-          <button
-            onClick={() => setTab("saved")}
-            className={pillClass(tab === "saved")}>
-            ★ Guardados · {library.length}
-            {unviewedUpdates > 0 && (
+            key={id}
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            title={t(hint)}
+            className={`${pillClass(tab === id)} flex-1`}>
+            {label}
+            {id === "updates" && unviewedUpdates > 0 && (
               <span
-                title="Novedades sin ver"
+                title={t("updates.unseen")}
                 className="ml-1 rounded-full bg-violet-600 px-1.5 text-[10px] text-white">
                 {unviewedUpdates}
               </span>
             )}
           </button>
-        </div>
+        ))}
       </div>
 
       {tab === "settings" && (
@@ -270,11 +282,18 @@ function IndexPopup() {
       {tab === "saved" && (
         <SavedTab
           library={library}
-          updates={updates}
-          newIds={newIds}
           citationStyle={citationStyle}
           styleSelect={styleSelect}
+          renderCard={renderCard}
+        />
+      )}
+
+      {tab === "updates" && (
+        <UpdatesTab
+          updates={updates}
+          hasSaved={library.length > 0}
           savedIds={savedIds}
+          newIds={newIds}
           renderCard={renderCard}
         />
       )}
@@ -285,67 +304,66 @@ function IndexPopup() {
             <input
               value={queryInput}
               onChange={(e) => setQueryInput(e.target.value)}
-              placeholder="Buscar por tema: p. ej. body image and eating disorders"
-              className="min-w-0 flex-1 rounded border border-slate-200 px-2 py-1 text-xs text-slate-700 placeholder:text-slate-400"
+              placeholder={t("search.placeholder")}
+              aria-label={t("search.placeholder")}
+              title={t("search.hint")}
+              className="min-w-0 flex-1 rounded border border-slate-200 px-2 py-1 text-xs text-slate-700 placeholder:text-slate-500"
             />
             <button
               type="submit"
               disabled={queryInput.trim().length < 3}
+              title={t("search.hint")}
               className="rounded border border-violet-200 bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-50">
-              Buscar
+              {t("search.button")}
             </button>
           </form>
 
           {current && (
             <div className="flex items-center justify-between gap-2 rounded bg-slate-50 px-2 py-1">
               <span className="line-clamp-1 text-xs text-slate-600">
-                Explorando: <strong>{current.label}</strong>
+                {t("exploring")} <strong>{current.label}</strong>
               </span>
               <button
-                onClick={() => setTrail((t) => t.slice(0, -1))}
+                onClick={() => setTrail((trail) => trail.slice(0, -1))}
+                title={t("back.hint")}
                 className="shrink-0 text-xs font-medium text-violet-700 hover:underline">
-                ← Volver
+                {t("back")}
               </button>
             </div>
           )}
 
           {!current && ref === undefined && (
-            <p className="text-sm text-slate-500">Detectando paper...</p>
+            <p className="text-sm text-slate-500">{t("detecting")}</p>
           )}
 
           {!current && ref === null && (
-            <p className="text-sm text-slate-500">
-              No se detectó ningún paper en esta página. Abre un artículo en
-              PubMed, arXiv, bioRxiv, PMC o la web de cualquier editorial que
-              publique el DOI en sus metadatos, o busca un tema arriba.
-            </p>
+            <p className="text-sm text-slate-500">{t("noPaper")}</p>
           )}
 
           {!current && ref && (
-            <p className="break-all text-xs text-slate-400">{ref}</p>
+            <p className="break-all text-xs text-slate-500">{ref}</p>
           )}
 
           {activeRef && job.phase === "loading" && (
-            <div className="flex flex-col gap-1">
-              <p className="text-sm text-slate-500">
-                {job.step ?? "Buscando papers relacionados..."}
-              </p>
-              <p className="text-xs text-slate-400">
-                Corre en segundo plano: puedes cerrar el popup y volver.
-              </p>
+            <div className="flex flex-col gap-1" role="status">
+              <p className="text-sm text-slate-500">{stepText(job.step)}</p>
+              <p className="text-xs text-slate-500">{t("runsInBackground")}</p>
             </div>
           )}
 
           {job.phase === "error" && (
-            <div className="flex flex-col items-start gap-2">
-              <p className="text-sm text-red-600">{job.message}</p>
+            <div className="flex flex-col items-start gap-2" role="alert">
+              <p className="text-sm text-red-600">
+                {/* a job stored by an older version has no error code */}
+                {t(`error.${job.error ?? "unknown"}` as TKey)}
+              </p>
               {!settings.s2ApiKey && (
                 <p className="text-xs text-slate-500">
-                  Sin clave propia, Semantic Scholar limita más las peticiones.{" "}
+                  {t("error.noKeyHint")}{" "}
                   <button
                     onClick={() => setTab("settings")}
-                    className="font-medium text-violet-600 hover:underline">
-                    Añade la tuya en Ajustes
+                    className="font-medium text-violet-700 hover:underline">
+                    {t("error.addKey")}
                   </button>
                   .
                 </p>
@@ -353,19 +371,17 @@ function IndexPopup() {
               <button
                 onClick={retry}
                 className="rounded border border-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-100">
-                Reintentar
+                {t("retry")}
               </button>
             </div>
           )}
 
           {job.phase === "done" && !result && (
-            <p className="text-sm text-slate-500">Cargando resultados...</p>
+            <p className="text-sm text-slate-500">{t("loadingResults")}</p>
           )}
 
           {job.phase === "done" && result && totalPapers === 0 && (
-            <p className="text-sm text-slate-500">
-              No se encontraron papers relacionados.
-            </p>
+            <p className="text-sm text-slate-500">{t("noResults")}</p>
           )}
 
           {totalPapers > 0 && (
@@ -373,26 +389,29 @@ function IndexPopup() {
               <div className="flex flex-wrap gap-1">
                 {FILTERS.map((f) => (
                   <button
-                    key={f.id}
-                    onClick={() => setFilter(f.id)}
-                    className={pillClass(filter === f.id)}>
-                    {f.label}
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    aria-pressed={filter === f}
+                    title={t(`filter.${f}.hint` as TKey)}
+                    className={pillClass(filter === f)}>
+                    {t(`filter.${f}` as TKey)}
                   </button>
                 ))}
               </div>
 
               {designs.length >= 2 && (
                 <label className="flex items-center gap-1.5 text-xs text-slate-500">
-                  Diseño
+                  {t("design.label")}
+                  <Hint text={t("design.hint")} />
                   <select
                     value={activeDesign}
                     onChange={(e) => setDesign(e.target.value as DesignFilter)}
-                    title="Diseño detectado con reglas en el título y el abstract"
+                    title={t("design.hint")}
                     className="min-w-0 flex-1 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs text-slate-700">
-                    <option value="all">Todos</option>
+                    <option value="all">{t("design.all")}</option>
                     {designs.map((d) => (
                       <option key={d.id} value={d.id}>
-                        {d.label} ({d.count})
+                        {t(`design.${d.id}` as TKey)} ({d.count})
                       </option>
                     ))}
                   </select>
@@ -400,15 +419,17 @@ function IndexPopup() {
               )}
 
               <div className="flex items-center justify-between gap-2">
-                <label className="flex items-center gap-1.5 text-xs text-slate-500">
-                  Ordenar
+                <label
+                  className="flex items-center gap-1.5 text-xs text-slate-500"
+                  title={t("sort.hint")}>
+                  {t("sort.label")}
                   <select
                     value={sort}
                     onChange={(e) => setSort(e.target.value as Sort)}
                     className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs text-slate-700">
                     {SORTS.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.label}
+                      <option key={s} value={s}>
+                        {t(`sort.${s}` as TKey)}
                       </option>
                     ))}
                   </select>
@@ -417,14 +438,18 @@ function IndexPopup() {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-2 text-xs text-slate-400">
-                  {visible.length} de {totalPapers} papers
+                <span className="flex items-center gap-2 text-xs text-slate-500">
+                  {t("count", { shown: visible.length, total: totalPapers })}
                   {timeline && (
-                    <button
-                      onClick={() => setShowTimeline((open) => !open)}
-                      className="font-medium text-violet-600 hover:underline">
-                      {showTimeline ? "Ocultar cronología" : "Ver cronología"}
-                    </button>
+                    <span className="flex items-center gap-1">
+                      <button
+                        onClick={() => setShowTimeline((open) => !open)}
+                        aria-expanded={showTimeline}
+                        className="font-medium text-violet-700 hover:underline">
+                        {showTimeline ? t("timeline.hide") : t("timeline.show")}
+                      </button>
+                      <Hint text={t("timeline.hint")} />
+                    </span>
                   )}
                 </span>
                 {visible.length > 0 && (
@@ -445,13 +470,14 @@ function IndexPopup() {
 
                 {showPicks && (
                   <div className="flex flex-col gap-2 rounded-lg bg-violet-50/60 p-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-violet-500">
-                      Empieza por aquí
+                    <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-violet-700">
+                      {t("picks.title")}
+                      <Hint text={t("picks.hint")} />
                     </p>
                     {result!.picks.map((pick) => (
                       <div key={pick.kind} className="flex flex-col gap-1">
-                        <span className="text-[11px] font-medium text-violet-600">
-                          {PICK_LABELS[pick.kind]}
+                        <span className="text-[11px] font-medium text-violet-700">
+                          {t(PICK_LABEL[pick.kind])}
                         </span>
                         {renderCard(pick.paper)}
                       </div>
@@ -460,15 +486,15 @@ function IndexPopup() {
                 )}
 
                 {visible.length === 0 && (
-                  <p className="text-sm text-slate-500">
-                    Ningún paper cumple este filtro.
-                  </p>
+                  <p className="text-sm text-slate-500">{t("noneMatch")}</p>
                 )}
 
                 {groups.map((group) => (
                   <div key={group.label} className="flex flex-col gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                      {group.label} · {group.papers.length}
+                    <p
+                      title={t("group.hint")}
+                      className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {groupLabel(group.label, t)} · {group.papers.length}
                     </p>
                     {group.papers.map(renderCard)}
                   </div>
@@ -479,6 +505,33 @@ function IndexPopup() {
         </>
       )}
     </div>
+  )
+}
+
+// Reads the settings before drawing anything (a flash of the wrong language or
+// of the setup screen would be worse than a blank frame), then puts the whole
+// interface in the user's language. On first run the setup screen comes before
+// everything else, and no analysis starts behind it.
+function IndexPopup() {
+  const settings = useStorageValue<Settings | null>(
+    SETTINGS_KEY,
+    getSettings,
+    null
+  )
+  if (settings === null) return <div className="w-[26rem] p-4" />
+
+  const lang = resolveLang(settings.language, navigator.language)
+  return (
+    <I18nProvider lang={lang}>
+      {settings.setupDone ? (
+        <PopupBody settings={settings} />
+      ) : (
+        <div className="flex w-[26rem] flex-col gap-3 p-4 font-sans">
+          <h1 className="text-lg font-semibold text-slate-900">NextPaper</h1>
+          <KeySetup settings={settings} firstRun />
+        </div>
+      )}
+    </I18nProvider>
   )
 }
 

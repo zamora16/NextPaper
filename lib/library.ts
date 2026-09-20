@@ -8,11 +8,7 @@ export const LIBRARY_KEY = "nextpaper_library"
 
 export type ReadStatus = "unread" | "reading" | "read"
 
-export const STATUSES: { id: ReadStatus; label: string }[] = [
-  { id: "unread", label: "Por leer" },
-  { id: "reading", label: "Leyendo" },
-  { id: "read", label: "Leído" }
-]
+export const STATUSES: ReadStatus[] = ["unread", "reading", "read"]
 
 export type SavedPaper = ScoredPaper & {
   savedAt: number

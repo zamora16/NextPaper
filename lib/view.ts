@@ -1,23 +1,18 @@
 import { isReview } from "~lib/paper-utils"
-import type { PaperGroup, ScoredPaper } from "~lib/pipeline"
+import { ALL_GROUP, type PaperGroup, type ScoredPaper } from "~lib/pipeline"
 import { DESIGNS, studyOf, type DesignId } from "~lib/study"
 
 export type Filter = "all" | "reference" | "citation" | "open" | "review"
 export type Sort = "relevance" | "citations" | "year"
 
-export const FILTERS: { id: Filter; label: string }[] = [
-  { id: "all", label: "Todos" },
-  { id: "reference", label: "Referencias" },
-  { id: "citation", label: "Lo citan" },
-  { id: "review", label: "Revisiones" },
-  { id: "open", label: "PDF libre" }
+export const FILTERS: Filter[] = [
+  "all",
+  "reference",
+  "citation",
+  "review",
+  "open"
 ]
-
-export const SORTS: { id: Sort; label: string }[] = [
-  { id: "relevance", label: "Relevancia" },
-  { id: "citations", label: "Más citados" },
-  { id: "year", label: "Más recientes" }
-]
+export const SORTS: Sort[] = ["relevance", "citations", "year"]
 
 function matches(paper: ScoredPaper, filter: Filter): boolean {
   switch (filter) {
@@ -41,14 +36,14 @@ export type DesignFilter = DesignId | "all"
 // are left out: the filter only offers what it can deliver.
 export function designOptions(
   groups: PaperGroup[]
-): { id: DesignId; label: string; count: number }[] {
+): { id: DesignId; count: number }[] {
   const counts = new Map<DesignId, number>()
   for (const paper of new Set(groups.flatMap((g) => g.papers))) {
     const { design } = studyOf(paper)
     if (design) counts.set(design, (counts.get(design) ?? 0) + 1)
   }
   return DESIGNS.filter((d) => counts.has(d.id))
-    .map((d) => ({ id: d.id, label: d.label, count: counts.get(d.id)! }))
+    .map((d) => ({ id: d.id, count: counts.get(d.id)! }))
     .sort((a, b) => b.count - a.count)
 }
 
@@ -79,5 +74,5 @@ export function applyView(
       ? b.citationCount - a.citationCount
       : (b.year ?? 0) - (a.year ?? 0)
   )
-  return flat.length ? [{ label: "Todos", papers: flat }] : []
+  return flat.length ? [{ label: ALL_GROUP, papers: flat }] : []
 }
