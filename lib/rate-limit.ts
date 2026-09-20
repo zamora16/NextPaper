@@ -12,7 +12,10 @@ export interface Limiter {
   run<T>(task: () => Promise<T>): Promise<T>
 }
 
-export function createLimiter(maxConcurrent: number, minGapMs: number): Limiter {
+export function createLimiter(
+  maxConcurrent: number,
+  minGapMs: number
+): Limiter {
   let active = 0
   let lastStart = 0
   const waiting: (() => void)[] = []

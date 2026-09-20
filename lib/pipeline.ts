@@ -1,6 +1,6 @@
 import { getCachedResult, setCachedResult } from "~lib/cache"
-import { clusterAuto } from "~lib/kmeans"
 import { labelClusters } from "~lib/keywords"
+import { clusterAuto } from "~lib/kmeans"
 import { isReview } from "~lib/paper-utils"
 import { RateLimitedError } from "~lib/s2-fetch"
 import {
@@ -105,9 +105,18 @@ export function choosePicks(
 
   const older = shortlist.filter((e) => (e.paper.year ?? 0) < recentFrom)
   const priorWork = older.filter((e) => e.sources.has("reference"))
-  choose("foundational", [...(priorWork.length ? priorWork : older)].sort(byCitations))
-  choose("review", byRelevance.filter((e) => isReview(e.paper)))
-  choose("recent", byRelevance.filter((e) => (e.paper.year ?? 0) >= recentFrom))
+  choose(
+    "foundational",
+    [...(priorWork.length ? priorWork : older)].sort(byCitations)
+  )
+  choose(
+    "review",
+    byRelevance.filter((e) => isReview(e.paper))
+  )
+  choose(
+    "recent",
+    byRelevance.filter((e) => (e.paper.year ?? 0) >= recentFrom)
+  )
 
   return picks
 }
@@ -115,7 +124,10 @@ export function choosePicks(
 export const QUERY_PREFIX = "QUERY:"
 
 export const normalizeTitle = (title: string) =>
-  title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim()
+  title
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
 
 // Preprint and published versions of one paper often come back as two
 // entries. Keep the most cited one and merge how it was found.
@@ -133,7 +145,9 @@ export function dedupe(
       continue
     }
     const [keep, drop] =
-      paper.citationCount > current.citationCount ? [paper, current] : [current, paper]
+      paper.citationCount > current.citationCount
+        ? [paper, current]
+        : [current, paper]
     const merged = sources.get(keep.paperId) ?? new Set<CandidateSource>()
     sources.get(drop.paperId)?.forEach((s) => merged.add(s))
     sources.set(keep.paperId, merged)
@@ -148,7 +162,10 @@ export function makeStrip(
   sources: Map<string, Set<CandidateSource>>,
   approximate: boolean
 ) {
-  return (paper: PaperWithEmbedding, similarity: number | null): ScoredPaper => {
+  return (
+    paper: PaperWithEmbedding,
+    similarity: number | null
+  ): ScoredPaper => {
     const { embedding: _embedding, ...rest } = paper
     return {
       ...rest,
@@ -192,7 +209,8 @@ export function assemble(
   }
 ): AnalysisResult {
   const shortlist = ranked.slice(0, SHORTLIST)
-  const toScored = (e: Entry) => strip(e.paper, options.showScore ? e.score : null)
+  const toScored = (e: Entry) =>
+    strip(e.paper, options.showScore ? e.score : null)
   const top = [...shortlist]
     .sort((a, b) => blended(b) - blended(a))
     .slice(0, options.topN)
@@ -305,7 +323,10 @@ async function analyzePaper(
   } else {
     const reference = seed.embedding ?? fallbackReference(embedded)
     const ranked: Entry[] = embedded
-      .map((e) => ({ ...e, score: cosineSimilarity(reference, e.paper.embedding) }))
+      .map((e) => ({
+        ...e,
+        score: cosineSimilarity(reference, e.paper.embedding)
+      }))
       .sort((a, b) => b.score - a.score)
 
     result = assemble(ranked, strip, {

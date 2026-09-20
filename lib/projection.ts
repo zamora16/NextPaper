@@ -7,10 +7,16 @@ import { dot, meanVector, normalize } from "~lib/vector-math"
 // Deterministic start vector so the map never jitters between runs.
 function seeded(n: number): number[] {
   let s = 12345
-  return Array.from({ length: n }, () => ((s = (s * 16807) % 2147483647) / 2147483647) + 0.5)
+  return Array.from(
+    { length: n },
+    () => (s = (s * 16807) % 2147483647) / 2147483647 + 0.5
+  )
 }
 
-function topEigen(matrix: number[][], iterations = 200): { vector: number[]; value: number } {
+function topEigen(
+  matrix: number[][],
+  iterations = 200
+): { vector: number[]; value: number } {
   const n = matrix.length
   let v = normalize(seeded(n))
 
@@ -21,7 +27,10 @@ function topEigen(matrix: number[][], iterations = 200): { vector: number[]; val
     v = next
   }
 
-  const value = dot(v, matrix.map((row) => dot(row, v)))
+  const value = dot(
+    v,
+    matrix.map((row) => dot(row, v))
+  )
   return { vector: v, value }
 }
 
@@ -48,11 +57,18 @@ export function project2D(vectors: number[][]): [number, number][] {
 
   // Sign convention: the largest coordinate of each axis is positive.
   const orient = (v: number[]) => {
-    const peak = v.reduce((best, x) => (Math.abs(x) > Math.abs(best) ? x : best), 0)
+    const peak = v.reduce(
+      (best, x) => (Math.abs(x) > Math.abs(best) ? x : best),
+      0
+    )
     return peak < 0 ? v.map((x) => -x) : v
   }
-  const x = orient(first.vector).map((c) => c * Math.sqrt(Math.max(first.value, 0)))
-  const y = orient(second.vector).map((c) => c * Math.sqrt(Math.max(second.value, 0)))
+  const x = orient(first.vector).map(
+    (c) => c * Math.sqrt(Math.max(first.value, 0))
+  )
+  const y = orient(second.vector).map(
+    (c) => c * Math.sqrt(Math.max(second.value, 0))
+  )
 
   const extent = Math.max(...x.map(Math.abs), ...y.map(Math.abs)) || 1
   const round = (value: number) => Math.round((value / extent) * 1000) / 1000

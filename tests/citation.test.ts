@@ -62,7 +62,8 @@ const molbertMeta: CrossrefMeta = {
 const DOI = "10.1016/j.jpsychores.2017.03.271"
 
 // A Crossref record with everything: full given names, issue, article number.
-const zamoraTitle = "Psychometric properties of the Spanish version of the Functionality Appreciation Scale"
+const zamoraTitle =
+  "Psychometric properties of the Spanish version of the Functionality Appreciation Scale"
 const zamora: Citable = {
   paperId: "bmc",
   title: zamoraTitle,
@@ -138,7 +139,9 @@ describe("with Crossref metadata (8 authors, single page)", () => {
   it("BibTeX: ASCII key with a title word, structured authors, no whitespace garbage", () => {
     const bib = cite("bibtex")
     expect(bib).toContain("@article{Molbert2017Assessing,")
-    expect(bib).toContain("author={Mölbert, S. and Thaler, A. and Mohler, B. and Streuber, S. and Black, M.J. and")
+    expect(bib).toContain(
+      "author={Mölbert, S. and Thaler, A. and Mohler, B. and Streuber, S. and Black, M.J. and"
+    )
     expect(bib).toContain("pages={162},")
     expect(bib).toContain(`doi={${DOI}}`)
     expect(bib).not.toMatch(/\n\s{3,}/)
@@ -199,7 +202,9 @@ describe("with Crossref metadata (3 authors, issue + article number + abbreviati
 
   it("BibTeX includes number and the article number as pages", () => {
     const bib = cite("bibtex")
-    expect(bib).toContain("author={Zamora, Ángel and Desdentado, Lorena and Herrero, Rocío}")
+    expect(bib).toContain(
+      "author={Zamora, Ángel and Desdentado, Lorena and Herrero, Rocío}"
+    )
     expect(bib).toContain("number={1}")
     expect(bib).toContain("pages={50}")
   })
@@ -223,13 +228,24 @@ describe("in-text citations", () => {
   })
 
   it("two authors join with the style's connector", () => {
-    const two: CrossrefMeta = { ...zamoraMeta, authors: zamoraMeta.authors.slice(0, 2) }
-    expect(inTextCitation(zamora, "apa", two)).toBe("(Zamora & Desdentado, 2024)")
+    const two: CrossrefMeta = {
+      ...zamoraMeta,
+      authors: zamoraMeta.authors.slice(0, 2)
+    }
+    expect(inTextCitation(zamora, "apa", two)).toBe(
+      "(Zamora & Desdentado, 2024)"
+    )
     expect(inTextCitation(zamora, "mla", two)).toBe("(Zamora and Desdentado)")
   })
 
   it("numeric styles have no in-text form", () => {
-    for (const style of ["vancouver", "ieee", "ama", "bibtex", "ris"] as const) {
+    for (const style of [
+      "vancouver",
+      "ieee",
+      "ama",
+      "bibtex",
+      "ris"
+    ] as const) {
       expect(supportsInText(style)).toBe(false)
       expect(inTextCitation(zamora, style, zamoraMeta)).toBeNull()
     }
@@ -264,7 +280,10 @@ describe("fallback to Semantic Scholar data only", () => {
   })
 
   it("also reads 'Last, First' names", () => {
-    const paper = { ...arxiv, authors: [{ authorId: "1", name: "van der Berg, Anna" }] }
+    const paper = {
+      ...arxiv,
+      authors: [{ authorId: "1", name: "van der Berg, Anna" }]
+    }
     expect(formatCitation(paper, "apa")).toContain("van der Berg, A.")
   })
 
@@ -285,27 +304,42 @@ describe("edge cases", () => {
   }
 
   it("does not double punctuation after ? or a final period", () => {
-    expect(formatCitation(base, "apa")).toBe("Lovelace, A. (n.d.). Is it working?")
+    expect(formatCitation(base, "apa")).toBe(
+      "Lovelace, A. (n.d.). Is it working?"
+    )
     expect(formatCitation({ ...base, title: "Plain title." }, "apa")).toBe(
       "Lovelace, A. (n.d.). Plain title."
     )
   })
 
   it("organization authors are kept whole", () => {
-    const meta: CrossrefMeta = { authors: [{ name: "World Health Organization" }], year: 2020 }
-    expect(formatCitation(base, "apa", meta)).toContain("World Health Organization (2020).")
-    expect(formatCitation(base, "bibtex", meta)).toContain("author={{World Health Organization}}")
+    const meta: CrossrefMeta = {
+      authors: [{ name: "World Health Organization" }],
+      year: 2020
+    }
+    expect(formatCitation(base, "apa", meta)).toContain(
+      "World Health Organization (2020)."
+    )
+    expect(formatCitation(base, "bibtex", meta)).toContain(
+      "author={{World Health Organization}}"
+    )
   })
 
   it("APA truncates 21+ authors: first 19, ellipsis, last", () => {
-    const authors = Array.from({ length: 25 }, (_, i) => ({ given: "A", family: `F${i + 1}` }))
+    const authors = Array.from({ length: 25 }, (_, i) => ({
+      given: "A",
+      family: `F${i + 1}`
+    }))
     const apa = formatCitation(base, "apa", { authors, year: 2020 })
     expect(apa).toContain("F19, A., . . . F25, A. (2020).")
     expect(apa).not.toContain("F20")
   })
 
   it("escapes LaTeX-special characters in BibTeX but not in URLs", () => {
-    const bib = formatCitation({ ...base, title: "R&D at 50% _speed_" }, "bibtex")
+    const bib = formatCitation(
+      { ...base, title: "R&D at 50% _speed_" },
+      "bibtex"
+    )
     expect(bib).toContain("title={R\\&D at 50\\% \\_speed\\_}")
   })
 

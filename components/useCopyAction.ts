@@ -17,7 +17,9 @@ async function tryCopy(text: string): Promise<boolean> {
 // as a fallback — the text is prepared and the next click copies it instantly
 // (still inside a fresh user gesture).
 export function useCopyAction(
-  getText: (onProgress: (done: number, total: number) => void) => Promise<string>
+  getText: (
+    onProgress: (done: number, total: number) => void
+  ) => Promise<string>
 ) {
   const [phase, setPhase] = useState<CopyPhase>("idle")
   const [progress, setProgress] = useState<[number, number] | null>(null)
@@ -39,7 +41,9 @@ export function useCopyAction(
     setPhase("busy")
     setProgress(null)
     try {
-      prepared.current = await getText((done, total) => setProgress([done, total]))
+      prepared.current = await getText((done, total) =>
+        setProgress([done, total])
+      )
     } catch {
       setPhase("idle")
       return

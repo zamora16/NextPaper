@@ -65,8 +65,15 @@ export function Timeline({
           const centerY = top + LABEL_HEIGHT + (LANE_HEIGHT - LABEL_HEIGHT) / 2
           return (
             <g key={lane.label}>
-              <text x={PAD_X} y={top + 10} fontSize="10" fontWeight="600" fill={color}>
-                {lane.label.length > 44 ? lane.label.slice(0, 43) + "…" : lane.label}
+              <text
+                x={PAD_X}
+                y={top + 10}
+                fontSize="10"
+                fontWeight="600"
+                fill={color}>
+                {lane.label.length > 44
+                  ? lane.label.slice(0, 43) + "…"
+                  : lane.label}
               </text>
               <line
                 x1={PAD_X}
@@ -97,7 +104,9 @@ export function Timeline({
                     role="button"
                     className="cursor-pointer"
                     onClick={() => onSelect(dot.paperId)}
-                    onKeyDown={(e) => e.key === "Enter" && onSelect(dot.paperId)}>
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && onSelect(dot.paperId)
+                    }>
                     <title>
                       {dot.title} ({dot.year}) ·{" "}
                       {dot.citationCount.toLocaleString()} citas

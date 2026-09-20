@@ -44,7 +44,8 @@ function readBibValue(source: string, start: number): [string, number] {
 
   if (source[i] === '"') {
     let j = i + 1
-    while (j < source.length && !(source[j] === '"' && source[j - 1] !== "\\")) j++
+    while (j < source.length && !(source[j] === '"' && source[j - 1] !== "\\"))
+      j++
     return [source.slice(i + 1, j), j + 1]
   }
 
@@ -156,7 +157,9 @@ export async function resolveReferences(
 
   if (parsed.dois.length > 0) {
     onStep(`Buscando ${parsed.dois.length} DOI...`)
-    const aligned = await getPapersAligned(parsed.dois.map((doi) => `DOI:${doi}`))
+    const aligned = await getPapersAligned(
+      parsed.dois.map((doi) => `DOI:${doi}`)
+    )
     aligned.forEach((paper, i) => {
       if (paper) papers.set(paper.paperId, paper)
       else notFound.push(parsed.dois[i])

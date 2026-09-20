@@ -165,11 +165,7 @@ export function silhouetteScore(
 
 // Picks the number of clusters by maximizing the silhouette score instead of
 // guessing it from the number of papers.
-export function clusterAuto(
-  vectors: number[][],
-  minK = 2,
-  maxK = 4
-): number[] {
+export function clusterAuto(vectors: number[][], minK = 2, maxK = 4): number[] {
   const upper = Math.min(maxK, Math.floor(vectors.length / 2))
   let best: number[] = new Array(vectors.length).fill(0)
   let bestScore = -Infinity

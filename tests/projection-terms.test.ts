@@ -5,7 +5,7 @@ import { sharedTerms } from "~lib/terms"
 
 function rng(seed: number) {
   let s = seed
-  return () => ((s = (s * 16807) % 2147483647) / 2147483647 - 0.5)
+  return () => (s = (s * 16807) % 2147483647) / 2147483647 - 0.5
 }
 
 const DIM = 64
@@ -15,14 +15,20 @@ function blobs(perBlob: number, blobCount: number, noise = 0.2) {
   const label: number[] = []
   for (let b = 0; b < blobCount; b++) {
     for (let i = 0; i < perBlob; i++) {
-      vectors.push(Array.from({ length: DIM }, (_, d) => (d % blobCount === b ? 1 : 0) + random() * noise))
+      vectors.push(
+        Array.from(
+          { length: DIM },
+          (_, d) => (d % blobCount === b ? 1 : 0) + random() * noise
+        )
+      )
       label.push(b)
     }
   }
   return { vectors, label }
 }
 
-const dist = (a: [number, number], b: [number, number]) => Math.hypot(a[0] - b[0], a[1] - b[1])
+const dist = (a: [number, number], b: [number, number]) =>
+  Math.hypot(a[0] - b[0], a[1] - b[1])
 
 describe("project2D", () => {
   it("keeps the map inside [-1, 1] with no NaN", () => {
@@ -39,11 +45,19 @@ describe("project2D", () => {
     const { vectors, label } = blobs(6, 3)
     const points = project2D(vectors)
 
-    let within = 0, withinN = 0, between = 0, betweenN = 0
+    let within = 0,
+      withinN = 0,
+      between = 0,
+      betweenN = 0
     for (let i = 0; i < points.length; i++) {
       for (let j = i + 1; j < points.length; j++) {
-        if (label[i] === label[j]) { within += dist(points[i], points[j]); withinN++ }
-        else { between += dist(points[i], points[j]); betweenN++ }
+        if (label[i] === label[j]) {
+          within += dist(points[i], points[j])
+          withinN++
+        } else {
+          between += dist(points[i], points[j])
+          betweenN++
+        }
       }
     }
     expect(within / withinN).toBeLessThan(0.5 * (between / betweenN))
@@ -57,8 +71,17 @@ describe("project2D", () => {
   it("handles tiny and degenerate inputs", () => {
     expect(project2D([])).toEqual([])
     expect(project2D([[1, 2, 3]])).toEqual([[0, 0]])
-    expect(project2D([[1, 0], [0, 1]])).toHaveLength(2)
-    const same = project2D([[1, 1, 1], [1, 1, 1], [1, 1, 1]])
+    expect(
+      project2D([
+        [1, 0],
+        [0, 1]
+      ])
+    ).toHaveLength(2)
+    const same = project2D([
+      [1, 1, 1],
+      [1, 1, 1],
+      [1, 1, 1]
+    ])
     expect(same.flat().every(Number.isFinite)).toBe(true)
   })
 })
@@ -92,7 +115,10 @@ describe("sharedTerms", () => {
 
   it("matches plurals with singulars", () => {
     // reference says "Scales", documents say "Scale" — still matched before the generic filter
-    const small = sharedTerms("Appreciation scales", [{ id: "x", text: "Appreciation scale" }, { id: "y", text: "Unrelated topic entirely" }])
+    const small = sharedTerms("Appreciation scales", [
+      { id: "x", text: "Appreciation scale" },
+      { id: "y", text: "Unrelated topic entirely" }
+    ])
     expect(small.get("x")).toContain("scale")
   })
 
@@ -122,10 +148,14 @@ describe("sharedTerms", () => {
   })
 
   it("respects maxTerms", () => {
-    const many = sharedTerms("alpha beta gamma delta epsilon", [
-      { id: "x", text: "alpha beta gamma delta epsilon" },
-      { id: "y", text: "unrelated words entirely here" }
-    ], 2)
+    const many = sharedTerms(
+      "alpha beta gamma delta epsilon",
+      [
+        { id: "x", text: "alpha beta gamma delta epsilon" },
+        { id: "y", text: "unrelated words entirely here" }
+      ],
+      2
+    )
     expect(many.get("x")).toHaveLength(2)
   })
 })

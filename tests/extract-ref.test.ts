@@ -51,7 +51,11 @@ describe("extractPaperRef", () => {
   })
 
   it("arXiv: uses citation_arxiv_id and strips the version", () => {
-    page(meta("citation_arxiv_id", "1706.03762v5"), "arxiv.org", "/abs/1706.03762v5")
+    page(
+      meta("citation_arxiv_id", "1706.03762v5"),
+      "arxiv.org",
+      "/abs/1706.03762v5"
+    )
     expect(extractPaperRef()).toBe("ARXIV:1706.03762")
   })
 
@@ -80,7 +84,11 @@ describe("extractPaperRef", () => {
   })
 
   it("a DOI in the metadata wins over the site-specific fallbacks", () => {
-    page(meta("citation_doi", "10.1000/wins"), "pubmed.ncbi.nlm.nih.gov", "/28129826/")
+    page(
+      meta("citation_doi", "10.1000/wins"),
+      "pubmed.ncbi.nlm.nih.gov",
+      "/28129826/"
+    )
     expect(extractPaperRef()).toBe("DOI:10.1000/wins")
   })
 

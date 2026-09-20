@@ -79,10 +79,12 @@ function normalizePages(pages?: string): string | undefined {
 
 function toRef(paper: Citable, meta?: CrossrefMeta | null): Ref {
   const structured = (meta?.authors ?? [])
-    .map((a): Person => ({
-      family: a.family ?? a.name ?? "",
-      given: a.family ? (a.given ?? "") : ""
-    }))
+    .map(
+      (a): Person => ({
+        family: a.family ?? a.name ?? "",
+        given: a.family ? a.given ?? "" : ""
+      })
+    )
     .filter((p) => p.family)
 
   let journal = meta?.journal ?? tidy(paper.journal?.name) ?? tidy(paper.venue)
@@ -132,9 +134,23 @@ const initialsOf = (given: string): string[] =>
     .filter(Boolean)
     .map((word) => word[0].toUpperCase())
 
-const doiUrl = (ref: Ref) => (ref.doi ? `https://doi.org/${ref.doi}` : undefined)
+const doiUrl = (ref: Ref) =>
+  ref.doi ? `https://doi.org/${ref.doi}` : undefined
 
-const MONTHS_IEEE = ["Jan.", "Feb.", "Mar.", "Apr.", "May", "Jun.", "Jul.", "Aug.", "Sep.", "Oct.", "Nov.", "Dec."]
+const MONTHS_IEEE = [
+  "Jan.",
+  "Feb.",
+  "Mar.",
+  "Apr.",
+  "May",
+  "Jun.",
+  "Jul.",
+  "Aug.",
+  "Sep.",
+  "Oct.",
+  "Nov.",
+  "Dec."
+]
 
 // "12(1)" — volume with optional issue.
 const volumeIssue = (ref: Ref) =>
@@ -144,7 +160,9 @@ const volumeIssue = (ref: Ref) =>
 
 function toAPA(ref: Ref): string {
   const names = ref.authors.map((p) => {
-    const initials = initialsOf(p.given).map((i) => i + ".").join(" ")
+    const initials = initialsOf(p.given)
+      .map((i) => i + ".")
+      .join(" ")
     return initials ? `${p.family}, ${initials}` : p.family
   })
 
@@ -174,7 +192,8 @@ function toAPA(ref: Ref): string {
 
 function toMLA(ref: Ref): string {
   const [first, second] = ref.authors
-  const inverted = (p: Person) => (p.given ? `${p.family}, ${p.given}` : p.family)
+  const inverted = (p: Person) =>
+    p.given ? `${p.family}, ${p.given}` : p.family
   let authors = ""
   if (ref.authors.length === 1) authors = inverted(first)
   else if (ref.authors.length === 2) {
@@ -203,7 +222,8 @@ function toMLA(ref: Ref): string {
 
 function toChicago(ref: Ref): string {
   const natural = (p: Person) => `${p.given} ${p.family}`.trim()
-  const inverted = (p: Person) => (p.given ? `${p.family}, ${p.given}` : p.family)
+  const inverted = (p: Person) =>
+    p.given ? `${p.family}, ${p.given}` : p.family
   // 11+ authors: the first seven, then "et al."
   const listed = ref.authors.length > 10 ? ref.authors.slice(0, 7) : ref.authors
   const people = listed.map((p, i) => (i === 0 ? inverted(p) : natural(p)))
@@ -242,7 +262,9 @@ function toChicago(ref: Ref): string {
 
 function toHarvard(ref: Ref): string {
   const names = ref.authors.map((p) => {
-    const initials = initialsOf(p.given).map((i) => i + ".").join("")
+    const initials = initialsOf(p.given)
+      .map((i) => i + ".")
+      .join("")
     return initials ? `${p.family}, ${initials}` : p.family
   })
 
@@ -270,7 +292,12 @@ function toHarvard(ref: Ref): string {
 
 function toIEEE(ref: Ref): string {
   const names = ref.authors.map((p) =>
-    [initialsOf(p.given).map((i) => i + ".").join(" "), p.family]
+    [
+      initialsOf(p.given)
+        .map((i) => i + ".")
+        .join(" "),
+      p.family
+    ]
       .filter(Boolean)
       .join(" ")
   )
@@ -338,14 +365,30 @@ function toNumeric(ref: Ref, listAll: number, listBeforeEtAl: number): string {
 
 // ---- reference-manager formats -------------------------------------------
 
-const STOP_WORDS = new Set(["the", "and", "with", "from", "using", "this", "that", "into", "their", "among", "for", "are"])
+const STOP_WORDS = new Set([
+  "the",
+  "and",
+  "with",
+  "from",
+  "using",
+  "this",
+  "that",
+  "into",
+  "their",
+  "among",
+  "for",
+  "are"
+])
 const fold = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "")
 const escapeBib = (value: string) => value.replace(/([&%$#_])/g, "\\$1")
 
 // Author + year + first meaningful title word keeps keys unique within a
 // library ("Molbert2017Assessing"), unlike author + year alone.
 function citationKey(ref: Ref): string {
-  const family = fold(ref.authors[0]?.family ?? "unknown").replace(/[^a-zA-Z0-9]/g, "")
+  const family = fold(ref.authors[0]?.family ?? "unknown").replace(
+    /[^a-zA-Z0-9]/g,
+    ""
+  )
   const word =
     fold(ref.title)
       .toLowerCase()
@@ -375,7 +418,10 @@ function toBibTeX(ref: Ref): string {
 
   const body = fields
     .filter(([, value]) => !!value)
-    .map(([key, value]) => `  ${key}={${key === "doi" || key === "url" ? value : escapeBib(value!)}}`)
+    .map(
+      ([key, value]) =>
+        `  ${key}={${key === "doi" || key === "url" ? value : escapeBib(value!)}}`
+    )
     .join(",\n")
 
   const type = ref.kind === "conference" ? "inproceedings" : "article"

@@ -98,5 +98,11 @@ export function buildTimeline(
     maxYear += 1
   }
 
-  return { lanes, minYear, maxYear, ticks: axisTicks(minYear, maxYear), undated }
+  return {
+    lanes,
+    minYear,
+    maxYear,
+    ticks: axisTicks(minYear, maxYear),
+    undated
+  }
 }

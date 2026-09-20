@@ -99,7 +99,9 @@ export function parseCrossref(message: any): CrossrefMeta {
   }
 }
 
-async function fetchMeta(doi: string): Promise<CrossrefMeta | null | undefined> {
+async function fetchMeta(
+  doi: string
+): Promise<CrossrefMeta | null | undefined> {
   const url =
     `https://api.crossref.org/works/${encodeURIComponent(doi)}` +
     (MAILTO ? `?mailto=${encodeURIComponent(MAILTO)}` : "")

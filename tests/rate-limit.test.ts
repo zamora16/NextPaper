@@ -8,7 +8,12 @@ describe("createLimiter", () => {
   afterEach(() => vi.useRealTimers())
 
   // Runs `count` tasks of `durationMs` each and records concurrency and starts.
-  async function drive(maxConcurrent: number, minGapMs: number, count: number, durationMs: number) {
+  async function drive(
+    maxConcurrent: number,
+    minGapMs: number,
+    count: number,
+    durationMs: number
+  ) {
     const limiter = createLimiter(maxConcurrent, minGapMs)
     let active = 0
     let peak = 0
@@ -89,7 +94,10 @@ describe("retryDelay", () => {
   })
 
   it("total wait over the first five retries stays under 6 s", () => {
-    const total = [0, 1, 2, 3, 4].reduce((sum, n) => sum + retryDelay(n, () => 1), 0)
+    const total = [0, 1, 2, 3, 4].reduce(
+      (sum, n) => sum + retryDelay(n, () => 1),
+      0
+    )
     expect(total).toBeLessThan(6000)
   })
 })

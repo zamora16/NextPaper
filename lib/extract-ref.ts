@@ -50,7 +50,8 @@ export function extractPaperRef(): string | null {
 
   // Fallbacks for NCBI pages whose metadata carries no DOI.
   if (location.hostname === "pubmed.ncbi.nlm.nih.gov") {
-    const pmid = meta("citation_pmid") ?? location.pathname.match(/^\/(\d+)/)?.[1]
+    const pmid =
+      meta("citation_pmid") ?? location.pathname.match(/^\/(\d+)/)?.[1]
     if (pmid) return `PMID:${pmid}`
   }
 

@@ -72,7 +72,9 @@ short
       "10.1038/s41586-021-03819-2",
       "10.1186/s40337-024-01004-0"
     ])
-    expect(titles).toEqual(["Attention is all you need and other titles are long enough"])
+    expect(titles).toEqual([
+      "Attention is all you need and other titles are long enough"
+    ])
   })
 })
 
@@ -116,24 +118,40 @@ const saved = (overrides: Partial<SavedPaper> = {}): SavedPaper => ({
 
 describe("backup file", () => {
   it("round-trips a library", () => {
-    const library = [saved({ status: "read", note: "keep", collections: ["Tesis"] })]
+    const library = [
+      saved({ status: "read", note: "keep", collections: ["Tesis"] })
+    ]
     const restored = parseBackup(JSON.stringify(buildBackup(library)))
     expect(restored).toHaveLength(1)
-    expect(restored![0]).toMatchObject({ paperId: "p1", status: "read", note: "keep", collections: ["Tesis"] })
+    expect(restored![0]).toMatchObject({
+      paperId: "p1",
+      status: "read",
+      note: "keep",
+      collections: ["Tesis"]
+    })
   })
 
   it("rejects anything that is not a NextPaper backup", () => {
     expect(parseBackup("not json")).toBeNull()
     expect(parseBackup(JSON.stringify({ library: [] }))).toBeNull()
-    expect(parseBackup(JSON.stringify({ app: "other", library: [] }))).toBeNull()
-    expect(parseBackup(JSON.stringify({ app: "nextpaper", library: "nope" }))).toBeNull()
+    expect(
+      parseBackup(JSON.stringify({ app: "other", library: [] }))
+    ).toBeNull()
+    expect(
+      parseBackup(JSON.stringify({ app: "nextpaper", library: "nope" }))
+    ).toBeNull()
   })
 
   it("drops malformed items and repairs missing fields", () => {
     const restored = parseBackup(
       JSON.stringify({
         app: "nextpaper",
-        library: [{ paperId: "ok", title: "T" }, { title: "no id" }, null, { paperId: 5, title: "bad id" }]
+        library: [
+          { paperId: "ok", title: "T" },
+          { title: "no id" },
+          null,
+          { paperId: 5, title: "bad id" }
+        ]
       })
     )!
     expect(restored).toHaveLength(1)
@@ -180,7 +198,9 @@ describe("backup file", () => {
 
 describe("mergeItems", () => {
   it("adds new papers and never overwrites the user's own status or note", () => {
-    const existing = { p1: saved({ status: "read", note: "mine", collections: ["A"] }) }
+    const existing = {
+      p1: saved({ status: "read", note: "mine", collections: ["A"] })
+    }
     const incoming = [
       saved({ status: "unread", note: "theirs", collections: ["B"] }),
       saved({ paperId: "p2", title: "New" })
@@ -196,7 +216,9 @@ describe("mergeItems", () => {
   })
 
   it("fills an empty note from the backup", () => {
-    const { library, updated } = mergeItems({ p1: saved() }, [saved({ note: "from backup" })])
+    const { library, updated } = mergeItems({ p1: saved() }, [
+      saved({ note: "from backup" })
+    ])
     expect(library.p1.note).toBe("from backup")
     expect(updated).toBe(1)
   })

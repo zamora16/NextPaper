@@ -19,9 +19,7 @@ const RETRY_CAP_MS = 3000
 // 1.8 s, 2.7 s, then 3 s. The old schedule (1.5 s doubling up to 10 s) turned
 // an unlucky request into many seconds of idle time.
 export function retryDelay(attempt: number, random = Math.random): number {
-  return (
-    Math.min(RETRY_CAP_MS, RETRY_BASE_MS * 1.5 ** attempt) + random() * 250
-  )
+  return Math.min(RETRY_CAP_MS, RETRY_BASE_MS * 1.5 ** attempt) + random() * 250
 }
 
 // api.semanticscholar.org is declared in host_permissions, so extension
