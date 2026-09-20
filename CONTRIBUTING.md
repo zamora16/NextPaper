@@ -21,7 +21,7 @@ npm install
 npm run dev                # then load build/chrome-mv3-dev via chrome://extensions
 npx tsc --noEmit           # typecheck (Parcel does NOT typecheck; run this every change)
 npx plasmo build           # production build -> build/chrome-mv3-prod
-npm test                   # vitest (155 tests): pure modules — citation, import/backup, kmeans, view,
+npm test                   # vitest (183 tests): pure modules — citation, import/backup, kmeans, view,
                            # keywords, terms, projection, timeline, study (design/sample), rate limiter/retry, API client (mocked fetch), pipeline (assemble/dedupe/picks), extractPaperRef (jsdom)
 ```
 
@@ -105,6 +105,11 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
     Do not add the `clipboardWrite` permission (it shows an install warning).
 16. **Never name or copy competitor products** (the user asked explicitly: inspiration is
     fine, mentions and clones are not) in code, UI, README or manifest text.
+17. **Precision over coverage for anything inferred.** If we are not sure a piece of information is
+    true, do not show it: a missing chip is better than a wrong one (the user's explicit priority).
+    Heuristics (`lib/study.ts`, shared terms, cluster labels) must return nothing when the text is
+    ambiguous, and any new one must be audited by reading its output on real abstracts — including a
+    set it was not tuned on — before it ships. Tests written by the author alone are not enough.
 
 ## Conventions
 
