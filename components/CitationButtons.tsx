@@ -5,8 +5,7 @@ import {
   IconCheck,
   IconChevronDown,
   IconCopy,
-  IconDownload,
-  IconQuote
+  IconDownload
 } from "~components/icons"
 import { buttonClass, selectClass } from "~components/ui"
 import { useCopyAction } from "~components/useCopyAction"
@@ -163,7 +162,6 @@ export function CitationMenu({
         aria-label={`${t("citeAs")}: ${t(`style.${style}` as TKey)}`}
         title={t("citeMenu.hint")}
         className={buttonClass}>
-        <IconQuote size={14} />
         {t(`style.${style}` as TKey)}
         <IconChevronDown size={12} />
       </button>
