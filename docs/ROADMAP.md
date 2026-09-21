@@ -124,10 +124,10 @@ Prompt caching and the per-item cache lower this further.
 | Personal e-mail removed from the manifest; MIT license; authorship = maintainer only | **DONE 2026-09-20** |
 | Hardening: http(s)-only links, bounded refs/DOIs | **DONE 2026-09-20** |
 | Public README, `docs/PRIVACY.md`, attribution to Semantic Scholar/Crossref in Ajustes | **DONE 2026-09-20** |
-| Push to GitHub so CI runs; check the first CI run | pending |
-| Test the built extension in branded Chrome (only Edge is automated), incl. the real toolbar click | pending |
-| Store listing: English + Spanish description, 1280x800 screenshots, icon, single-purpose statement, a public URL for the privacy policy, version above 0.0.1 | pending |
-| Decide the store name (trademark search) | pending |
+| Push to GitHub so CI runs; check the first CI run | **DONE 2026-09-21** |
+| Test the built extension in branded Chrome (only Edge is automated), incl. the real toolbar click | **DONE 2026-09-21** (manual) |
+| Store listing: English + Spanish description, 1280x800 screenshots, icon, single-purpose statement, a public URL for the privacy policy, version above 0.0.1 | version **1.0.0** set 2026-09-21; the listing is prepared by the maintainer |
+| Decide the store name (trademark search) | **DONE 2026-09-21** (no other product found under the name) |
 | Review `npm audit` again (only build-tool advisories today; none reach the shipped bundle) | ongoing |
 
 ## 5. Suggested order

@@ -1,6 +1,6 @@
 # Privacy
 
-NextPaper is built so that your reading stays yours. This page says exactly what the extension does with data. It is written to be usable as the privacy policy of a store listing (add the contact address of the maintainer).
+NextPaper is built so that your reading stays yours. This page says exactly what the extension does with data. It is written to be usable as the privacy policy of a store listing.
 
 ## What stays on your device
 

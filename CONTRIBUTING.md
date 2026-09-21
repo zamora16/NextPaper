@@ -3,8 +3,8 @@
 Chrome extension (Plasmo + React 18 + TypeScript + Tailwind 3) that helps
 researchers find, triage, organize and cite related literature while they read.
 **Everything runs locally in the extension: no server, no LLM, no per-use cost.**
-Data comes from the Semantic Scholar API (free). It is also a data-science portfolio
-piece, so real, explainable ML (embeddings, cosine ranking, from-scratch clustering,
+Data comes from the Semantic Scholar API (free). It is also a data-science
+project, so real, explainable ML (embeddings, cosine ranking, from-scratch clustering,
 silhouette) is a feature, not overhead.
 
 Read these before changing anything non-trivial:
@@ -115,7 +115,7 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
 16. **Do not name or copy other products** (inspiration is fine, mentions and clones are
     not) in code, UI, README or manifest text.
 17. **Precision over coverage for anything inferred.** If we are not sure a piece of information is
-    true, do not show it: a missing chip is better than a wrong one (the maintainer's explicit priority).
+    true, do not show it: a missing chip is better than a wrong one (a standing project priority).
     Heuristics (`lib/study.ts`, cluster labels) must return nothing when the text is
     ambiguous, and any new one must be audited by reading its output on real abstracts — including a
     set it was not tuned on — before it ships. Tests written by the author alone are not enough.

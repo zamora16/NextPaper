@@ -1,10 +1,27 @@
 {
   "name": "nextpaper",
   "displayName": "NextPaper",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Find, triage and cite related literature while you read: papers ranked by semantic similarity, grouped by subtopic and ready to cite.",
   "author": "Angel Zamora <angelzamora1616@gmail.com>",
   "license": "MIT",
+  "homepage": "https://github.com/zamora16/NextPaper#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zamora16/NextPaper.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zamora16/NextPaper/issues"
+  },
+  "keywords": [
+    "chrome-extension",
+    "literature-review",
+    "semantic-scholar",
+    "research-tools",
+    "citations",
+    "embeddings",
+    "clustering"
+  ],
   "scripts": {
     "dev": "plasmo dev",
     "build": "plasmo build",
