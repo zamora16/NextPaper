@@ -15,7 +15,14 @@ import {
   norm,
   normalize
 } from "~lib/vector-math"
-import { applyView, searchLibrary } from "~lib/view"
+import {
+  applyView,
+  isRangeActive,
+  lastYears,
+  NO_RANGE,
+  searchLibrary,
+  type Range
+} from "~lib/view"
 
 describe("searchLibrary", () => {
   const item = (
@@ -200,27 +207,248 @@ describe("clusterAuto picks k by silhouette", () => {
 })
 
 describe("labelClusters", () => {
-  it("labels each cluster with words that distinguish it, not shared ones", () => {
-    const labels = labelClusters([
-      [
-        "Neural machine translation with attention",
-        "Attention models for neural machine translation",
-        "Multilingual neural machine translation"
-      ],
-      [
-        "Protein structure prediction with neural networks",
-        "Deep protein folding prediction",
-        "Protein structure prediction at scale"
-      ]
-    ])
-    expect(labels[0]).toMatch(/Translation/)
-    expect(labels[1]).toMatch(/Protein/)
-    // "neural" appears in both clusters, so it must not win either label
-    expect(labels[0].toLowerCase()).not.toContain("neural")
+  const translation = [
+    "Neural machine translation with attention",
+    "Attention models for neural machine translation",
+    "Multilingual neural machine translation"
+  ]
+  const protein = [
+    "Protein structure prediction with neural networks",
+    "Deep protein folding prediction",
+    "Protein structure prediction at scale"
+  ]
+
+  it("names each group with the words that set it apart, not the shared ones", () => {
+    const [a, b] = labelClusters([translation, protein])
+    expect(a).toMatch(/machine translation/i)
+    expect(b).toMatch(/protein/i)
+    // "neural" is in both groups, so it is not what names either one
+    expect(a).not.toBe("Neural")
+    expect(b).not.toBe("Neural")
   })
 
-  it("falls back to a generic label when nothing usable remains", () => {
-    expect(labelClusters([["a b c"]])).toEqual(["Grupo"])
+  it("prefers a phrase to the words it is made of, up to three words", () => {
+    const labels = labelClusters([
+      [
+        "Graph neural networks for molecules",
+        "Explainable graph neural networks",
+        "Scalable graph neural networks in chemistry"
+      ],
+      ["Random forests for tabular data", "Boosting for tabular data"]
+    ])
+    expect(labels[0]).toBe("Graph neural networks")
+  })
+
+  it("keeps acronyms and names as written, and lowers everything else", () => {
+    const labels = labelClusters([
+      [
+        "CRISPR screens in human cells",
+        "CRISPR base editing of the genome",
+        "Delivery of CRISPR components"
+      ],
+      [
+        "Predicting folds with AlphaFold models",
+        "AlphaFold in structural biology",
+        "Using AlphaFold for design"
+      ],
+      ["RANDOMIZED TRIAL OF EXERCISE", "Randomized trial of diet", "Trials"]
+    ])
+    expect(labels[0]).toBe("CRISPR")
+    expect(labels[1]).toBe("AlphaFold")
+    expect(labels[2]).toMatch(/^Randomized/)
+    expect(labels[2]).not.toMatch(/RANDOMIZED/)
+  })
+
+  it("folds plurals into one term and shows a word the papers use", () => {
+    const labels = labelClusters([
+      [
+        "A scale for body appreciation",
+        "Scales of body appreciation in men",
+        "Validation of the scale"
+      ],
+      ["Deep learning for images", "Learning to rank", "Image learning"]
+    ])
+    expect(labels[0]).toMatch(/scale/i)
+  })
+
+  it("says nothing when no word is in at least half of the group's titles", () => {
+    const labels = labelClusters([
+      [
+        "Alpha waves in sleep",
+        "Beta blockers and outcomes",
+        "Gamma rays in space"
+      ],
+      ["Delta smelting", "Epsilon proofs", "Zeta functions"]
+    ])
+    expect(labels).toEqual([null, null])
+  })
+
+  it("does not name a group by a word only one of its papers has", () => {
+    const labels = labelClusters([
+      ["Volcano eruptions", "Coral reef ecology", "Desert botany"],
+      ["Neural coding", "Neural plasticity", "Neural networks in the brain"]
+    ])
+    expect(labels[0]).toBeNull()
+    expect(labels[1]).toMatch(/neural/i)
+  })
+
+  it("does not name a group by a word the other groups use just as much", () => {
+    const labels = labelClusters([
+      [
+        "Deep learning for vision",
+        "Deep learning for speech",
+        "Deep learning in law"
+      ],
+      [
+        "Deep learning for text",
+        "Deep learning for music",
+        "Deep learning for art"
+      ]
+    ])
+    expect(labels).toEqual([null, null])
+  })
+
+  it("never uses the filler words of abstracts and papers", () => {
+    const labels = labelClusters([
+      [
+        "Results of a study of methods",
+        "Analysis of results and methods",
+        "A review of studies and results"
+      ],
+      [
+        "Something entirely different here",
+        "Another unrelated topic",
+        "Third one"
+      ]
+    ])
+    expect(labels[0]).toBeNull()
+  })
+
+  it("understands Spanish filler words too", () => {
+    const labels = labelClusters([
+      [
+        "Estudio de la depresión en adolescentes",
+        "Depresión y sueño en adolescentes",
+        "Tratamiento de la depresión"
+      ],
+      ["Física de materiales blandos", "Materiales para baterías", "Reología"]
+    ])
+    expect(labels[0]).toMatch(/depresi/i)
+    expect(labels[0]!.toLowerCase()).not.toContain("estudio")
+  })
+
+  it("never gives two groups the same name", () => {
+    const same = [
+      "Body image and eating",
+      "Body image in adolescents",
+      "Body image measures"
+    ]
+    const named = labelClusters([same, [...same]]).filter(Boolean)
+    expect(new Set(named).size).toBe(named.length)
+  })
+
+  it("only pairs two terms when the second is nearly as characteristic", () => {
+    const labels = labelClusters([
+      [
+        "Sleep and memory consolidation",
+        "Sleep spindles and memory",
+        "Memory during sleep",
+        "Sleep in the elderly"
+      ],
+      ["Trading algorithms", "Portfolio algorithms", "Markets"]
+    ])
+    expect(labels[0]).toMatch(/sleep/i)
+    expect(labels[0]!.split(" · ").length).toBeLessThanOrEqual(2)
+  })
+
+  it("needs the term in at least half of the group, however distinctive it is", () => {
+    // "volcano" is in one third of the group and nowhere else: distinctive, but
+    // most of the group's papers do not use it, so it must not name the group
+    const labels = labelClusters([
+      [
+        "Volcano hazards",
+        "Volcano monitoring",
+        "Coral reefs",
+        "Desert botany",
+        "River deltas",
+        "Glacier melt"
+      ],
+      ["Neural coding", "Neural plasticity", "Neural circuits"]
+    ])
+    expect(labels[0]).toBeNull()
+  })
+
+  it("does not name a group of a single paper", () => {
+    expect(
+      labelClusters([
+        ["Volcano hazards"],
+        ["Neural coding", "Neural circuits"]
+      ])[0]
+    ).toBeNull()
+  })
+
+  it("leaves out a second term that fewer of the papers use", () => {
+    const labels = labelClusters([
+      [
+        "Sleep and memory",
+        "Sleep and memory in adults",
+        "Sleep in children",
+        "Sleep hygiene"
+      ],
+      ["Trading algorithms", "Portfolio algorithms", "Markets"]
+    ])
+    // "sleep" is in all four titles, "memory" in half of them
+    expect(labels[0]).toBe("Sleep")
+  })
+
+  it("does not repeat a word across the terms of one label", () => {
+    const labels = labelClusters([
+      [
+        "Mindfulness training benefits",
+        "Mindfulness training outcomes",
+        "Training benefits of mindfulness"
+      ],
+      ["Trading algorithms", "Portfolio algorithms", "Markets"]
+    ])
+    const words = labels[0]!.toLowerCase().split(/ · | /)
+    expect(new Set(words).size).toBe(words.length)
+  })
+
+  it("gives a shared word to one group only", () => {
+    const labels = labelClusters([
+      ["Sleep and memory", "Sleep and attention", "Sleep and mood"],
+      ["Sleep and appetite", "Sleep and weight", "Sleep and hormones"],
+      ["Trading algorithms", "Portfolio algorithms", "Markets"]
+    ])
+    expect(labels.filter((label) => /sleep/i.test(label ?? ""))).toHaveLength(1)
+  })
+
+  it("is deterministic", () => {
+    const groups = [translation, protein]
+    expect(labelClusters(groups)).toEqual(labelClusters(groups))
+  })
+
+  it("copes with empty input and odd characters", () => {
+    expect(labelClusters([])).toEqual([])
+    expect(labelClusters([[]])).toEqual([null])
+    expect(labelClusters([["--- ...", "12345", "¿¡?!"], ["ok"]])).toEqual([
+      null,
+      null
+    ])
+  })
+
+  it("every word of a label is in at least half of the group's titles", () => {
+    const groups = [translation, protein]
+    const labels = labelClusters(groups)
+    labels.forEach((label, i) => {
+      for (const word of label!.toLowerCase().split(/ · | /)) {
+        const stem = word.replace(/s$/, "")
+        const inside = groups[i].filter((title) =>
+          title.toLowerCase().includes(stem)
+        ).length
+        expect(inside / groups[i].length).toBeGreaterThanOrEqual(0.5)
+      }
+    })
   })
 })
 
@@ -266,6 +494,89 @@ describe("applyView", () => {
   ]
   const ids = (g: PaperGroup[]) =>
     g.flatMap((x) => x.papers.map((p) => p.paperId))
+
+  describe("year and citation bounds", () => {
+    const range = (over: Partial<Range>): Range => ({ ...NO_RANGE, ...over })
+    const view = (r: Range) =>
+      ids(applyView(groups, "all", "relevance", "all", r))
+
+    it("keeps everything when no bound is set", () => {
+      expect(view(NO_RANGE)).toEqual(["a1", "a2", "b1"])
+      expect(isRangeActive(NO_RANGE)).toBe(false)
+    })
+
+    it("bounds the year from either side, inclusively", () => {
+      expect(view(range({ yearFrom: 2018 }))).toEqual(["a2", "b1"])
+      expect(view(range({ yearTo: 2018 }))).toEqual(["a1", "b1"])
+      expect(view(range({ yearFrom: 2018, yearTo: 2018 }))).toEqual(["b1"])
+      expect(isRangeActive(range({ yearFrom: 2018 }))).toBe(true)
+    })
+
+    it("bounds the citations from below", () => {
+      expect(view(range({ minCitations: 50 }))).toEqual(["a2", "b1"])
+      expect(view(range({ minCitations: 500 }))).toEqual(["b1"])
+      expect(isRangeActive(range({ minCitations: 1 }))).toBe(true)
+    })
+
+    it("combines both bounds with the other filters", () => {
+      const combined = applyView(
+        groups,
+        "citation",
+        "relevance",
+        "all",
+        range({ yearFrom: 2020, minCitations: 10 })
+      )
+      expect(ids(combined)).toEqual(["a2"])
+    })
+
+    it("leaves out a paper with no year while a year bound is on, only then", () => {
+      const withUnknown: PaperGroup[] = [
+        {
+          label: "A",
+          papers: [
+            make("known", { year: 2020 }),
+            make("unknown", { year: null })
+          ]
+        }
+      ]
+      const under = (r: Range) =>
+        ids(applyView(withUnknown, "all", "relevance", "all", r))
+      expect(under(range({ yearFrom: 2000 }))).toEqual(["known"])
+      expect(under(range({ yearTo: 2030 }))).toEqual(["known"])
+      expect(under(range({ minCitations: 0 }))).toEqual(["known", "unknown"])
+    })
+
+    it("shows nothing for an impossible range, without failing", () => {
+      expect(view(range({ yearFrom: 2024, yearTo: 2010 }))).toEqual([])
+    })
+
+    it("drops groups that end up empty and keeps a flat sort working", () => {
+      const grouped = applyView(
+        groups,
+        "all",
+        "relevance",
+        "all",
+        range({ yearFrom: 2024 })
+      )
+      expect(grouped.map((g) => g.label)).toEqual(["A"])
+      expect(
+        ids(
+          applyView(
+            groups,
+            "all",
+            "citations",
+            "all",
+            range({ yearFrom: 2015 })
+          )
+        )
+      ).toEqual(["b1", "a2"])
+    })
+
+    it("counts the last N years including the current one", () => {
+      expect(lastYears(5, 2026)).toEqual({ yearFrom: 2022, yearTo: null })
+      expect(lastYears(10, 2026).yearFrom).toBe(2017)
+    })
+  })
 
   it("filters and drops groups that end up empty", () => {
     expect(ids(applyView(groups, "reference", "relevance"))).toEqual(["a1"])

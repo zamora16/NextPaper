@@ -60,7 +60,7 @@ State as of 2026-09-20. Verified against the code and by real-browser e2e runs
    breaks near-ties toward established work; keep top 18 (`TOP_N`).
 8. Clustering: `clusterAuto` runs k-means for k∈[2, min(4, ⌊n/2⌋)], merges clusters
    smaller than 2, and keeps the k with the best **silhouette score**. Labels come from
-   `labelClusters` (distinctive words by document-frequency lift vs. all clusters).
+   `labelClusters` (`lib/keywords.ts`): terms and phrases of up to 3 words taken from the group's **titles**, each in at least half of them (and at least 2) and at least 0.3 more frequent there than in the other groups; a longer phrase replaces the words it contains; acronyms keep their capitals; a term goes to one group only. When nothing qualifies the group is `@group:N` and the popup shows *Group N* (a label is inferred information: better none than a misleading one).
    Groups are ordered by mean score.
 9. `choosePicks` ("Empieza por aquí"): *foundational* = most cited older-than-2-years paper
    (prefers ones the seed references), *review* = best blended paper where `isReview`,
@@ -113,7 +113,9 @@ the translated message and a *Retry* button; nothing is cached.
 | `lib/pipeline.ts` | See §2. Also `QUERY_PREFIX`, `PickKind`, `ScoredPaper`, `AnalysisResult`. |
 | `lib/kmeans.ts` | `kMeans` (k-means++ init, seeded mulberry32(42), Lloyd ≤25 iters, L2-normalized vectors ⇒ Euclidean ≈ cosine), `mergeSmallClusters`, `silhouetteScore`, `clusterAuto`. |
 | `lib/vector-math.ts` | dot, norm, cosine, normalize, euclidean, mean. |
-| `lib/keywords.ts` | `labelClusters` (EN/ES stopwords, words >3 chars). |
+| `lib/keywords.ts` | `labelClusters(titles[][]) → (string \| null)[]`: c-TF-IDF-style subtopic names with coverage and contrast rules (see step 8). Titles only: abstracts share the whole topic's vocabulary and add filler words (measured on real groups). EN/ES stopwords plus study jargon. |
+| `lib/citing.ts` | "How others cite it": `namesThePaper` (author + year within ±1 year, `et al.`, two first authors, a proper name from the title, or the quoted title), `isUsableSentence` (length, no `(cid:`, letter ratio), `selectCitingSentences` (one sentence per citing paper, named ones first, influential then recent), `getCitingSentences(ref)` (cache → `getCitationContexts` → select → store), and the bounded cache `nextpaper_citing_v1_<ref>` (compressed, 14 d, 30 entries). |
+| `components/CitedBy.tsx`, `components/RangeFilters.tsx` | The collapsible *How others cite it* section (loads only when opened) and the year / minimum-citations panel. |
 | `lib/timeline.ts` | `buildTimeline(groups, seedYear?)`: per-subtopic lanes with year span/median, axis domain widened to include the open paper, round ticks, count of undated papers; `null` with fewer than 4 dated papers. |
 | `lib/study.ts` | **Pure** study-card heuristics: `extractStudy` → `{design, sample}`; `studyOf` memoizes per paper object (WeakMap); **derived at render time, not stored** (no cache bump, works on old saved papers). **Precision over coverage.** Design: `DESIGNS` is ordered (first match wins: protocol → meta → systematic → rct → trial → psychometric → experimental → review → case-control → cohort → mixed → cross-sectional → qualitative → case); a pattern matches the **title** or an abstract sentence that talks about the study itself (`SELF` cues) and is not about earlier work (`BACKGROUND`); `titlePattern` is title-only; text beats `publicationTypes`; conflicting pairs (cohort vs cross-sectional, qualitative vs survey words) give no design; Unicode hyphens are normalized. Sample: a figure is reported only if it is the single figure, or the one introduced as the whole sample (`TOTAL_CUE`) with no other figure above half of it; group sizes (`n =`, "in each group", joined figures), invited pools, shares ("(80%)"), repeated measurements, spelled-out counts and "aged 18 and 65" ranges make it return nothing; reviews use only the studies *included* and give nothing when two counts conflict. Regressions in `tests/study.test.ts`, all from real abstracts. |
 | `lib/citation.ts` | **Pure** formatter (`formatCitation(paper, style, meta?)`, `inTextCitation`): APA 7, MLA 9, Chicago author-date, Harvard (Cite Them Right), IEEE, Vancouver, AMA, BibTeX, RIS. `toRef` normalizes Semantic Scholar + optional Crossref data (Crossref wins); without Crossref, author names are parsed heuristically (last word = family). `citationKey` = author+year+first title word. Unit-tested (`tests/citation.test.ts`). |
@@ -128,7 +130,7 @@ the translated message and a *Retry* button; nothing is cached.
 | `lib/view.ts` | Filters (`reference`, `citation`, `review`, `open`), an independent design filter (`DesignFilter`, `designOptions` = designs present with counts) and sorts (`relevance` keeps groups; `citations`/`year` flatten). |
 | `lib/paper-utils.ts` | `isReview`: title patterns or a review design declared in the text (`studyOf`); Semantic Scholar's `Review` type is **not trusted** (it tagged 109 of 430 papers whose text declares a trial, cohort or survey; `MetaAnalysis` is consistent and kept through `study.ts`). `plainPaper`: a paper with no analysis context and no embedding. |
 | `lib/extract-ref.ts` | Self-contained page extractor (see Rules in `CONTRIBUTING.md`). |
-| `lib/cache.ts` | Compressed result cache (`v11`, 7-day TTL), `pruneStorage` (expiry, 40-entry cap, legacy keys, orphan jobs; runs after each analysis and at worker start) and a clear-and-retry on write failure. |
+| `lib/cache.ts` | Compressed result cache (`v12`, 7-day TTL), `pruneStorage` (expiry, 40-entry cap, legacy keys, orphan jobs; runs after each analysis and at worker start) and a clear-and-retry on write failure. |
 | `lib/compress.ts` | `compressJson` / `decompressJson`: native gzip (`CompressionStream`) + base64. |
 | `lib/job.ts` | `JobState` (`loading` \| `done` \| `error`; **no result inside**), `JOB_PREFIX`, `jobKey`. |
 
@@ -137,9 +139,10 @@ the translated message and a *Retry* button; nothing is cached.
 | Key | Value | Lifetime / bound |
 |---|---|---|
 | `nextpaper_job_<ref>` | `JobState`: `{phase:"loading",step?}` | `{phase:"done"}` | `{phase:"error",error: ErrorCode}` (a few bytes, language-neutral) | Pruned when its cache entry disappears |
-| `nextpaper_cache_v11_<ref>` | `{z, cachedAt}` where `z` = base64(gzip(JSON of `AnalysisResult`)) | 7-day TTL **and** newest 40 entries only; removed by `pruneStorage` |
+| `nextpaper_cache_v12_<ref>` | `{z, cachedAt}` where `z` = base64(gzip(JSON of `AnalysisResult`)) | 7-day TTL **and** newest 40 entries only; removed by `pruneStorage` |
 | `nextpaper_library` | `Record<paperId, SavedPaper>` (`ScoredPaper` + `savedAt`, `status`, `note`, `collections`) | permanent, never pruned |
 | `nextpaper_crossref_v1_<doi>` | `{m: CrossrefMeta \| null, at}` (`null` = Crossref has no record, e.g. arXiv DOIs) | 30 d hit / 7 d miss, newest 500 kept (`pruneStorage`) |
+| `nextpaper_citing_v1_<ref>` | `{z, at}`: gzip+base64 of `CitingResult {named, others, scanned, withSentences}` (≤ 30 + 20 sentences) | 14 d and newest 30 only; removed by `pruneStorage`; never touches the library or alerts |
 | `nextpaper_updates` | `{running, checkedAt, lastError, seen[≤600], items[≤40]}` | permanent, bounded |
 
 Older prefixes (`nextpaper_cache_v1..v5_`, `nextpaper_emb_v1_`, `nextpaper_rec_v1_`) are
@@ -170,6 +173,14 @@ deleted.
 - Some papers have no embedding (no abstract indexed). Old Elsevier papers often lack
   references.
 - Accepted id prefixes: `DOI:`, `ARXIV:`, `PMID:`, `PMCID:` (numeric), raw `paperId`.
+
+### Citation sentences (verified 2026-09-21, real API)
+
+- `GET /graph/v1/paper/{id}/citations?fields=contexts,isInfluential,title,year,venue,url,paperId&limit=500`: ≈ 200 KB, 0.7–1.3 s. Order is arbitrary; only the first page is used.
+- **`intents` / `contextsWithIntent[].intents` come back empty for every citation** (checked on 1,000 citations of one paper). There is no method/result/background filter to build.
+- **Coverage is partial:** 15% (a small paper: 2 of 13) to ~50% (AlphaFold: 417 of 1,000) of the citing papers have any sentence.
+- **Quality is noisy** (PDF extraction): broken hyphenation ("mech-anisms"), lost ligatures, bare footnote numbers, and sentences that belong to a *neighbouring* reference ("131,132 Despite its excellent sensitivity…" attached to AlphaFold). Reading ~22 random sentences of each of 5 papers, about 40% could not be tied to the cited paper. Hence the rule: show by default only sentences that name it. Measured on the 5 papers (first 500 citing papers): 71% (BAS-2), 83% (PRISMA), 53% (AlphaFold), 79% (Baron & Kenny) of usable sentences name the paper; only 16% for ResNet, which is cited with numbers ("[43]") — expected, and the price of precision.
+- Held-out audit (AlphaFold, ResNet, Baron & Kenny): 30 accepted sentences each, all about the paper; one false positive found ("He et al. [2022]", another paper of a very common surname) → a year that is not the paper's ±1 rejects the mention.
 
 ### Crossref facts (verified 2026-09-19)
 
@@ -208,6 +219,8 @@ deleted.
 | Colors are CSS variables (`style.css`), not Tailwind palette classes | One place defines light and dark, so the whole popup follows the system theme; `tests/design-tokens.test.ts` fails on a raw palette color or hex in a component. |
 | Fixed 600 px popup frame with a scrolling content area | Chrome caps a popup at 600 px; without a frame the header and tabs scrolled away with a long list. |
 | Native `<select>`, `title` tooltips and a serif for paper titles | Zero dependencies, correct keyboard and screen-reader behavior for free, and the reading feel of a journal. |
+| Citation sentences: only ones that name the paper, others behind a link | Semantic Scholar's sentence extraction attaches some sentences to a neighbouring reference; showing them as "how others cite this paper" would be wrong information. Coverage is sacrificed on purpose (rule 17). |
+| Cluster labels from titles, with coverage and contrast thresholds | Tried abstracts too: they add filler ("achieves", "potential") and blur what distinguishes a group (every abstract of a topic uses the topic's words), so a group about machine translation got "Performance · achieves". Titles gave "Machine translation". Thresholds were tuned on 9 analyses and judged on 10 unseen ones; requiring a strict majority lost correct labels ("AlphaFold"), 60% lost a third of them. |
 | `?ref=` popup param | The only way to drive the popup in automation (no toolbar click ⇒ no `activeTab`). |
 
 ## 7. Known technical debt

@@ -31,6 +31,8 @@ export interface ScoredPaper extends RecommendedPaper {
 // label would stay in the language that was active when it was cached).
 export const RELATED_GROUP = "@related"
 export const ALL_GROUP = "@all"
+// A subtopic no honest name was found for: "@group:2" is "Group 2".
+export const GROUP_PREFIX = "@group:"
 
 export interface PaperGroup {
   label: string
@@ -258,7 +260,10 @@ export function assemble(
       papers: members.map(toScored)
     }))
     .sort((a, b) => b.avgScore - a.avgScore)
-    .map(({ label, papers }) => ({ label, papers }))
+    .map(({ label, papers }, i) => ({
+      label: label ?? GROUP_PREFIX + (i + 1),
+      papers
+    }))
 
   return { groups, picks: choosePicks(shortlist, toScored) }
 }

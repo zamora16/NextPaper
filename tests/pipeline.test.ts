@@ -4,6 +4,7 @@ import {
   assemble,
   choosePicks,
   dedupe,
+  GROUP_PREFIX,
   makeStrip,
   normalizeTitle,
   RELATED_GROUP
@@ -74,7 +75,11 @@ describe("dedupe", () => {
 })
 
 // Three topics as axis-aligned blobs; within a topic the score decreases.
-function topicEntries(perTopic: number) {
+function topicEntries(
+  perTopic: number,
+  titleOf = (topic: number, i: number) =>
+    `${["Alpha", "Bravo", "Charlie"][topic]} topic paper ${i}`
+) {
   const random = rng(3)
   const entries = []
   const sources = new Map<string, Set<CandidateSource>>()
@@ -87,7 +92,7 @@ function topicEntries(perTopic: number) {
       )
       const p = paper(id, {
         embedding,
-        title: `${["Alpha", "Bravo", "Charlie"][topic]} topic paper ${i}`,
+        title: titleOf(topic, i),
         citationCount: 5 + i
       })
       sources.set(id, new Set<CandidateSource>(["search"]))
@@ -154,6 +159,42 @@ describe("assemble", () => {
     })
     expect(few.groups).toHaveLength(1)
     expect(few.groups[0].label).toBe(RELATED_GROUP)
+  })
+})
+
+describe("naming the groups", () => {
+  const options = { topN: 18, maxClusters: 4, showScore: true }
+
+  it("names each group with the words its titles share", () => {
+    const { entries, sources } = topicEntries(6)
+    const result = assemble(entries, makeStrip(sources, false), options)
+    const labels = result.groups.map((g) => g.label)
+    expect(labels).toHaveLength(3)
+    expect(labels.some((l) => /alpha/i.test(l))).toBe(true)
+    expect(labels.some((l) => /bravo/i.test(l))).toBe(true)
+    expect(labels.some((l) => /charlie/i.test(l))).toBe(true)
+    // the words come from the group's own titles
+    for (const group of result.groups) {
+      const word = group.label.split(" ")[0].toLowerCase()
+      expect(
+        group.papers.every((p) => p.title.toLowerCase().includes(word))
+      ).toBe(true)
+    }
+  })
+
+  it("numbers a group no honest name was found for, in the order shown", () => {
+    // every title is different: nothing is shared by half of any group
+    const words = ["volcano", "harbor", "tundra", "saffron", "quartz", "marble"]
+    const { entries, sources } = topicEntries(
+      6,
+      (topic, i) => `${words[i]}${topic} unique${topic}${i}`
+    )
+    const result = assemble(entries, makeStrip(sources, false), options)
+    expect(result.groups.map((g) => g.label)).toEqual([
+      GROUP_PREFIX + 1,
+      GROUP_PREFIX + 2,
+      GROUP_PREFIX + 3
+    ])
   })
 })
 

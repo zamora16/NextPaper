@@ -1,3 +1,4 @@
+import type { RawCitation } from "~lib/citing"
 import {
   ApiKeyRejectedError,
   PaperNotFoundError,
@@ -133,6 +134,40 @@ export async function getSeed(ref: string): Promise<Seed> {
       .map((r: { paperId?: string }) => r.paperId)
       .filter((id: string | undefined): id is string => !!id),
     citers: (data.citations ?? []).filter((c: Citer) => !!c?.paperId)
+  }
+}
+
+// The first page of papers citing this one, with the sentences where they cite
+// it (Semantic Scholar extracts them from full texts, so only some papers have
+// them). The order is arbitrary and pages are 500 papers, about 200 KB.
+// Null when a request failed. Asked on demand, never during an analysis.
+const CITATIONS_PAGE = 500
+
+export async function getCitationContexts(ref: string): Promise<{
+  paper: { title: string; year: number | null; authors: string[] }
+  rows: RawCitation[]
+} | null> {
+  const path = paperPath(ref)
+  const [meta, citations] = await Promise.all([
+    getJson<{
+      title?: string
+      year?: number | null
+      authors?: { name?: string }[]
+    }>(`${BASE}/graph/v1/paper/${path}?fields=title,year,authors.name`),
+    getJson<{ data?: RawCitation[] }>(
+      `${BASE}/graph/v1/paper/${path}/citations?fields=contexts,isInfluential,title,year,venue,url,paperId&limit=${CITATIONS_PAGE}`
+    )
+  ])
+  if (!meta || !citations) return null
+  return {
+    paper: {
+      title: meta.title ?? "",
+      year: meta.year ?? null,
+      authors: (meta.authors ?? [])
+        .map((a) => a?.name)
+        .filter((name): name is string => typeof name === "string")
+    },
+    rows: citations.data ?? []
   }
 }
 

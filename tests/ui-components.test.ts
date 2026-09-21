@@ -325,6 +325,29 @@ describe("RelatedTab", () => {
     expect(bench.button("Timeline")).toBeTruthy()
   })
 
+  it("offers 'How others cite it' for a paper, not for a topic or before results", async () => {
+    await bench.render(createElement(RelatedTab, relatedProps()))
+    expect(bench.button("How others cite it")).toBeTruthy()
+
+    await bench.render(
+      createElement(
+        RelatedTab,
+        relatedProps({
+          current: { ref: "QUERY:body image", label: "body image" }
+        })
+      )
+    )
+    expect(bench.button("How others cite it")).toBeUndefined()
+
+    await bench.render(
+      createElement(
+        RelatedTab,
+        relatedProps({ result: null, job: { phase: "loading" } })
+      )
+    )
+    expect(bench.button("How others cite it")).toBeUndefined()
+  })
+
   it("lists every paper, with the count", async () => {
     await bench.render(createElement(RelatedTab, relatedProps()))
     expect(bench.container.querySelectorAll("[data-card]").length).toBe(2)

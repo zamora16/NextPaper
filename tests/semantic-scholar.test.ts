@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   collectCandidates,
+  getCitationContexts,
   getPapers,
   getPapersAligned,
   getRecommendedIds,
@@ -358,5 +359,59 @@ describe("getPapersAligned", () => {
     mockFetch(route)
     expect(await getPapersAligned([])).toEqual([])
     expect(calls).toHaveLength(0)
+  })
+})
+
+describe("getCitationContexts", () => {
+  const meta = {
+    title: "T",
+    year: 2015,
+    authors: [{ name: "Ada Lovelace" }, {}]
+  }
+
+  it("asks for the citing sentences of one page, on demand, in two parallel requests", async () => {
+    mockFetch((call) =>
+      call.url.includes("/citations")
+        ? json({
+            data: [{ contexts: ["a sentence"], citingPaper: { paperId: "c1" } }]
+          })
+        : json(meta)
+    )
+    const result = await getCitationContexts("DOI:10.1/a#b")
+    expect(calls).toHaveLength(2)
+    const citations = calls.find((c) => c.url.includes("/citations"))!
+    expect(citations.url).toContain("limit=500")
+    expect(citations.url).toContain(
+      "fields=contexts,isInfluential,title,year,venue,url,paperId"
+    )
+    // a "#" inside a DOI must not end the path
+    expect(citations.url).toContain("DOI:10.1/a%23b/citations")
+    expect(result?.paper).toEqual({
+      title: "T",
+      year: 2015,
+      authors: ["Ada Lovelace"]
+    })
+    expect(result?.rows).toHaveLength(1)
+  })
+
+  it("is null when either request fails, so the caller can retry", async () => {
+    mockFetch((call) =>
+      call.url.includes("/citations") ? json({}, 400) : json(meta)
+    )
+    expect(await getCitationContexts("X")).toBeNull()
+    mockFetch((call) =>
+      call.url.includes("/citations") ? json({ data: [] }) : json({}, 400)
+    )
+    expect(await getCitationContexts("X")).toBeNull()
+  })
+
+  it("copes with a paper that has no citations or no data", async () => {
+    mockFetch((call) =>
+      call.url.includes("/citations") ? json({ data: null }) : json({})
+    )
+    expect(await getCitationContexts("X")).toEqual({
+      paper: { title: "", year: null, authors: [] },
+      rows: []
+    })
   })
 })

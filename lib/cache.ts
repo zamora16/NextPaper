@@ -1,3 +1,4 @@
+import { CITING_MAX_ENTRIES, CITING_PREFIX, CITING_TTL_MS } from "~lib/citing"
 import { compressJson, decompressJson } from "~lib/compress"
 import {
   CROSSREF_MAX_ENTRIES,
@@ -16,10 +17,10 @@ const TTL_MS = 7 * 24 * 60 * 60 * 1000
 const MAX_ENTRIES = 40
 // Bumped whenever the shape or the retrieval strategy changes, so entries
 // produced by an older strategy are never served.
-export const KEY_PREFIX = "nextpaper_cache_v11_"
+export const KEY_PREFIX = "nextpaper_cache_v12_"
 // Keys written by earlier versions (uncompressed results, per-paper embeddings,
 // raw recommendation lists). Removed on sight so they don't eat the quota.
-const LEGACY_KEYS = /^nextpaper_(cache_v([1-9]|10)|emb_v1|rec_v1)_/
+const LEGACY_KEYS = /^nextpaper_(cache_v([1-9]|1[01])|emb_v1|rec_v1)_/
 
 interface CacheEntry {
   z: string // gzip + base64 of the AnalysisResult JSON
@@ -52,6 +53,7 @@ export async function pruneStorage(
   const remove: string[] = []
   const live: { key: string; ref: string; cachedAt: number }[] = []
   const crossref: { key: string; at: number }[] = []
+  const citing: { key: string; at: number }[] = []
 
   for (const [key, value] of Object.entries(all)) {
     if (LEGACY_KEYS.test(key)) {
@@ -61,6 +63,10 @@ export async function pruneStorage(
       const ttl = entry?.m ? CROSSREF_TTL_MS : CROSSREF_MISS_TTL_MS
       if (Date.now() - (entry?.at ?? 0) > ttl) remove.push(key)
       else crossref.push({ key, at: entry.at })
+    } else if (key.startsWith(CITING_PREFIX)) {
+      const at = (value as { at?: number })?.at ?? 0
+      if (Date.now() - at > CITING_TTL_MS) remove.push(key)
+      else citing.push({ key, at })
     } else if (key.startsWith(KEY_PREFIX)) {
       const cachedAt = (value as CacheEntry)?.cachedAt ?? 0
       if (Date.now() - cachedAt > TTL_MS) remove.push(key)
@@ -72,6 +78,9 @@ export async function pruneStorage(
   crossref
     .slice(CROSSREF_MAX_ENTRIES)
     .forEach((entry) => remove.push(entry.key))
+
+  citing.sort((a, b) => b.at - a.at)
+  citing.slice(CITING_MAX_ENTRIES).forEach((entry) => remove.push(entry.key))
 
   live.sort((a, b) => b.cachedAt - a.cachedAt)
   live.slice(MAX_ENTRIES).forEach((entry) => remove.push(entry.key))

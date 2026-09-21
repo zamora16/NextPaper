@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest"
 
+import { groupLabel } from "~components/i18n"
 import { CITATION_STYLES } from "~lib/citation"
 import { isLangPreference, resolveLang, richParts, translate } from "~lib/i18n"
 import { en } from "~lib/i18n/en"
 import { es } from "~lib/i18n/es"
+import { GROUP_PREFIX } from "~lib/pipeline"
 import { DESIGNS } from "~lib/study"
 
 const keys = Object.keys(en) as (keyof typeof en)[]
@@ -125,5 +127,23 @@ describe("richParts", () => {
     ])
     expect(richParts("plain")).toEqual([{ text: "plain", bold: false }])
     expect(richParts("**all**")).toEqual([{ text: "all", bold: true }])
+  })
+})
+
+describe("groupLabel", () => {
+  const t = (lang: "en" | "es") => (key: any, params?: any) =>
+    translate(lang, key, params)
+
+  it("shows the words of a named group as they are", () => {
+    expect(groupLabel("Machine translation", t("en"))).toBe(
+      "Machine translation"
+    )
+  })
+
+  it("translates the stand-ins and numbers an unnamed group", () => {
+    expect(groupLabel(GROUP_PREFIX + 2, t("en"))).toBe("Group 2")
+    expect(groupLabel(GROUP_PREFIX + 2, t("es"))).toBe("Grupo 2")
+    expect(groupLabel("@related", t("es"))).toBe("Relacionados")
+    expect(groupLabel("@all", t("en"))).toBe("All")
   })
 })

@@ -31,6 +31,34 @@ function matches(paper: ScoredPaper, filter: Filter): boolean {
 
 export type DesignFilter = DesignId | "all"
 
+// Bounds on year and citations. A paper with no year is left out while a year
+// bound is set: we cannot say it falls inside.
+export interface Range {
+  yearFrom: number | null
+  yearTo: number | null
+  minCitations: number
+}
+
+export const NO_RANGE: Range = { yearFrom: null, yearTo: null, minCitations: 0 }
+
+export const isRangeActive = (range: Range) =>
+  range.yearFrom !== null || range.yearTo !== null || range.minCitations > 0
+
+// "The last N years", counting the current one.
+export const lastYears = (years: number, now = new Date().getFullYear()) => ({
+  yearFrom: now - years + 1,
+  yearTo: null
+})
+
+function inRange(paper: ScoredPaper, range: Range): boolean {
+  if (range.yearFrom !== null || range.yearTo !== null) {
+    if (paper.year === null || paper.year === undefined) return false
+    if (range.yearFrom !== null && paper.year < range.yearFrom) return false
+    if (range.yearTo !== null && paper.year > range.yearTo) return false
+  }
+  return (paper.citationCount ?? 0) >= range.minCitations
+}
+
 // Designs present in the results with their paper counts, most common first
 // (ties keep the priority order of DESIGNS). Papers with no detected design
 // are left out: the filter only offers what it can deliver.
@@ -53,7 +81,8 @@ export function applyView(
   groups: PaperGroup[],
   filter: Filter,
   sort: Sort,
-  design: DesignFilter = "all"
+  design: DesignFilter = "all",
+  range: Range = NO_RANGE
 ): PaperGroup[] {
   const filtered = groups
     .map((g) => ({
@@ -61,6 +90,7 @@ export function applyView(
       papers: g.papers.filter(
         (p) =>
           matches(p, filter) &&
+          inRange(p, range) &&
           (design === "all" || studyOf(p).design === design)
       )
     }))

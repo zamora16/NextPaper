@@ -33,6 +33,26 @@ export const es: Record<Key, string> = {
   "context.open": "Paper abierto",
   "context.exploring": "Explorando",
   "context.topic": "Tema",
+  "citedBy.title": "Cómo lo citan",
+  "citedBy.hint":
+    "Frases de los papers que citan a este, donde Semantic Scholar encontró la cita. Primero se muestran solo las que nombran a este paper por su autor o su título.",
+  "citedBy.loading": "Buscando las frases...",
+  "citedBy.error": "No se pudieron cargar las frases.",
+  "citedBy.none": "Semantic Scholar no tiene frases de citas para este paper.",
+  "citedBy.noNamed": "Ninguna frase nombra a este paper por su autor o título.",
+  "citedBy.summary":
+    "Frases encontradas en {n} de {total} papers que lo citan.",
+  "citedBy.influential": "Influyente",
+  "citedBy.influential.hint":
+    "Semantic Scholar marca esta cita como influyente",
+  "citedBy.onlyInfluential": "Solo influyentes",
+  "citedBy.more": "Ver {n} más",
+  "citedBy.others": "Ver {n} que no nombran al paper",
+  "citedBy.others.hide": "Ocultarlas",
+  "citedBy.others.note":
+    "Semantic Scholar asoció estas frases al paper, pero no mencionan a sus autores ni su título, así que pueden ser sobre otra referencia cercana.",
+  "citedBy.source":
+    "Las frases se extraen automáticamente del texto completo de los papers que lo citan y pueden contener errores.",
   back: "← Volver",
   "back.hint": "Volver al análisis anterior",
   detecting: "Detectando paper...",
@@ -80,6 +100,18 @@ export const es: Record<Key, string> = {
   "design.all": "Todos",
   "design.hint":
     "Diseño detectado con reglas en el título y el abstract; filtra por tipo de estudio. Puede fallar",
+  "filters.more": "Más filtros",
+  "filters.year": "Año",
+  "filters.year.from": "Desde",
+  "filters.year.to": "Hasta",
+  "filters.last5": "Últimos 5 años",
+  "filters.last10": "Últimos 10 años",
+  "filters.minCitations": "Mín. citas",
+  "filters.minCitations.any": "Cualquiera",
+  "filters.minCitations.n": "{n}+",
+  "filters.noYear":
+    "Los papers sin año quedan fuera mientras hay un año fijado, porque no sabemos dónde caen.",
+  "filters.clear": "Quitar filtros",
   "sort.label": "Ordenar",
   "sort.hint": "Orden de los resultados",
   "sort.relevance": "Relevancia",
@@ -100,6 +132,7 @@ export const es: Record<Key, string> = {
   "pick.recent": "Lo más reciente",
   "group.related": "Relacionados",
   "group.all": "Todos",
+  "group.n": "Grupo {n}",
   "group.hint": "Papers agrupados por similitud de contenido (subtemas)",
 
   // copy and export

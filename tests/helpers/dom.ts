@@ -44,6 +44,15 @@ export function mountBench(lang: Lang = "en") {
         )!.set!.call(input, value)
         input.dispatchEvent(new Event("input", { bubbles: true }))
       }),
+    // Chooses an option of a <select> the way the browser does.
+    select: (element: HTMLSelectElement, value: string) =>
+      act(async () => {
+        Object.getOwnPropertyDescriptor(
+          HTMLSelectElement.prototype,
+          "value"
+        )!.set!.call(element, value)
+        element.dispatchEvent(new Event("change", { bubbles: true }))
+      }),
     unmount: async () => {
       await act(async () => root.unmount())
       container.remove()

@@ -143,7 +143,7 @@ describe("analyzing a paper", () => {
     realisticSet()
     const result = await analyze("DOI:10.1/x")
     expect(JSON.stringify(result)).not.toContain("embedding")
-    const cached = chrome.data.get("nextpaper_cache_v11_DOI:10.1/x") as {
+    const cached = chrome.data.get("nextpaper_cache_v12_DOI:10.1/x") as {
       z: string
     }
     expect(cached.z.length).toBeLessThan(3000)

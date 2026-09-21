@@ -13,7 +13,7 @@ import {
   type Params,
   type TKey
 } from "~lib/i18n"
-import { ALL_GROUP, RELATED_GROUP } from "~lib/pipeline"
+import { ALL_GROUP, GROUP_PREFIX, RELATED_GROUP } from "~lib/pipeline"
 
 export type Translate = (key: TKey, params?: Params) => string
 
@@ -80,5 +80,8 @@ export function Hint({ text }: { text: string }) {
 export function groupLabel(label: string, t: Translate): string {
   if (label === RELATED_GROUP) return t("group.related")
   if (label === ALL_GROUP) return t("group.all")
+  if (label.startsWith(GROUP_PREFIX)) {
+    return t("group.n", { n: Number(label.slice(GROUP_PREFIX.length)) })
+  }
   return label
 }
