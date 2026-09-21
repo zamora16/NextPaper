@@ -13,6 +13,7 @@ Read these before changing anything non-trivial:
 - `docs/PERFORMANCE.md` — measured request behavior, why the pipeline is shaped this way, rules to keep it fast
 - `docs/PRODUCT.md` — what users get today and the known limits
 - `docs/ROADMAP.md` — prioritized improvement ideas (free layer first, optional low-token AI layer)
+- `docs/EVALUATION.md` — how the ranking was measured, what it showed, and the limits of those numbers
 
 ## Commands
 
@@ -44,7 +45,7 @@ node scripts/e2e-storage.cjs       # compression, pruning, migration, user data 
 node scripts/e2e-import.cjs        # import .bib, collections, backup/restore, hostile file
 node scripts/e2e-setup.cjs         # first-run setup, personal API key, no key in the bundle
 node scripts/e2e-english.cjs       # English UI, three tabs, hover hints, language switch
-npx vitest run --config vitest.audit.config.ts   # real analyses saved to read subtopic labels (see scripts/audit)
+npx vitest run --config vitest.audit.config.ts <capture-groups|pick-seeds|collect-pools|evaluate>   # real-API audits (always name one: pick-seeds rewrites scripts/audit/seeds.json); see docs/EVALUATION.md
 OUT=dir node scripts/screenshots.cjs   # screenshots of every screen (LANG_UI=es, DARK=1, SCALE=2)
 node scripts/make-icon.cjs         # regenerates assets/icon.png from the app mark
 node scripts/trace-network.cjs     # request-by-request timeline of a cold analysis (performance work)

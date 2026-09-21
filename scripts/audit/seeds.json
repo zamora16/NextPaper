@@ -1,0 +1,410 @@
+[
+  {
+    "field": "psychology",
+    "query": "adolescent depression treatment outcomes",
+    "ref": "c2063de19cdf674fb08f983dbd2b9eb1f31c6f6a",
+    "title": "The Adolescent Behavioral Activation Program: Adapting Behavioral Activation as a Treatment for Depression in Adolescence",
+    "year": 2015,
+    "references": 70
+  },
+  {
+    "field": "psychology",
+    "query": "adolescent depression treatment outcomes",
+    "ref": "cc30481424d0d40568cbfcc319b54016855d6b18",
+    "title": "The SAFETY Program: A Treatment-Development Trial of a Cognitive-Behavioral Family Treatment for Adolescent Suicide Attempters",
+    "year": 2014,
+    "references": 32
+  },
+  {
+    "field": "psychology",
+    "query": "working memory training in children",
+    "ref": "b4b4c8bd24401110fbad4e671be8cb1ef29984f3",
+    "title": "Working memory training in typically developing children: A multilevel meta-analysis",
+    "year": 2019,
+    "references": 53
+  },
+  {
+    "field": "psychology",
+    "query": "body image and social media",
+    "ref": "6cb099a9fdb1e4f3080a5531269449ba89253276",
+    "title": "Social Media, Body Image and Resistance Training: Creating the Perfect ‘Me’ with Dietary Supplements, Anabolic Steroids and SARM’s",
+    "year": 2021,
+    "references": 62
+  },
+  {
+    "field": "psychology",
+    "query": "body image and social media",
+    "ref": "911684232acd09f4842c4f3ea771d06aa27ee9a6",
+    "title": "Social media, body image and food choices in healthy young adults: A mixed methods systematic review",
+    "year": 2019,
+    "references": 72
+  },
+  {
+    "field": "medicine",
+    "query": "randomized trial cardiovascular prevention",
+    "ref": "f194d0dfdb4d229d27102edaf6e9683c4cab5078",
+    "title": "Mediterranean diet and endothelial function in patients with coronary heart disease: An analysis of the CORDIOPREV randomized controlled trial",
+    "year": 2020,
+    "references": 53
+  },
+  {
+    "field": "medicine",
+    "query": "randomized trial cardiovascular prevention",
+    "ref": "951464ecb73e0ce20c48126d4e12647ab3f003a0",
+    "title": "The dapagliflozin and prevention of adverse outcomes in chronic kidney disease (DAPA-CKD) trial: baseline characteristics",
+    "year": 2020,
+    "references": 29
+  },
+  {
+    "field": "medicine",
+    "query": "COVID-19 vaccine effectiveness",
+    "ref": "81e9f8eb68a2879760fb37c775e9dd7971824b68",
+    "title": "Acceptance of a COVID-19 Vaccine in Southeast Asia: A Cross-Sectional Study in Indonesia",
+    "year": 2020,
+    "references": 55
+  },
+  {
+    "field": "medicine",
+    "query": "COVID-19 vaccine effectiveness",
+    "ref": "cb1679176700e20ea7d4e1d6af03824fdfc91f68",
+    "title": "Evaluation of post-introduction COVID-19 vaccine effectiveness: Summary of interim guidance of the World Health Organization",
+    "year": 2021,
+    "references": 26
+  },
+  {
+    "field": "medicine",
+    "query": "immunotherapy checkpoint inhibitors survival",
+    "ref": "e7ba7cf9923227649f9c7ad7b4d184807c353e04",
+    "title": "The Predictive Value of Tumor Mutation Burden on Efficacy of Immune Checkpoint Inhibitors in Cancers: A Systematic Review and Meta-Analysis",
+    "year": 2019,
+    "references": 75
+  },
+  {
+    "field": "medicine",
+    "query": "immunotherapy checkpoint inhibitors survival",
+    "ref": "a4de86aa1e67cee25c5e030b036cc59f64a7b92a",
+    "title": "Metabolomics to Assess Response to Immune Checkpoint Inhibitors in Patients with Non-Small-Cell Lung Cancer",
+    "year": 2020,
+    "references": 50
+  },
+  {
+    "field": "cs-ml",
+    "query": "graph neural network node classification",
+    "ref": "4156df84bf8b352f52b39304e4935a4994b1c150",
+    "title": "Simplifying approach to Node Classification in Graph Neural Networks",
+    "year": 2021,
+    "references": 45
+  },
+  {
+    "field": "cs-ml",
+    "query": "graph neural network node classification",
+    "ref": "91fb815361fdbf80ff15ce4d783a41846bd99232",
+    "title": "GCC: Graph Contrastive Coding for Graph Neural Network Pre-Training",
+    "year": 2020,
+    "references": 66
+  },
+  {
+    "field": "cs-ml",
+    "query": "contrastive learning visual representations",
+    "ref": "3021152ab7540da7fd85baf2560568d8ef4a9b23",
+    "title": "MixCo: Mix-up Contrastive Learning for Visual Representation",
+    "year": 2020,
+    "references": 38
+  },
+  {
+    "field": "cs-ml",
+    "query": "contrastive learning visual representations",
+    "ref": "79ef0efa7217bf85712c652b3b3640176b9e2feb",
+    "title": "Unsupervised Learning of Dense Visual Representations",
+    "year": 2020,
+    "references": 78
+  },
+  {
+    "field": "cs-nlp",
+    "query": "neural machine translation low-resource languages",
+    "ref": "1cd7f2c74bd7ffb3a8b1527bec8795d0876a40b6",
+    "title": "Transfer Learning for Low-Resource Neural Machine Translation",
+    "year": 2016,
+    "references": 29
+  },
+  {
+    "field": "cs-nlp",
+    "query": "neural machine translation low-resource languages",
+    "ref": "2115a9127cb7ea4dfd5c3a08bfc41bab3b279266",
+    "title": "Universal Neural Machine Translation for Extremely Low Resource Languages",
+    "year": 2018,
+    "references": 26
+  },
+  {
+    "field": "cs-nlp",
+    "query": "question answering with pretrained language models",
+    "ref": "4e0709e83f62f7011ec98dd9182aa3cde81aa66d",
+    "title": "Image Captioning for Effective Use of Language Models in Knowledge-Based Visual Question Answering",
+    "year": 2021,
+    "references": 48
+  },
+  {
+    "field": "cs-nlp",
+    "query": "question answering with pretrained language models",
+    "ref": "bb9a6231611a8efd678f30334c294052e5062142",
+    "title": "Training Question Answering Models from Synthetic Data",
+    "year": 2020,
+    "references": 44
+  },
+  {
+    "field": "biology",
+    "query": "single-cell RNA sequencing gene regulation",
+    "ref": "d0a61e7022a3ac9b81fcab97977b6d9d70e831b7",
+    "title": "Single-Cell RNA-Seq Reveals Hypothalamic Cell Diversity",
+    "year": 2017,
+    "references": 46
+  },
+  {
+    "field": "biology",
+    "query": "single-cell RNA sequencing gene regulation",
+    "ref": "b722bd7842c0b3074b370e3b820133c53dd4efc6",
+    "title": "Single-cell RNA-seq reveals distinct injury responses in different types of DRG sensory neurons",
+    "year": 2016,
+    "references": 50
+  },
+  {
+    "field": "biology",
+    "query": "CRISPR base editing efficiency",
+    "ref": "b3b55f62932d450ad06ff4b4521e8a522b18f93a",
+    "title": "Current Status and Challenges of DNA Base Editing Tools.",
+    "year": 2020,
+    "references": 95
+  },
+  {
+    "field": "biology",
+    "query": "CRISPR base editing efficiency",
+    "ref": "c5d79e3e2af21940033a607c9951e47cff89df98",
+    "title": "EditR: A Method to Quantify Base Editing from Sanger Sequencing",
+    "year": 2018,
+    "references": 27
+  },
+  {
+    "field": "neuroscience",
+    "query": "hippocampus memory consolidation during sleep",
+    "ref": "81e7b04ebd9b62deb6040956af3fc31ce588c8d4",
+    "title": "Abnormal locus coeruleus activity during sleep alters sleep signatures of memory consolidation and impairs place cell stability and spatial memory",
+    "year": 2018,
+    "references": 62
+  },
+  {
+    "field": "economics",
+    "query": "minimum wage employment effects",
+    "ref": "32c7b7bd7b132de0048563acfe81bc3b8df3f466",
+    "title": "Reallocation Effects of the Minimum Wage",
+    "year": 2021,
+    "references": 72
+  },
+  {
+    "field": "economics",
+    "query": "minimum wage employment effects",
+    "ref": "b78608d1cd9ee5f7d3f31d0b6d6715ae08594cf1",
+    "title": "Employment Effects of the New German Minimum Wage: Evidence from Establishment-Level Microdata",
+    "year": 2019,
+    "references": 50
+  },
+  {
+    "field": "education",
+    "query": "formative feedback and student achievement",
+    "ref": "ba03f43f789584990bc2a382ba1ca27cc33d7ec7",
+    "title": "Formative assessment in mathematics: Mediated by feedback's perceived usefulness and students' self-efficacy",
+    "year": 2018,
+    "references": 65
+  },
+  {
+    "field": "education",
+    "query": "formative feedback and student achievement",
+    "ref": "f08b26f2d399d286d65bc4f7ed15831fe3b3da45",
+    "title": "Online Mathematics Homework Increases Student Achievement",
+    "year": 2016,
+    "references": 43
+  },
+  {
+    "field": "education",
+    "query": "teacher professional development effectiveness",
+    "ref": "9a65be6d79acf555728f124788b301aebf68e273",
+    "title": "Improving teacher-child interactions: A randomized controlled trial of Making the Most of Classroom Interactions and My Teaching Partner professional development models",
+    "year": 2017,
+    "references": 30
+  },
+  {
+    "field": "ecology",
+    "query": "species distribution modelling under climate change",
+    "ref": "f9d0de914224ff5af0717ea5362a84d47a738151",
+    "title": "Modelling the influence of biotic factors on species distribution patterns",
+    "year": 2016,
+    "references": 65
+  },
+  {
+    "field": "ecology",
+    "query": "species distribution modelling under climate change",
+    "ref": "b9e3e9a09a66edc2ff38589ed2c7892f3cc653bc",
+    "title": "Protected areas network is not adequate to protect a critically endangered East Africa Chelonian: Modelling distribution of pancake tortoise, Malacochersus tornieri under current and future climates",
+    "year": 2020,
+    "references": 74
+  },
+  {
+    "field": "ecology",
+    "query": "pollinator decline agricultural intensification",
+    "ref": "4c8a4eab1d482132115d2ac84ea0efebf86df0d1",
+    "title": "Combined effects of global change pressures on animal-mediated pollination.",
+    "year": 2013,
+    "references": 75
+  },
+  {
+    "field": "ecology",
+    "query": "pollinator decline agricultural intensification",
+    "ref": "d6f5c6e8f7e335c09339121f971c9a0a21619b50",
+    "title": "Landscape crop diversity and semi-natural habitat affect crop pollinators, pollination benefit and yield",
+    "year": 2021,
+    "references": 76
+  },
+  {
+    "field": "physics",
+    "query": "topological insulators surface states",
+    "ref": "cfeaea38524b9cb9aafe2da997600c419cda74d5",
+    "title": "Quantum Hall effect on top and bottom surface states of topological insulator (Bi1−xSbx)2Te3 films",
+    "year": 2014,
+    "references": 31
+  },
+  {
+    "field": "physics",
+    "query": "topological insulators surface states",
+    "ref": "038536be91c8395056b93e099a6fd33c6c816faf",
+    "title": "Dirac Surface States in Intrinsic Magnetic Topological Insulators \nEuSn2As2\n and \nMnBi2nTe3n+1",
+    "year": 2019,
+    "references": 48
+  },
+  {
+    "field": "materials",
+    "query": "perovskite solar cell stability",
+    "ref": "25ab6e8b8fafbb283535f40031916df1079076a0",
+    "title": "The Dawn of Lead‐Free Perovskite Solar Cell: Highly Stable Double Perovskite Cs2AgBiBr6 Film",
+    "year": 2017,
+    "references": 35
+  },
+  {
+    "field": "materials",
+    "query": "perovskite solar cell stability",
+    "ref": "34e48285d92246d12fd609bbb91c99f9ff8e4cf7",
+    "title": "Tolerance of Perovskite Solar Cell to High-Energy Particle Irradiations in Space Environment",
+    "year": 2018,
+    "references": 27
+  },
+  {
+    "field": "epidemiology",
+    "query": "air pollution and mortality cohort study",
+    "ref": "90d3710db22709c3ea35c50b65429a0c9f6c85b9",
+    "title": "Mortality and morbidity in a population exposed to multiple sources of air pollution: A retrospective cohort study using air dispersion models.",
+    "year": 2015,
+    "references": 34
+  },
+  {
+    "field": "epidemiology",
+    "query": "air pollution and mortality cohort study",
+    "ref": "fd1c1e40cfbe57338f42b5c0c2f08fdc96f13625",
+    "title": "Low concentrations of fine particle air pollution and mortality in the Canadian Community Health Survey cohort",
+    "year": 2019,
+    "references": 39
+  },
+  {
+    "field": "sociology",
+    "query": "social media political polarization",
+    "ref": "5564e3111c4c4cc17f9513bb39d756130084bd8a",
+    "title": "The role of (social) media in political polarization: a systematic review",
+    "year": 2021,
+    "references": 84
+  },
+  {
+    "field": "sociology",
+    "query": "social media political polarization",
+    "ref": "c1cb4725a7fb0df77c52d6d2792e87d588178715",
+    "title": "Exposure to opposing views on social media can increase political polarization",
+    "year": 2018,
+    "references": 50
+  },
+  {
+    "field": "environment",
+    "query": "microplastics effects on marine organisms",
+    "ref": "2ca02648f7d41af835b9f512dcd6d7abfd536a4c",
+    "title": "Microplastics as Vehicles of Environmental PAHs to Marine Organisms: Combined Chemical and Physical Hazards to the Mediterranean Mussels, Mytilus galloprovincialis",
+    "year": 2018,
+    "references": 80
+  },
+  {
+    "field": "environment",
+    "query": "microplastics effects on marine organisms",
+    "ref": "8d1bea05e85ec0324ebbb8c7343063fd61f67004",
+    "title": "Microplastics effects in Scrobicularia plana.",
+    "year": 2017,
+    "references": 76
+  },
+  {
+    "field": "nutrition",
+    "query": "Mediterranean diet and cardiovascular risk",
+    "ref": "0fd3db537353f9a71b7a7bbb4cff029c327a92ba",
+    "title": "A comprehensive meta-analysis on evidence of Mediterranean diet and cardiovascular disease: Are individual components equal?",
+    "year": 2017,
+    "references": 58
+  },
+  {
+    "field": "nutrition",
+    "query": "Mediterranean diet and cardiovascular risk",
+    "ref": "ee0ac5f5c988b92d601fde80c98aa71950a4be98",
+    "title": "The antioxidant potential of the Mediterranean diet in patients at high cardiovascular risk: an in-depth review of the PREDIMED",
+    "year": 2018,
+    "references": 79
+  },
+  {
+    "field": "public-health",
+    "query": "physical activity and mental health older adults",
+    "ref": "46a954e696f3194430a9c5de68b350faaf1814c3",
+    "title": "Physical Activity Changes and Its Risk Factors among Community-Dwelling Japanese Older Adults during the COVID-19 Epidemic: Associations with Subjective Well-Being and Health-Related Quality of Life",
+    "year": 2020,
+    "references": 36
+  },
+  {
+    "field": "public-health",
+    "query": "physical activity and mental health older adults",
+    "ref": "c86fc2ac86b3df4edc1a3383037b7fc2e70a217a",
+    "title": "Changes in Health Behaviors, Mental and Physical Health among Older Adults under Severe Lockdown Restrictions during the COVID-19 Pandemic in Spain",
+    "year": 2021,
+    "references": 63
+  },
+  {
+    "field": "chemistry",
+    "query": "metal-organic frameworks gas separation",
+    "ref": "642dca1822dbe9073ef5fd875fc559caf1abfebc",
+    "title": "Metal-organic frameworks based membranes for liquid separation.",
+    "year": 2017,
+    "references": 52
+  },
+  {
+    "field": "chemistry",
+    "query": "metal-organic frameworks gas separation",
+    "ref": "3f185f13cbcfe39d6c90064180b29992280ae20f",
+    "title": "Computational Screening of Metal–Organic Frameworks for Membrane-Based CO2/N2/H2O Separations: Best Materials for Flue Gas Separation",
+    "year": 2018,
+    "references": 62
+  },
+  {
+    "field": "engineering",
+    "query": "deep learning for structural health monitoring",
+    "ref": "19cbe981874af4d2412186726262109defda8ea5",
+    "title": "Autonomous UAVs for Structural Health Monitoring Using Deep Learning and an Ultrasonic Beacon System with Geo‐Tagging",
+    "year": 2018,
+    "references": 46
+  },
+  {
+    "field": "engineering",
+    "query": "deep learning for structural health monitoring",
+    "ref": "a1d57dc1797b1b6f2f65795af6a15fe94aee377c",
+    "title": "Structural health monitoring using extremely compressed data through deep learning",
+    "year": 2019,
+    "references": 50
+  }
+]
