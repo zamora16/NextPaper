@@ -4,7 +4,7 @@ Chrome extension (Plasmo + React 18 + TypeScript + Tailwind 3) that helps
 researchers find, triage, organize and cite related literature while they read.
 **Everything runs locally in the extension: no server, no LLM, no per-use cost.**
 Data comes from the Semantic Scholar API (free). It is also a data-science portfolio
-piece, so real, explainable ML (embeddings, cosine ranking, from-scratch k-means,
+piece, so real, explainable ML (embeddings, cosine ranking, from-scratch clustering,
 silhouette) is a feature, not overhead.
 
 Read these before changing anything non-trivial:
@@ -79,7 +79,7 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
    outside the function body.
 6. **Never store embeddings** (768 floats each). `strip()` in `lib/pipeline.ts` drops
    them; cached results and library items must stay small.
-7. **Bump the cache prefix** (`KEY_PREFIX` in `lib/cache.ts`, currently `v12`) whenever the
+7. **Bump the cache prefix** (`KEY_PREFIX` in `lib/cache.ts`, currently `v13`) whenever the
    `AnalysisResult` shape or the retrieval/ranking strategy changes, or users get stale
    results from the old strategy. Also add the old prefix to `LEGACY_KEYS` so it gets
    cleaned up. Library items (`nextpaper_library`) persist forever: schema changes there
@@ -168,7 +168,7 @@ lib/pipeline.ts      THE core: candidates -> embeddings -> ranking -> clusters -
 lib/semantic-scholar.ts   API client (seed, candidates, batch papers, search, recent)
 lib/s2-fetch.ts, rate-limit.ts, api-key.ts   HTTP discipline (see rule 1-2); the key comes from lib/settings.ts (per user)
 lib/settings.ts, url.ts, ref.ts             settings + key check; http(s)-only links; bounded refs
-lib/kmeans.ts, vector-math.ts, keywords.ts   from-scratch ML (k-means++, silhouette, labels)
+lib/clustering.ts, vector-math.ts, keywords.ts   from-scratch ML (hierarchical clustering, silhouette, labels)
 lib/timeline.ts                              timeline-by-subtopic data
 lib/keywords.ts                              subtopic labels (titles, coverage + contrast rules)
 lib/study.ts                                 study design + sample size from the abstract (pure, derived at render time, not stored)

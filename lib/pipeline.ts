@@ -1,8 +1,8 @@
 import { getCachedResult, setCachedResult } from "~lib/cache"
+import { clusterAuto } from "~lib/clustering"
 import { RateLimitedError } from "~lib/errors"
 import type { Step } from "~lib/job"
 import { labelClusters } from "~lib/keywords"
-import { clusterAuto } from "~lib/kmeans"
 import { isReview } from "~lib/paper-utils"
 import {
   collectCandidates,
@@ -18,21 +18,21 @@ import { cosineSimilarity, meanVector } from "~lib/vector-math"
 
 export type Relation = "reference" | "citation" | null
 
+// The similarity itself is not kept: on the 18 papers shown it varies by about
+// 0.03, so a "% similar" told the cards apart no better than their order does
+// (docs/EVALUATION.md).
 export interface ScoredPaper extends RecommendedPaper {
-  similarity: number | null
-  // True when the seed paper has no embedding and similarity was measured
-  // against the centroid of its likely-relevant neighbors instead.
-  approximate: boolean
   relation: Relation
 }
 
-// Groups made of real subtopics carry their words as the label. These two are
+// Groups made of real subtopics carry their words as the label. These are
 // stand-ins the interface shows in the user's language (a stored translated
-// label would stay in the language that was active when it was cached).
+// label would stay in the language that was active when it was cached):
+// everything together, everything re-sorted into one list, and the papers that
+// belong to no group with an honest name.
 export const RELATED_GROUP = "@related"
 export const ALL_GROUP = "@all"
-// A subtopic no honest name was found for: "@group:2" is "Group 2".
-export const GROUP_PREFIX = "@group:"
+export const OTHER_GROUP = "@other"
 
 export interface PaperGroup {
   label: string
@@ -55,6 +55,9 @@ export interface AnalysisResult {
   seedTitle?: string
   // "A, B, C +2": the first three authors and how many more there are.
   seedByline?: string
+  // The open paper has no embedding, so the order comes from an approximation
+  // (the centroid of its likely-relevant neighbours).
+  approximate?: boolean
 }
 
 type Embedded = PaperWithEmbedding & { embedding: number[] }
@@ -174,21 +177,10 @@ export function dedupe(
 }
 
 // Vectors are dropped so they never reach storage.
-export function makeStrip(
-  sources: Map<string, Set<CandidateSource>>,
-  approximate: boolean
-) {
-  return (
-    paper: PaperWithEmbedding,
-    similarity: number | null
-  ): ScoredPaper => {
+export function makeStrip(sources: Map<string, Set<CandidateSource>>) {
+  return (paper: PaperWithEmbedding): ScoredPaper => {
     const { embedding: _embedding, ...rest } = paper
-    return {
-      ...rest,
-      similarity,
-      approximate,
-      relation: relationOf(sources.get(paper.paperId))
-    }
+    return { ...rest, relation: relationOf(sources.get(paper.paperId)) }
   }
 }
 
@@ -205,38 +197,42 @@ function flatFallback(
         papers: [...papers]
           .sort((a, b) => b.citationCount - a.citationCount)
           .slice(0, topN)
-          .map((p) => strip(p, null))
+          .map(strip)
       }
     ]
   }
 }
 
-// Turns scored candidates (best first) into clustered groups plus the
-// "where to start" picks. Topical score decides the shortlist; among
-// near-equal candidates (SPECTER cosines of on-topic papers differ by only a
-// few points) a small log-citations bonus favors established work.
+// Turns scored candidates (best first) into groups plus the "where to start"
+// picks. Topical score decides the shortlist; among near-equal candidates
+// (SPECTER cosines of on-topic papers differ by only a few points) a small
+// log-citations bonus favors established work.
+//
+// Groups come from clustering the shown papers, and only the ones an honest
+// name was found for are kept (`labelClusters`); the rest go together into
+// "other". When no group can be named there are no groups at all: among the
+// papers closest to one paper there is often no real subtopic structure, and a
+// forced partition would only look like knowledge (docs/EVALUATION.md).
 export function assemble(
   ranked: Entry[],
   strip: ReturnType<typeof makeStrip>,
   options: {
     topN: number
     maxClusters: number
-    showScore: boolean
   }
 ): AnalysisResult {
   const shortlist = ranked.slice(0, SHORTLIST)
-  const toScored = (e: Entry) =>
-    strip(e.paper, options.showScore ? e.score : null)
+  const toScored = (e: Entry) => strip(e.paper)
   const top = [...shortlist]
     .sort((a, b) => blended(b) - blended(a))
     .slice(0, options.topN)
-
-  if (top.length < 4) {
-    return {
-      groups: [{ label: RELATED_GROUP, papers: top.map(toScored) }],
-      picks: choosePicks(shortlist, toScored)
-    }
+  const picks = choosePicks(shortlist, toScored)
+  const together = {
+    groups: [{ label: RELATED_GROUP, papers: top.map(toScored) }],
+    picks
   }
+
+  if (top.length < 4) return together
 
   const assignments = clusterAuto(
     top.map((e) => e.paper.embedding),
@@ -244,34 +240,43 @@ export function assemble(
     options.maxClusters
   )
   const clusterCount = Math.max(...assignments) + 1
-
   const clusters = Array.from({ length: clusterCount }, (_, id) =>
     top.filter((_, i) => assignments[i] === id)
   ).filter((members) => members.length > 0)
+  if (clusters.length < 2) return together
 
   const labels = labelClusters(
     clusters.map((members) => members.map((m) => m.paper.title))
   )
-
-  const groups = clusters
+  const named = clusters
     .map((members, i) => ({
       label: labels[i],
-      avgScore: members.reduce((s, m) => s + m.score, 0) / members.length,
-      papers: members.map(toScored)
+      members,
+      avgScore: members.reduce((s, m) => s + m.score, 0) / members.length
     }))
+    .filter((group) => group.label !== null)
     .sort((a, b) => b.avgScore - a.avgScore)
-    .map(({ label, papers }, i) => ({
-      label: label ?? GROUP_PREFIX + (i + 1),
-      papers
-    }))
+  if (named.length === 0) return together
 
-  return { groups, picks: choosePicks(shortlist, toScored) }
+  const namedIds = new Set(
+    named.flatMap((g) => g.members.map((m) => m.paper.paperId))
+  )
+  const others = top.filter((e) => !namedIds.has(e.paper.paperId))
+
+  const groups = named.map((g) => ({
+    label: g.label as string,
+    papers: g.members.map(toScored)
+  }))
+  if (others.length > 0) {
+    groups.push({ label: OTHER_GROUP, papers: others.map(toScored) })
+  }
+  return { groups, picks }
 }
 
 // Candidates come from the paper's references, citations, title search and
 // Semantic Scholar's own recommendations; every candidate's SPECTER2 embedding
 // is fetched in one batch, ranked by cosine similarity to the seed and
-// clustered with k-means.
+// grouped by subtopic where the groups can be named.
 async function analyzePaper(
   ref: string,
   onStep: (step: Step) => void
@@ -299,7 +304,7 @@ async function analyzePaper(
     (p) => normalizeTitle(p.title) !== seedTitle
   )
 
-  const strip = makeStrip(sources, seed.embedding === null)
+  const strip = makeStrip(sources)
   const embedded = papers
     .filter((p): p is Embedded => !!p.embedding)
     .map((paper) => ({
@@ -320,12 +325,9 @@ async function analyzePaper(
       }))
       .sort((a, b) => b.score - a.score)
 
-    result = assemble(ranked, strip, {
-      topN: TOP_N,
-      maxClusters: 4,
-      showScore: true
-    })
+    result = assemble(ranked, strip, { topN: TOP_N, maxClusters: 4 })
   }
+  if (seed.embedding === null) result.approximate = true
   result.seedYear = seed.year
   result.seedTitle = seed.title
   if (seed.authors?.length) result.seedByline = byline(seed.authors)
@@ -335,7 +337,7 @@ async function analyzePaper(
 }
 
 // Topic search: results come ranked by Semantic Scholar's relevance, then get
-// the same embedding-based grouping so a topic reads as a map of subtopics.
+// the same embedding-based grouping (where it can be named).
 async function analyzeQuery(
   ref: string,
   onStep: (step: Step) => void
@@ -363,7 +365,7 @@ async function analyzeQuery(
     ids.map((id) => [id, new Set<CandidateSource>(["search"])])
   )
   const papers = dedupe(fetched, sources)
-  const strip = makeStrip(sources, false)
+  const strip = makeStrip(sources)
 
   const rank = new Map(ids.map((id, i) => [id, i]))
   const embedded: Entry[] = papers
@@ -380,11 +382,7 @@ async function analyzeQuery(
   const result =
     embedded.length < 2
       ? flatFallback(papers, strip, QUERY_TOP_N)
-      : assemble(embedded, strip, {
-          topN: QUERY_TOP_N,
-          maxClusters: 5,
-          showScore: false
-        })
+      : assemble(embedded, strip, { topN: QUERY_TOP_N, maxClusters: 5 })
 
   await setCachedResult(ref, result)
   return result

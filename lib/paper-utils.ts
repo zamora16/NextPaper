@@ -23,8 +23,15 @@ export function isReview(paper: RecommendedPaper): boolean {
 }
 
 // `sharedTerms` no longer exists, but items saved by older versions carry it.
-type Loose = RecommendedPaper &
-  Partial<ScoredPaper> & { embedding?: unknown; sharedTerms?: unknown }
+// Items and results of older versions also carry the similarity of the analysis
+// and its "approximate" flag.
+type Loose = RecommendedPaper & {
+  relation?: unknown
+  similarity?: unknown
+  approximate?: unknown
+  embedding?: unknown
+  sharedTerms?: unknown
+}
 
 // A paper with no trace of the analysis it came from. Similarity, relation and
 // (and, in older versions, shared terms) only make sense next to the paper that was open; in the
@@ -33,5 +40,5 @@ type Loose = RecommendedPaper &
 export function plainPaper(paper: Loose): ScoredPaper {
   const { embedding, similarity, approximate, relation, sharedTerms, ...rest } =
     paper
-  return { ...rest, similarity: null, approximate: false, relation: null }
+  return { ...rest, relation: null }
 }

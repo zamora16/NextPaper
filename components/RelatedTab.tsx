@@ -23,7 +23,13 @@ import {
 import type { CitationStyle } from "~lib/citation"
 import type { TKey } from "~lib/i18n"
 import type { JobState, Step } from "~lib/job"
-import { ALL_GROUP, type AnalysisResult, type PickKind } from "~lib/pipeline"
+import {
+  ALL_GROUP,
+  OTHER_GROUP,
+  RELATED_GROUP,
+  type AnalysisResult,
+  type PickKind
+} from "~lib/pipeline"
 import { buildTimeline } from "~lib/timeline"
 import { applyView, FILTERS, SORTS, type Filter, type Sort } from "~lib/view"
 
@@ -205,8 +211,15 @@ export function RelatedTab({
   // match; the flattened list of a re-sorted view has no subtopic.
   const colorOf = (label: string) => {
     const index = result?.groups.findIndex((g) => g.label === label) ?? -1
-    return index < 0 ? "rgb(var(--muted))" : groupColor(index)
+    return index < 0 || label === OTHER_GROUP
+      ? "rgb(var(--muted))"
+      : groupColor(index)
   }
+
+  // A single list has no heading to show: the count above already says it.
+  const standAlone =
+    groups.length === 1 &&
+    (groups[0].label === RELATED_GROUP || groups[0].label === ALL_GROUP)
 
   const submit = () => {
     const query = queryInput.trim().replace(/\s+/g, " ")
@@ -247,6 +260,10 @@ export function RelatedTab({
       />
 
       {context}
+
+      {result?.approximate && !current?.ref.startsWith("QUERY:") && (
+        <p className="text-xs text-muted">{t("context.approximate")}</p>
+      )}
 
       {!current && pageRef === undefined && (
         <p className="text-sm text-muted">{t("detecting")}</p>
@@ -407,25 +424,27 @@ export function RelatedTab({
 
           {groups.map((group) => (
             <section key={group.label} className="flex flex-col gap-2.5">
-              <h3
-                title={t("group.hint")}
-                className="flex items-center gap-2 pt-1 text-xs font-semibold text-soft">
-                <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{
-                    background:
-                      group.label === ALL_GROUP
-                        ? "rgb(var(--muted))"
-                        : colorOf(group.label)
-                  }}
-                />
-                <span className="line-clamp-1 uppercase tracking-wide">
-                  {groupLabel(group.label, t)}
-                </span>
-                <span className="font-normal tabular-nums text-muted">
-                  {group.papers.length}
-                </span>
-              </h3>
+              {!standAlone && (
+                <h3
+                  title={t("group.hint")}
+                  className="flex items-center gap-2 pt-1 text-xs font-semibold text-soft">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{
+                      background:
+                        group.label === ALL_GROUP
+                          ? "rgb(var(--muted))"
+                          : colorOf(group.label)
+                    }}
+                  />
+                  <span className="line-clamp-1 uppercase tracking-wide">
+                    {groupLabel(group.label, t)}
+                  </span>
+                  <span className="font-normal tabular-nums text-muted">
+                    {group.papers.length}
+                  </span>
+                </h3>
+              )}
               {group.papers.map((paper) => renderCard(paper))}
             </section>
           ))}

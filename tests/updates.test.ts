@@ -97,7 +97,7 @@ describe("checkForUpdates", () => {
     recommend({ s1: ["n1"] })
     await checkForUpdates()
     const [item] = (await getUpdates()).items
-    expect(item.paper.similarity).toBeNull()
+    expect("similarity" in item.paper).toBe(false)
     expect(item.paper.relation).toBeNull()
     expect("embedding" in item.paper).toBe(false)
   })

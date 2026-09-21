@@ -52,31 +52,6 @@ function Chip({
   )
 }
 
-// How close the paper is to the open one, as a small bar: comparing ten cards
-// is faster with a shape than with ten numbers.
-function SimilarityMeter({
-  percent,
-  title
-}: {
-  percent: number
-  title: string
-}) {
-  const t = useT()
-  return (
-    <span title={title} className="inline-flex items-center gap-1.5">
-      <span className="h-1.5 w-9 overflow-hidden rounded-full bg-sunken">
-        <span
-          className="block h-full rounded-full bg-accent"
-          style={{ width: `${Math.max(4, Math.min(100, percent))}%` }}
-        />
-      </span>
-      <span className="text-[11px] font-medium tabular-nums text-accent-ink">
-        {t("card.similar", { n: percent })}
-      </span>
-    </span>
-  )
-}
-
 export function PaperCard({
   paper,
   citationStyle,
@@ -110,8 +85,6 @@ export function PaperCard({
   const influential = paper.influentialCitationCount ?? 0
   const study = studyOf(paper)
   const pdfUrl = httpUrl(paper.openAccessPdf?.url)
-  const similarity =
-    paper.similarity !== null ? Math.round(paper.similarity * 100) : null
 
   const cite = useCopyAction(() => citeOne(paper, citationStyle))
   const inText = useCopyAction(
@@ -171,16 +144,6 @@ export function PaperCard({
         </p>
 
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-          {similarity !== null && (
-            <SimilarityMeter
-              percent={similarity}
-              title={
-                paper.approximate
-                  ? t("card.similar.approx.hint")
-                  : t("card.similar.hint")
-              }
-            />
-          )}
           <span
             title={
               influential > 0

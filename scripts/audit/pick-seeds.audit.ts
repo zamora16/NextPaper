@@ -11,40 +11,7 @@ import { getPapers, getSeed, searchPapers } from "~lib/semantic-scholar"
 
 import { installChrome } from "../../tests/helpers/chrome"
 import { setSettingsForTests } from "./key"
-
-// One line per topic: a field, and a query that finds well-cited papers in it.
-const TOPICS: [string, string][] = [
-  ["psychology", "adolescent depression treatment outcomes"],
-  ["psychology", "working memory training in children"],
-  ["psychology", "body image and social media"],
-  ["medicine", "randomized trial cardiovascular prevention"],
-  ["medicine", "COVID-19 vaccine effectiveness"],
-  ["medicine", "immunotherapy checkpoint inhibitors survival"],
-  ["cs-ml", "graph neural network node classification"],
-  ["cs-ml", "contrastive learning visual representations"],
-  ["cs-nlp", "neural machine translation low-resource languages"],
-  ["cs-nlp", "question answering with pretrained language models"],
-  ["biology", "single-cell RNA sequencing gene regulation"],
-  ["biology", "CRISPR base editing efficiency"],
-  ["neuroscience", "hippocampus memory consolidation during sleep"],
-  ["economics", "minimum wage employment effects"],
-  ["economics", "financial inclusion and household welfare"],
-  ["education", "formative feedback and student achievement"],
-  ["education", "teacher professional development effectiveness"],
-  ["ecology", "species distribution modelling under climate change"],
-  ["ecology", "pollinator decline agricultural intensification"],
-  ["physics", "topological insulators surface states"],
-  ["materials", "perovskite solar cell stability"],
-  ["epidemiology", "air pollution and mortality cohort study"],
-  ["sociology", "social media political polarization"],
-  ["linguistics", "bilingual language acquisition in children"],
-  ["environment", "microplastics effects on marine organisms"],
-  ["nutrition", "Mediterranean diet and cardiovascular risk"],
-  ["public-health", "physical activity and mental health older adults"],
-  ["chemistry", "metal-organic frameworks gas separation"],
-  ["engineering", "deep learning for structural health monitoring"],
-  ["political-science", "electoral systems and democratic accountability"]
-]
+import { TOPICS } from "./topics"
 
 const PER_TOPIC = 2
 

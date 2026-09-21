@@ -12,7 +12,7 @@ The interface is available in **English and Spanish** (it follows your browser l
 
 ## What it does
 
-- **Related papers** for the article you have open (from its references, its citing papers, title search and Semantic Scholar's recommendations), ranked by SPECTER2 embedding similarity and clustered into subtopics (k-means written from scratch, `k` chosen by silhouette score).
+- **Related papers** for the article you have open (from its references, its citing papers, title search and Semantic Scholar's recommendations), ranked by SPECTER2 embedding similarity and, where the groups can be given an honest name, grouped into subtopics (hierarchical clustering written from scratch, the number of groups chosen by silhouette score).
 - **Where to start**: a classic, the most relevant review and the most recent work.
 - **Triage**: one-sentence summary, abstract, citation counts, study design and sample size read from the abstract, a timeline of the subtopics, and free-PDF links.
 - **Snowballing**: *Explorar* runs the same analysis on any result; the search box analyzes a free-text topic.

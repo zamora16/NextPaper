@@ -147,7 +147,7 @@ const tmp = (name, content) => {
   const evil2 = (await library()).find((p) => p.paperId === "evil2")
   check("item with wrong field types was imported", !!evil2)
   check("the popup still renders after it", text.includes("Evil paper two") && !!(await page.$("button[aria-label='Importar...']")))
-  check("its fields were rebuilt with the right types", evil2 && evil2.tldr === null && evil2.abstract === null && evil2.venue === "" && evil2.similarity === null && evil2.sharedTerms === undefined)
+  check("its fields were rebuilt with the right types", evil2 && evil2.tldr === null && evil2.abstract === null && evil2.venue === "" && evil2.similarity === undefined && evil2.sharedTerms === undefined)
   check("injected similarity / shared terms are not shown", !text.includes("99% similar") && !text.includes("injectedterm"))
 
   // 7. Garbage file is rejected politely

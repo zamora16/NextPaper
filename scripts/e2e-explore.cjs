@@ -24,14 +24,15 @@ const SEED_TITLE = new RegExp(
     [...document.querySelectorAll("section h3")].map((h) => h.textContent)
   )
   check("analysis finished", list.length > 0, `${((Date.now() - start) / 1000).toFixed(1)}s, ${list.length} cards`)
-  check("results are grouped", headings.length >= 1, headings.join(" | "))
+  // Groups appear only where they can be named; otherwise it is one plain list
+  console.log("  groups shown:", headings.length ? headings.join(" | ") : "(none: a plain list)")
   check("seed paper itself not in results", !list.some((t) => SEED_TITLE.test(t)))
   const firstTitle = list[0]
 
-  // Subtopic names: real terms from the titles, or a numbered group
+  // Every heading is a real name (terms from the titles) or "Otros relacionados"
   check(
-    "group names are terms or numbered groups",
-    headings.every((h) => !/ \/ /.test(h) && h.trim().length > 0),
+    "every group heading is a real name",
+    headings.every((h) => !/ \/ |^Grupo \d/.test(h) && h.trim().length > 0),
     headings.join(" | ")
   )
 
@@ -51,7 +52,7 @@ const SEED_TITLE = new RegExp(
   })
   await sleep(400)
   const flat = await page.evaluate(() => [...document.querySelectorAll("section h3")].length)
-  check("sorting by citations gives one list", flat === 1, groupsBefore + " groups -> " + flat)
+  check("sorting by citations gives one list without headings", flat === 0, groupsBefore + " groups -> " + flat)
   await page.evaluate(() => {
     const select = [...document.querySelectorAll("select")].find((s) => [...s.options].some((o) => o.value === "citations"))
     const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value").set
@@ -69,7 +70,7 @@ const SEED_TITLE = new RegExp(
   const lanes = await page.evaluate(
     () => [...document.querySelectorAll("svg text")].filter((el) => el.getAttribute("font-weight") === "600" && !/tu paper/.test(el.textContent)).length
   )
-  check("timeline has one lane per subtopic group", lanes >= 2, lanes + " lanes")
+  check("timeline has one lane per group (one when there are none)", lanes === Math.max(1, groupsBefore), lanes + " lanes, " + groupsBefore + " groups")
   check(
     "timeline marks the year of the paper being read",
     await page.evaluate(() => [...document.querySelectorAll("svg text")].some((el) => /tu paper \(\d{4}\)/.test(el.textContent)))

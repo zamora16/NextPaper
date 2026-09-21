@@ -77,7 +77,10 @@ export const es: Record<Key, string> = {
   "filter.review.hint": "Revisiones de la literatura y metaanálisis",
   "filter.open.hint": "Papers con el texto completo disponible gratis",
   "sort.label": "Ordenar",
-  "sort.hint": "Orden de los resultados",
+  "sort.hint":
+    "Orden de los resultados. Relevancia: primero lo más cercano en contenido al paper abierto (el orden propio de Semantic Scholar en una búsqueda por tema).",
+  "context.approximate":
+    "Este paper no tiene abstract indexado, así que el orden es una aproximación.",
   "sort.relevance": "Relevancia",
   "sort.citations": "Más citados",
   "sort.year": "Más recientes",
@@ -96,7 +99,7 @@ export const es: Record<Key, string> = {
   "pick.recent": "Lo más reciente",
   "group.related": "Relacionados",
   "group.all": "Todos",
-  "group.n": "Grupo {n}",
+  "group.other": "Otros relacionados",
   "group.hint": "Papers agrupados por similitud de contenido (subtemas)",
 
   // copy and export
@@ -125,11 +128,6 @@ export const es: Record<Key, string> = {
   "card.citations_other": "{n} citas",
   "card.citations.hint": "Cuántos papers citan a este",
   "card.influential": "{n} citas influyentes",
-  "card.similar": "{n}% similar",
-  "card.similar.hint":
-    "Cuánto se parece su contenido al paper que lees (similitud coseno entre embeddings SPECTER2)",
-  "card.similar.approx.hint":
-    "Aproximada: el paper que lees no tiene embedding, se compara con sus vecinos más probables",
   "card.relation.reference": "Referencia",
   "card.relation.reference.hint": "El paper que lees cita a este",
   "card.relation.citation": "Lo cita",

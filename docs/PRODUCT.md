@@ -1,6 +1,6 @@
 # Product: what NextPaper gives the user today
 
-State as of 2026-09-20. The UI is available in English and Spanish.
+State as of 2026-09-21. The UI is available in English and Spanish.
 
 **One line:** while you read a paper (or type a topic), NextPaper shows the most relevant
 related literature, ranked by semantic similarity, grouped by subtopic, with everything
@@ -12,9 +12,9 @@ you need to triage, save and cite it — all local, free, no account, no AI call
 |---|---|
 | "I found one good paper — what else should I read?" | Analyzes the open paper and returns the 18 most related papers, ranked by SPECTER2 embedding similarity, from its references, its citing papers, title search and Semantic Scholar recommendations. |
 | "Where do I even start?" | **Empieza por aquí**: a classic (most cited older prior work), the most relevant review, and the most recent work. |
-| "Is this worth my time?" | One-sentence tl;dr (from Semantic Scholar), abstract on demand, citation count (tooltip: influential citations), `% similar`, tags *Referencia* / *Lo cita* / *Revisión*, and a free-PDF button. |
+| "Is this worth my time?" | One-sentence tl;dr (from Semantic Scholar), abstract on demand, citation count (tooltip: influential citations), tags *Referencia* / *Lo cita* / *Revisión*, and a free-PDF button. |
 | "What kind of study is this?" | Each card shows the **study design** (e.g. *Ensayo aleatorizado*, *Transversal / encuesta*, *Metaanálisis*) and the **sample size** (`n = 245`, or `24 estudios` for reviews), read from the title and abstract with plain rules. Shown only when detected — never guessed — so it is absent on roughly half of the papers (design) and most (sample size). |
-| "There are too many results" | Automatic subtopic groups (k-means, k by silhouette) with labels; filters (Referencias, Lo citan, Revisiones, PDF libre); sort by relevance / most cited / most recent; **Ver cronología**: one lane per subtopic with the papers placed by year (size = citations, dashed line = the paper you are reading; click a dot to jump to its card) — shows which lines of work are classic vs recent and where the heavily cited papers sit. |
+| "There are too many results" | Subtopic groups (hierarchical clustering) shown only when they can be named, the rest under *Otros relacionados*; filters (Referencias, Lo citan, Revisiones, PDF libre); sort by relevance / most cited / most recent; **Ver cronología**: one lane per subtopic with the papers placed by year (size = citations, dashed line = the paper you are reading; click a dot to jump to its card) — shows which lines of work are classic vs recent and where the heavily cited papers sit. |
 | "I want to follow the trail" | **Explorar** on any card runs the same analysis on that paper (snowballing) with a breadcrumb and instant *Volver*. |
 | "I don't have a seed paper yet" | Topic search box: up to 100 results grouped into subtopics. |
 | "I keep losing track of what I read" | Bookmark → **Saved (Guardados)** with status (por leer / leyendo / leído), a personal note and **collections** (e.g. one per thesis chapter) with filters; read status also shows on cards in later searches. **Copia de seguridad** to a JSON file and **Importar** from a NextPaper backup, a `.bib`/`.ris` file or a list of DOIs/titles (also for people who already have a reference library). |
@@ -45,8 +45,8 @@ you need to triage, save and cite it — all local, free, no account, no AI call
 
 - **Key:** without a personal key everything works but is slower (a first analysis ~20 s instead of ~5 s in our tests) and fails more often; the setup screen says so.
 - **Speed:** a first analysis of a paper takes ~4–9 s (Semantic Scholar answers ~30% of requests with a temporary 429 that is retried); repeats are instant for 7 days.
-- **Coverage:** papers without an indexed abstract have no embedding → the `% similar` is
-  approximate (`~`), or missing in topic search. Some old papers have no reference list.
+- **Coverage:** papers without an indexed abstract have no embedding → the order is an
+  approximation (the popup says so). Some old papers have no reference list.
 - **Citations sample:** only the 60 most cited + 40 most recent citing papers are
   considered per paper.
 - **Citation formatting:** styles are hand-implemented (common rules, unit-tested) and not
@@ -57,7 +57,7 @@ you need to triage, save and cite it — all local, free, no account, no AI call
   25 per file) and accepted only when the found title is nearly identical.
 - **Study design and sample size** are rule-based and built to **prefer no chip over a wrong one**: a design counts only if it is in the title or in a sentence about the study itself (background such as "several trials are underway" is ignored), and a sample size is shown only when one unambiguous figure exists (groups, subgroups, invited pools, repeated measurements and negations all produce *no* chip). The price is coverage: design appears on ~40–55% of papers and sample size on ~25–30%. Accuracy was checked by reading the exact text behind every chip on ~1,250 real abstracts; on a second, unseen set roughly 1 in 15 design chips was still wrong before the last round of fixes, so **treat a chip as a hint, not as fact** (the tooltip says so). Rules are English plus some Spanish; sample is never read from a paper without an abstract.
 - **"Revisión" tag, filter and pick:** decided from the title or the abstract ("systematic review", "this review", meta-analysis...), not from Semantic Scholar's own `Review` label, which is wrong for many primary studies. A real review that never says so in its title or abstract will not be tagged.
-- **Cluster labels** come from the group's titles and are shown only when their words are in at least half of them; about 30% of groups get no name and show *Group N*. A named group can still get a broad label ("Prediction").
+- **Cluster labels** come from the group's titles and are shown only when their words are in at least half of them; a group with no name is not shown as such: its papers go to *Otros relacionados*, and when no group can be named the results are one plain list (in our audit about 85% of the groups in paper mode and 65% in topic search could be named). A named group can still get a broad label ("Prediction").
 - **Timeline:** it needs publication years (papers without one are omitted; it is hidden with fewer than 4 dated papers).
 - **Language:** UI in English or Spanish (follows the browser, changeable in Settings); abstracts and tl;dr are always in English, as the API provides them.
 - **Automation gaps:** PubMed/PMC/MDPI extraction, Chrome (only Edge automated) and the

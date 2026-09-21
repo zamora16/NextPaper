@@ -93,12 +93,9 @@ describe("plainPaper", () => {
     } as unknown as ScoredPaper
 
     const plain = plainPaper(scored)
-    expect(plain).toMatchObject({
-      title: "Kept",
-      similarity: null,
-      approximate: false,
-      relation: null
-    })
+    expect(plain).toMatchObject({ title: "Kept", relation: null })
+    expect("similarity" in plain).toBe(false)
+    expect("approximate" in plain).toBe(false)
     expect("sharedTerms" in plain).toBe(false)
     expect("embedding" in plain).toBe(false)
   })

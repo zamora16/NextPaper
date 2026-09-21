@@ -79,7 +79,7 @@ const REF = process.argv[2] || "DOI:10.1186/s40337-024-01004-0"
   const context = await page.evaluate(() => {
     const text = document.body.innerText
     return {
-      similar: /\d+% similar/.test(text),
+      similar: /\d+% (similar|de similitud)/.test(text),
       shared: text.includes("Coincide en:"),
       relation: /\b(Referencia|Lo cita)\b/.test(text)
     }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  adjustedRandIndex,
   aucRoc,
   bootstrapDifference,
   bootstrapMean,
@@ -152,5 +153,44 @@ describe("the bootstrap", () => {
 
   it("refuses lists that are not paired", () => {
     expect(() => bootstrapDifference([1, 2], [1], 10)).toThrow()
+  })
+})
+
+describe("adjustedRandIndex", () => {
+  it("is 1 for the same partition, whatever the group names", () => {
+    expect(adjustedRandIndex([0, 0, 1, 1, 2], [5, 5, 3, 3, 9])).toBe(1)
+    expect(adjustedRandIndex([0, 1, 2, 3], [3, 2, 1, 0])).toBe(1)
+  })
+
+  it("matches a value worked out by hand", () => {
+    // a = {0,1}{2,3}, b = {0}{1,2,3}: one pair is together in both; the pairs
+    // together in a (2) and in b (3) make 1 pair expected by chance out of 6,
+    // so the index is (1 - 1) / (2.5 - 1) = 0
+    expect(adjustedRandIndex([0, 0, 1, 1], [0, 1, 1, 1])).toBeCloseTo(0, 10)
+  })
+
+  it("is negative when the groupings disagree more than chance", () => {
+    expect(adjustedRandIndex([0, 0, 1, 1], [0, 1, 0, 1])).toBeLessThan(0)
+  })
+
+  it("is high for a small change and lower for a large one", () => {
+    const a = [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2]
+    const oneMoved = [0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2]
+    const scrambled = [0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2]
+    const small = adjustedRandIndex(a, oneMoved)
+    expect(small).toBeGreaterThan(0.6)
+    expect(small).toBeLessThan(1)
+    expect(adjustedRandIndex(a, scrambled)).toBeLessThan(small)
+  })
+
+  it("treats two trivial groupings as agreeing, and a trivial and a real one as not", () => {
+    expect(adjustedRandIndex([0, 0, 0, 0], [7, 7, 7, 7])).toBe(1)
+    expect(adjustedRandIndex([0, 1, 2, 3], [0, 1, 2, 3])).toBe(1)
+    expect(adjustedRandIndex([0, 0, 0, 0], [0, 0, 1, 1])).toBe(0)
+    expect(adjustedRandIndex([0, 1, 2, 3], [0, 0, 1, 1])).toBe(0)
+  })
+
+  it("refuses groupings of different items", () => {
+    expect(() => adjustedRandIndex([0, 1], [0])).toThrow()
   })
 })

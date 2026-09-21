@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import { labelClusters } from "~lib/keywords"
 import {
   clusterAuto,
-  kMeans,
   mergeSmallClusters,
   silhouetteScore
-} from "~lib/kmeans"
+} from "~lib/clustering"
+import { labelClusters } from "~lib/keywords"
 import { ALL_GROUP, type PaperGroup, type ScoredPaper } from "~lib/pipeline"
 import {
   cosineSimilarity,
@@ -16,6 +15,8 @@ import {
   normalize
 } from "~lib/vector-math"
 import { applyView, searchLibrary } from "~lib/view"
+
+import { kMeans } from "../scripts/audit/kmeans-baseline"
 
 describe("searchLibrary", () => {
   const item = (
@@ -134,7 +135,7 @@ describe("vector-math", () => {
   })
 })
 
-describe("k-means", () => {
+describe("k-means (the retired grouping, kept as the audit baseline)", () => {
   it("recovers well-separated clusters", () => {
     const { vectors, truth } = blobs([5, 5, 5])
     expect(samePartition(kMeans(vectors, 3), truth)).toBe(true)
@@ -185,7 +186,7 @@ describe("mergeSmallClusters", () => {
   })
 })
 
-describe("clusterAuto picks k by silhouette", () => {
+describe("clusterAuto (hierarchical, k by silhouette)", () => {
   it.each([2, 3, 4])("finds %i true clusters", (k) => {
     const { vectors, truth } = blobs(Array(k).fill(5))
     const found = clusterAuto(vectors)
@@ -196,6 +197,28 @@ describe("clusterAuto picks k by silhouette", () => {
   it("returns one cluster for fewer than 4 points", () => {
     const { vectors } = blobs([3])
     expect(clusterAuto(vectors)).toEqual([0, 0, 0])
+  })
+
+  it("is deterministic: no random start, the same input gives the same groups", () => {
+    const { vectors } = blobs([6, 6, 6], 0.6)
+    expect(clusterAuto(vectors)).toEqual(clusterAuto(vectors))
+  })
+
+  it("never returns more groups than maxK", () => {
+    const { vectors } = blobs([5, 5, 5, 5])
+    expect(new Set(clusterAuto(vectors, 2, 2)).size).toBeLessThanOrEqual(2)
+    expect(new Set(clusterAuto(vectors, 2, 3)).size).toBeLessThanOrEqual(3)
+  })
+
+  it("keeps the same groups when a paper is dropped", () => {
+    const { vectors, truth } = blobs([6, 6, 6], 0.4)
+    const without = vectors.filter((_, i) => i !== 4)
+    expect(
+      samePartition(
+        clusterAuto(without),
+        truth.filter((_, i) => i !== 4)
+      )
+    ).toBe(true)
   })
 })
 

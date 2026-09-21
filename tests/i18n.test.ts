@@ -5,7 +5,7 @@ import { CITATION_STYLES } from "~lib/citation"
 import { isLangPreference, resolveLang, richParts, translate } from "~lib/i18n"
 import { en } from "~lib/i18n/en"
 import { es } from "~lib/i18n/es"
-import { GROUP_PREFIX } from "~lib/pipeline"
+import { OTHER_GROUP } from "~lib/pipeline"
 import { DESIGNS } from "~lib/study"
 
 const keys = Object.keys(en) as (keyof typeof en)[]
@@ -140,9 +140,9 @@ describe("groupLabel", () => {
     )
   })
 
-  it("translates the stand-ins and numbers an unnamed group", () => {
-    expect(groupLabel(GROUP_PREFIX + 2, t("en"))).toBe("Group 2")
-    expect(groupLabel(GROUP_PREFIX + 2, t("es"))).toBe("Grupo 2")
+  it("translates the stand-ins", () => {
+    expect(groupLabel(OTHER_GROUP, t("en"))).toBe("Other related")
+    expect(groupLabel(OTHER_GROUP, t("es"))).toBe("Otros relacionados")
     expect(groupLabel("@related", t("es"))).toBe("Relacionados")
     expect(groupLabel("@all", t("en"))).toBe("All")
   })

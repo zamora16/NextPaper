@@ -14,9 +14,10 @@ import type { ScoredPaper } from "~lib/pipeline"
 
 import { installChrome, type FakeChrome } from "./helpers/chrome"
 
-// A result card as the analysis produced it: similarity and relation describe
-// the relationship to the paper that was open at the time. `sharedTerms` no
-// longer exists, but items saved by older versions still carry it.
+// A result card as the analysis produced it: relation describes the
+// relationship to the paper that was open at the time. `similarity`,
+// `approximate` and `sharedTerms` no longer exist, but items saved by older
+// versions still carry them.
 const card = (id: string, over: Partial<ScoredPaper> = {}): ScoredPaper =>
   ({
     paperId: id,
@@ -52,15 +53,15 @@ describe("saving papers", () => {
     expect(saved).toMatchObject({ status: "unread", note: "", collections: [] })
   })
 
-  // In Guardados nothing is "open", so "91% similar", "Referencia" or
+  // In Guardados nothing is "open", so "Referencia" or
   // "Coincide en: body · image" would describe a relationship to a paper that
   // is no longer there.
   it("does not keep what only made sense next to the paper that was open", async () => {
     await toggleSaved(card("a"))
     const [saved] = await getLibrary()
-    expect(saved.similarity).toBeNull()
     expect(saved.relation).toBeNull()
-    expect(saved.approximate).toBe(false)
+    expect("similarity" in saved).toBe(false)
+    expect("approximate" in saved).toBe(false)
     expect("sharedTerms" in saved).toBe(false)
   })
 
@@ -76,7 +77,6 @@ describe("saving papers", () => {
     })
     const [saved] = await getLibrary()
     expect(saved).toMatchObject({
-      similarity: null,
       relation: null,
       status: "read",
       note: "keep me",
@@ -200,8 +200,8 @@ describe("importing", () => {
   it("imported papers carry no analysis context either", async () => {
     await addPapers([card("b")])
     const [saved] = await getLibrary()
-    expect(saved.similarity).toBeNull()
     expect(saved.relation).toBeNull()
+    expect("similarity" in saved).toBe(false)
     expect("sharedTerms" in saved).toBe(false)
   })
 

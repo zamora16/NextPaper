@@ -16,10 +16,11 @@ const TTL_MS = 7 * 24 * 60 * 60 * 1000
 const MAX_ENTRIES = 40
 // Bumped whenever the shape or the retrieval strategy changes, so entries
 // produced by an older strategy are never served.
-export const KEY_PREFIX = "nextpaper_cache_v12_"
+export const KEY_PREFIX = "nextpaper_cache_v13_"
 // Keys written by earlier versions (uncompressed results, per-paper embeddings,
 // raw recommendation lists). Removed on sight so they don't eat the quota.
-const LEGACY_KEYS = /^nextpaper_(cache_v([1-9]|1[01])|emb_v1|rec_v1|citing_v1)_/
+const LEGACY_KEYS =
+  /^nextpaper_(cache_v([1-9]|1[0-2])|emb_v1|rec_v1|citing_v1)_/
 
 interface CacheEntry {
   z: string // gzip + base64 of the AnalysisResult JSON

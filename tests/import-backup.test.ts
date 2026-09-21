@@ -106,8 +106,6 @@ const saved = (overrides: Partial<SavedPaper> = {}): SavedPaper => ({
   citationCount: 3,
   venue: "",
   url: "https://example.org/p1",
-  similarity: null,
-  approximate: false,
   relation: null,
   savedAt: 1,
   status: "unread",

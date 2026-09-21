@@ -79,7 +79,10 @@ export const en = {
   "filter.review.hint": "Literature reviews and meta-analyses",
   "filter.open.hint": "Papers with a free full text available",
   "sort.label": "Sort",
-  "sort.hint": "Order of the results",
+  "sort.hint":
+    "Order of the results. Relevance: closest in content to the open paper first (Semantic Scholar's own order for a topic search).",
+  "context.approximate":
+    "This paper has no abstract indexed, so the order is an approximation.",
   "sort.relevance": "Relevance",
   "sort.citations": "Most cited",
   "sort.year": "Most recent",
@@ -98,7 +101,7 @@ export const en = {
   "pick.recent": "The latest",
   "group.related": "Related",
   "group.all": "All",
-  "group.n": "Group {n}",
+  "group.other": "Other related",
   "group.hint": "Papers grouped by similarity of content (subtopics)",
 
   // copy and export
@@ -127,11 +130,6 @@ export const en = {
   "card.citations_other": "{n} citations",
   "card.citations.hint": "How many papers cite this one",
   "card.influential": "{n} influential citations",
-  "card.similar": "{n}% similar",
-  "card.similar.hint":
-    "How close its content is to the paper you are reading (cosine similarity between SPECTER2 embeddings)",
-  "card.similar.approx.hint":
-    "Approximate: the paper you are reading has no embedding, so it is compared with its most likely neighbors",
   "card.relation.reference": "Reference",
   "card.relation.reference.hint": "The paper you are reading cites this one",
   "card.relation.citation": "Cites it",

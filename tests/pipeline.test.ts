@@ -4,9 +4,9 @@ import {
   assemble,
   choosePicks,
   dedupe,
-  GROUP_PREFIX,
   makeStrip,
   normalizeTitle,
+  OTHER_GROUP,
   RELATED_GROUP
 } from "~lib/pipeline"
 import type { CandidateSource, PaperWithEmbedding } from "~lib/semantic-scholar"
@@ -107,15 +107,11 @@ function topicEntries(
 }
 
 describe("assemble", () => {
+  const options = { topN: 18, maxClusters: 4 }
+
   it("groups the top papers by topic and strips the vectors", () => {
     const { entries, sources } = topicEntries(6)
-    const strip = makeStrip(sources, false)
-
-    const result = assemble(entries, strip, {
-      topN: 18,
-      maxClusters: 4,
-      showScore: true
-    })
+    const result = assemble(entries, makeStrip(sources), options)
 
     expect(result.groups).toHaveLength(3)
     expect(result.groups.map((g) => g.papers.length)).toEqual([6, 6, 6])
@@ -128,46 +124,30 @@ describe("assemble", () => {
     const all = result.groups.flatMap((g) => g.papers)
     expect(new Set(all.map((p) => p.paperId)).size).toBe(18)
     expect(all.every((p) => !("embedding" in p))).toBe(true)
-    expect(all.every((p) => typeof p.similarity === "number")).toBe(true)
-  })
-
-  it("omits similarity when there is no reference paper (topic search)", () => {
-    const { entries, sources } = topicEntries(5)
-    const result = assemble(entries, makeStrip(sources, false), {
-      topN: 24,
-      maxClusters: 5,
-      showScore: false
-    })
-    expect(
-      result.groups.flatMap((g) => g.papers).every((p) => p.similarity === null)
-    ).toBe(true)
+    expect(all.every((p) => !("similarity" in p))).toBe(true)
   })
 
   it("respects topN and returns a single group for a handful of papers", () => {
     const { entries, sources } = topicEntries(6)
-    const capped = assemble(entries, makeStrip(sources, false), {
+    const capped = assemble(entries, makeStrip(sources), {
       topN: 9,
-      maxClusters: 4,
-      showScore: true
+      maxClusters: 4
     })
     expect(capped.groups.flatMap((g) => g.papers)).toHaveLength(9)
 
-    const few = assemble(entries.slice(0, 3), makeStrip(sources, false), {
-      topN: 18,
-      maxClusters: 4,
-      showScore: true
-    })
+    const few = assemble(entries.slice(0, 3), makeStrip(sources), options)
     expect(few.groups).toHaveLength(1)
     expect(few.groups[0].label).toBe(RELATED_GROUP)
   })
 })
 
 describe("naming the groups", () => {
-  const options = { topN: 18, maxClusters: 4, showScore: true }
-
   it("names each group with the words its titles share", () => {
     const { entries, sources } = topicEntries(6)
-    const result = assemble(entries, makeStrip(sources, false), options)
+    const result = assemble(entries, makeStrip(sources), {
+      topN: 18,
+      maxClusters: 4
+    })
     const labels = result.groups.map((g) => g.label)
     expect(labels).toHaveLength(3)
     expect(labels.some((l) => /alpha/i.test(l))).toBe(true)
@@ -182,19 +162,40 @@ describe("naming the groups", () => {
     }
   })
 
-  it("numbers a group no honest name was found for, in the order shown", () => {
-    // every title is different: nothing is shared by half of any group
-    const words = ["volcano", "harbor", "tundra", "saffron", "quartz", "marble"]
-    const { entries, sources } = topicEntries(
-      6,
-      (topic, i) => `${words[i]}${topic} unique${topic}${i}`
+  // Titles nothing is shared by: no honest name exists for that group.
+  const first = ["volcano", "harbor", "tundra", "saffron", "quartz", "marble"]
+  const second = ["falcon", "glacier", "lantern", "orchid", "pebble", "thistle"]
+  const unique = (topic: number, i: number) =>
+    `${first[(i + topic) % 6]} ${second[(i * 5 + topic * 2) % 6]}`
+
+  it('puts the papers of a group with no honest name under "other", last', () => {
+    const { entries, sources } = topicEntries(6, (topic, i) =>
+      topic === 2
+        ? unique(topic, i)
+        : `${["Alpha", "Bravo"][topic]} topic paper ${i}`
     )
-    const result = assemble(entries, makeStrip(sources, false), options)
-    expect(result.groups.map((g) => g.label)).toEqual([
-      GROUP_PREFIX + 1,
-      GROUP_PREFIX + 2,
-      GROUP_PREFIX + 3
-    ])
+    const result = assemble(entries, makeStrip(sources), {
+      topN: 18,
+      maxClusters: 4
+    })
+    const labels = result.groups.map((g) => g.label)
+    expect(labels).toHaveLength(3)
+    expect(labels[2]).toBe(OTHER_GROUP)
+    expect(
+      result.groups[2].papers.every((p) => p.paperId.startsWith("t2-"))
+    ).toBe(true)
+    expect(labels.slice(0, 2).every((l) => /alpha|bravo/i.test(l))).toBe(true)
+  })
+
+  it("shows one plain list when no group can be named, instead of made-up groups", () => {
+    const { entries, sources } = topicEntries(6, unique)
+    const result = assemble(entries, makeStrip(sources), {
+      topN: 18,
+      maxClusters: 4
+    })
+    expect(result.groups).toHaveLength(1)
+    expect(result.groups[0].label).toBe(RELATED_GROUP)
+    expect(result.groups[0].papers).toHaveLength(18)
   })
 })
 

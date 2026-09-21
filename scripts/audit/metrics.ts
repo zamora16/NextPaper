@@ -130,3 +130,35 @@ export function bootstrapDifference(
     seed
   )
 }
+
+// How much two groupings of the same items agree, corrected for chance:
+// 1 = identical partitions (whatever the group names), about 0 = no better than
+// random, negative = worse. Two groupings that put everything together, or
+// everything apart, agree completely; one of each does not.
+export function adjustedRandIndex(a: number[], b: number[]): number {
+  if (a.length !== b.length) throw new Error("groupings differ in length")
+  const n = a.length
+  const choose2 = (x: number) => (x * (x - 1)) / 2
+
+  const table = new Map<string, number>()
+  const rows = new Map<number, number>()
+  const cols = new Map<number, number>()
+  for (let i = 0; i < n; i++) {
+    const key = `${a[i]}|${b[i]}`
+    table.set(key, (table.get(key) ?? 0) + 1)
+    rows.set(a[i], (rows.get(a[i]) ?? 0) + 1)
+    cols.set(b[i], (cols.get(b[i]) ?? 0) + 1)
+  }
+
+  const together = [...table.values()].reduce((s, v) => s + choose2(v), 0)
+  const rowPairs = [...rows.values()].reduce((s, v) => s + choose2(v), 0)
+  const colPairs = [...cols.values()].reduce((s, v) => s + choose2(v), 0)
+  const expected = (rowPairs * colPairs) / choose2(n)
+  const best = (rowPairs + colPairs) / 2
+
+  // both trivial (or n < 2): nothing to disagree about
+  if (best === expected) {
+    return rows.size === cols.size && together === rowPairs ? 1 : 0
+  }
+  return (together - expected) / (best - expected)
+}

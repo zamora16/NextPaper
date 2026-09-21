@@ -44,8 +44,6 @@ const paper = (over: Partial<ScoredPaper> = {}): ScoredPaper => ({
   abstract: "We study attention.",
   tldr: { text: "Attention is studied." },
   openAccessPdf: { url: "https://example.org/p1.pdf" },
-  similarity: 0.87,
-  approximate: false,
   relation: null,
   ...over
 })
@@ -63,18 +61,17 @@ const card = (
   })
 
 describe("PaperCard", () => {
-  it("shows the similarity, the citations and the tl;dr", async () => {
+  it("shows the citations and the tl;dr", async () => {
     await bench.render(card(paper()))
     const text = bench.text()
-    expect(text).toContain("87% similar")
     expect(text).toContain("1234 citations")
     expect(text).toContain("Attention is studied.")
     expect(text).toContain("Ada Lovelace, Alan Turing")
   })
 
-  it("says nothing about similarity when there is none (saved papers)", async () => {
-    await bench.render(card(paper({ similarity: null })))
-    expect(bench.text()).not.toContain("similar")
+  it("shows no similarity number: it would tell the cards apart no better than their order", async () => {
+    await bench.render(card(paper()))
+    expect(bench.text()).not.toMatch(/similar|similitud|%/)
   })
 
   it("the compact form keeps the essentials and drops the rest", async () => {
@@ -333,7 +330,7 @@ describe("RelatedTab", () => {
 
 const savedPaper = (id: string, over: Partial<SavedPaper> = {}): SavedPaper =>
   ({
-    ...paper({ paperId: id, title: `Title ${id}`, similarity: null }),
+    ...paper({ paperId: id, title: `Title ${id}` }),
     savedAt: 1,
     status: "unread",
     note: "",

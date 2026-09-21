@@ -122,8 +122,46 @@ completely on every card. The number is a real cosine, but reading it as a perce
    paper whose reference list the API does not give as unrelated.
 4. **The seeds** are papers from 2012–2021 with many citations. New papers, or papers nobody cites, are not
    covered, and there the search and the recommendations probably matter more.
-5. **Only the 18 shown were measured**, not the grouping into subtopics, the picks or the timeline.
+5. **Only the 18 shown were measured** for the ranking. The stability of the groups is measured in its own section; the picks and the timeline are not measured.
 6. Small samples per field: the intervals are over the 51 seeds, not per field.
+
+## Are the subtopic groups stable?
+
+The ranking was measured above; the grouping into subtopics was not, and it looked fragile: among the 18 papers
+closest to one paper the silhouette (how well separated the groups are) has a median of 0.078 and never passes
+0.2, so there is often no real structure to find. The question is whether the groups the extension showed were
+the same when the input barely changed.
+
+**Method.** Take the papers to group, drop about 10% at random, regroup, and compare the two groupings on the
+papers both contain with the adjusted Rand index (ARI: 1 = same groups, 0 = as similar as two random
+groupings). Repeated over the 51 seeds and, for topic search, 30 topics (`collect-topics`), with bootstrap
+intervals over seeds.
+
+| Method | Paper mode: stability (ARI) | Topic mode: stability (ARI) |
+| --- | --- | --- |
+| k-means, best silhouette (what shipped) | 0.44 [0.40, 0.49] | 0.35 |
+| Hierarchical (average linkage, cosine), best silhouette | 0.75 | 0.74 |
+| Hierarchical + only groups with an honest name, rest in "Other" | 0.75 | 0.72 |
+
+With the last variant 85% of the groups shown in paper mode had a name (65% in topic mode), there were about 2.2
+groups per result, and the largest held about 72% of the papers (89% in topic mode).
+
+**Decision.** Three changes, all shipped:
+
+1. **Hierarchical clustering replaces k-means** (`lib/clustering.ts`; the old k-means is kept in
+   `scripts/audit/kmeans-baseline.ts` as the baseline of this audit). It is more stable and it has no random
+   start.
+2. **Only groups that can be named are shown.** `labelClusters` decides; the papers of the other groups go
+   together into "Other related", last. When no group can be named the result is one plain list with no headings:
+   a partition nobody can describe would only look like knowledge (rule 17). The old "Group N" is gone.
+3. **The "% similar" number and bar are gone.** On the 18 shown, the cosine varies by about 0.03 between the
+   first and the last card: the number told cards apart no better than their order does, and "91% similar" read
+   as a probability it is not. The order itself (closest in content first) is unchanged; papers without an
+   indexed abstract still get an "approximate order" note.
+
+**Limits.** Stability is not correctness: a stable grouping can still be a wrong one, and the names are checked
+only by the rules in `labelClusters` and by reading them (rule 17). Dropping papers at random is a mild
+perturbation; a different set of candidates would move the groups more.
 
 ## What would strengthen it
 
@@ -138,7 +176,9 @@ Needs the API and a key in `.env.local` (`S2_API_KEY`); everything else is local
 npx vitest run --config vitest.audit.config.ts pick-seeds      # ~5 min, rewrites scripts/audit/seeds.json
 npx vitest run --config vitest.audit.config.ts collect-pools   # ~20 min for 51 seeds; resumable
 npx vitest run --config vitest.audit.config.ts evaluate        # seconds; prints and saves the report
+npx vitest run --config vitest.audit.config.ts collect-topics  # topic-search pools for the group audit; resumable
+npx vitest run --config vitest.audit.config.ts cluster-stability  # seconds; ARI under random drops
 ```
 
 Pools are saved to `<tmp>/probe/pools` (`AUDIT_POOLS` overrides), one JSON per seed with the 40 closest vectors,
-so later analyses (for example how stable the subtopic groups are) need no new requests.
+so later analyses (such as the stability of the groups) need no new requests.
