@@ -28,7 +28,7 @@ const SPANISH = /Guardados|Novedades|Relacionados|Buscar art|Ver cronolog|Empiez
       label: h.getAttribute("aria-label")
     }))
   )
-  check("hover hints are present and labelled", hints.length >= 3 && hints.every((h) => h.title && h.title === h.label), String(hints.length))
+  check("hover hints are present and labelled", hints.length >= 2 && hints.every((h) => h.title && h.title === h.label), String(hints.length))
 
   await clickButton(page, "Timeline", false)
   await sleep(500)

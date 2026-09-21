@@ -301,7 +301,7 @@ describe("RelatedTab", () => {
     expect(bench.text()).not.toContain("Start here")
   })
 
-  it("explains the timeline and the design filter with an info icon", async () => {
+  it("explains the timeline with an info icon", async () => {
     const dated = ["a", "b", "c", "d", "e"].map((id, i) =>
       paper({
         paperId: id,
@@ -321,31 +321,7 @@ describe("RelatedTab", () => {
       (el) => el.getAttribute("aria-label") ?? ""
     )
     expect(hints.some((h) => h.startsWith("A chart with one row"))).toBe(true)
-    expect(hints.some((h) => h.startsWith("Filter by study design"))).toBe(true)
     expect(bench.button("Timeline")).toBeTruthy()
-  })
-
-  it("offers 'How others cite it' for a paper, not for a topic or before results", async () => {
-    await bench.render(createElement(RelatedTab, relatedProps()))
-    expect(bench.button("How others cite it")).toBeTruthy()
-
-    await bench.render(
-      createElement(
-        RelatedTab,
-        relatedProps({
-          current: { ref: "QUERY:body image", label: "body image" }
-        })
-      )
-    )
-    expect(bench.button("How others cite it")).toBeUndefined()
-
-    await bench.render(
-      createElement(
-        RelatedTab,
-        relatedProps({ result: null, job: { phase: "loading" } })
-      )
-    )
-    expect(bench.button("How others cite it")).toBeUndefined()
   })
 
   it("lists every paper, with the count", async () => {

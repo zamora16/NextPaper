@@ -18,8 +18,7 @@ The interface is available in **English and Spanish** (it follows your browser l
 - **Snowballing**: *Explorar* runs the same analysis on any result; the search box analyzes a free-text topic.
 - **Library**: save papers with a reading status, notes and collections; search inside it; back up and restore; import from BibTeX, RIS or a list of DOIs.
 - **Citations** in APA 7, MLA 9, Chicago, Harvard, IEEE, Vancouver, AMA, BibTeX and RIS (plus in-text), enriched with Crossref; export `.bib` / `.ris` for Zotero or Mendeley.
-- **How others cite it**: the sentences where citing papers cite the one you are reading (only those that name it by default, since the extraction is noisy).
-- **Filters**: by relation, review, free PDF, study design, year range and minimum citations.
+- **Filters and order**: by relation (references, papers that cite it), reviews and free PDF; sort by relevance, citations or year.
 - **Alerts**: once a day it looks for new papers related to what you saved.
 
 Where a piece of information cannot be established reliably (a study design, a sample size), NextPaper shows nothing rather than a guess.

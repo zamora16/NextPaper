@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import type { PaperGroup, ScoredPaper } from "~lib/pipeline"
 import { extractStudy, parseCount, studyOf } from "~lib/study"
-import { applyView, designOptions } from "~lib/view"
 
 // Precision over coverage: a wrong chip is worse than none. Many cases below
 // come from errors found by auditing ~760 real Semantic Scholar abstracts.
@@ -574,56 +572,5 @@ describe("studyOf", () => {
       publicationTypes: null
     }
     expect(studyOf(paper)).toBe(studyOf(paper))
-  })
-})
-
-describe("design filter in the view", () => {
-  const paper = (
-    id: string,
-    title: string,
-    abstract: string | null
-  ): ScoredPaper =>
-    ({
-      paperId: id,
-      title,
-      abstract,
-      publicationTypes: null,
-      citationCount: 1,
-      year: 2020,
-      relation: null,
-      openAccessPdf: null
-    }) as unknown as ScoredPaper
-  const groups: PaperGroup[] = [
-    {
-      label: "A",
-      papers: [
-        paper("r1", "Trial one: a randomized controlled trial", null),
-        paper("r2", "Trial two: a randomized controlled trial", null),
-        paper("c1", "Survey: a cross-sectional survey", null),
-        paper("n1", "An essay", "Thoughts.")
-      ]
-    },
-    { label: "B", papers: [paper("m1", "Pooling: a meta-analysis", null)] }
-  ]
-  const ids = (g: PaperGroup[]) =>
-    g.flatMap((x) => x.papers.map((p) => p.paperId))
-
-  it("lists only detected designs, most common first, with counts", () => {
-    expect(designOptions(groups).map((d) => [d.id, d.count])).toEqual([
-      ["rct", 2],
-      ["meta", 1],
-      ["cross-sectional", 1]
-    ])
-  })
-
-  it("filters by design and drops emptied groups", () => {
-    expect(ids(applyView(groups, "all", "relevance", "rct"))).toEqual([
-      "r1",
-      "r2"
-    ])
-    expect(
-      applyView(groups, "all", "relevance", "meta").map((g) => g.label)
-    ).toEqual(["B"])
-    expect(ids(applyView(groups, "all", "relevance", "all"))).toHaveLength(5)
   })
 })

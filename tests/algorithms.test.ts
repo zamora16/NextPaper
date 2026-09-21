@@ -15,14 +15,7 @@ import {
   norm,
   normalize
 } from "~lib/vector-math"
-import {
-  applyView,
-  isRangeActive,
-  lastYears,
-  NO_RANGE,
-  searchLibrary,
-  type Range
-} from "~lib/view"
+import { applyView, searchLibrary } from "~lib/view"
 
 describe("searchLibrary", () => {
   const item = (
@@ -494,89 +487,6 @@ describe("applyView", () => {
   ]
   const ids = (g: PaperGroup[]) =>
     g.flatMap((x) => x.papers.map((p) => p.paperId))
-
-  describe("year and citation bounds", () => {
-    const range = (over: Partial<Range>): Range => ({ ...NO_RANGE, ...over })
-    const view = (r: Range) =>
-      ids(applyView(groups, "all", "relevance", "all", r))
-
-    it("keeps everything when no bound is set", () => {
-      expect(view(NO_RANGE)).toEqual(["a1", "a2", "b1"])
-      expect(isRangeActive(NO_RANGE)).toBe(false)
-    })
-
-    it("bounds the year from either side, inclusively", () => {
-      expect(view(range({ yearFrom: 2018 }))).toEqual(["a2", "b1"])
-      expect(view(range({ yearTo: 2018 }))).toEqual(["a1", "b1"])
-      expect(view(range({ yearFrom: 2018, yearTo: 2018 }))).toEqual(["b1"])
-      expect(isRangeActive(range({ yearFrom: 2018 }))).toBe(true)
-    })
-
-    it("bounds the citations from below", () => {
-      expect(view(range({ minCitations: 50 }))).toEqual(["a2", "b1"])
-      expect(view(range({ minCitations: 500 }))).toEqual(["b1"])
-      expect(isRangeActive(range({ minCitations: 1 }))).toBe(true)
-    })
-
-    it("combines both bounds with the other filters", () => {
-      const combined = applyView(
-        groups,
-        "citation",
-        "relevance",
-        "all",
-        range({ yearFrom: 2020, minCitations: 10 })
-      )
-      expect(ids(combined)).toEqual(["a2"])
-    })
-
-    it("leaves out a paper with no year while a year bound is on, only then", () => {
-      const withUnknown: PaperGroup[] = [
-        {
-          label: "A",
-          papers: [
-            make("known", { year: 2020 }),
-            make("unknown", { year: null })
-          ]
-        }
-      ]
-      const under = (r: Range) =>
-        ids(applyView(withUnknown, "all", "relevance", "all", r))
-      expect(under(range({ yearFrom: 2000 }))).toEqual(["known"])
-      expect(under(range({ yearTo: 2030 }))).toEqual(["known"])
-      expect(under(range({ minCitations: 0 }))).toEqual(["known", "unknown"])
-    })
-
-    it("shows nothing for an impossible range, without failing", () => {
-      expect(view(range({ yearFrom: 2024, yearTo: 2010 }))).toEqual([])
-    })
-
-    it("drops groups that end up empty and keeps a flat sort working", () => {
-      const grouped = applyView(
-        groups,
-        "all",
-        "relevance",
-        "all",
-        range({ yearFrom: 2024 })
-      )
-      expect(grouped.map((g) => g.label)).toEqual(["A"])
-      expect(
-        ids(
-          applyView(
-            groups,
-            "all",
-            "citations",
-            "all",
-            range({ yearFrom: 2015 })
-          )
-        )
-      ).toEqual(["b1", "a2"])
-    })
-
-    it("counts the last N years including the current one", () => {
-      expect(lastYears(5, 2026)).toEqual({ yearFrom: 2022, yearTo: null })
-      expect(lastYears(10, 2026).yearFrom).toBe(2017)
-    })
-  })
 
   it("filters and drops groups that end up empty", () => {
     expect(ids(applyView(groups, "reference", "relevance"))).toEqual(["a1"])

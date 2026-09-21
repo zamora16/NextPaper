@@ -133,6 +133,7 @@ describe("pruneStorage", () => {
       "nextpaper_cache_v5_a",
       "nextpaper_cache_v8_a",
       "nextpaper_cache_v10_a",
+      "nextpaper_citing_v1_a",
       "nextpaper_emb_v1_a",
       "nextpaper_rec_v1_a"
     ]) {

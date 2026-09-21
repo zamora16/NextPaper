@@ -22,7 +22,7 @@ npm run dev                # then load build/chrome-mv3-dev via chrome://extensi
 npx tsc --noEmit           # typecheck, `strict` on (Parcel does NOT typecheck; run this every change)
 npm run format             # prettier over lib/components/tests/popup/background (CI runs format:check)
 npx plasmo build           # production build -> build/chrome-mv3-prod
-npm test                   # vitest (~570 tests; `npm run test:coverage` enforces floors on lib/, ~98% lines): every module in lib/ —
+npm test                   # vitest (~490 tests; `npm run test:coverage` enforces floors on lib/, ~98% lines): every module in lib/ —
                            # keywords, timeline, study (design/sample), rate limiter/retry, API client (mocked fetch), pipeline (assemble/dedupe/picks), extractPaperRef (jsdom)
 ```
 
@@ -44,7 +44,6 @@ node scripts/e2e-storage.cjs       # compression, pruning, migration, user data 
 node scripts/e2e-import.cjs        # import .bib, collections, backup/restore, hostile file
 node scripts/e2e-setup.cjs         # first-run setup, personal API key, no key in the bundle
 node scripts/e2e-english.cjs       # English UI, three tabs, hover hints, language switch
-node scripts/e2e-features.cjs      # How others cite it, year/citation filters, subtopic labels
 npx vitest run --config vitest.audit.config.ts   # real analyses saved to read subtopic labels (see scripts/audit)
 OUT=dir node scripts/screenshots.cjs   # screenshots of every screen (LANG_UI=es, DARK=1, SCALE=2)
 node scripts/make-icon.cjs         # regenerates assets/icon.png from the app mark
@@ -170,7 +169,6 @@ lib/s2-fetch.ts, rate-limit.ts, api-key.ts   HTTP discipline (see rule 1-2); the
 lib/settings.ts, url.ts, ref.ts             settings + key check; http(s)-only links; bounded refs
 lib/kmeans.ts, vector-math.ts, keywords.ts   from-scratch ML (k-means++, silhouette, labels)
 lib/timeline.ts                              timeline-by-subtopic data
-lib/citing.ts                                citing sentences ("How others cite it"): what names a paper, cache
 lib/keywords.ts                              subtopic labels (titles, coverage + contrast rules)
 lib/study.ts                                 study design + sample size from the abstract (pure, derived at render time, not stored)
 lib/citation.ts, cite.ts, crossref.ts        9 styles + in-text (pure, tested); async Crossref enrichment; Crossref client/cache

@@ -28,43 +28,38 @@ const SEED_TITLE = new RegExp(
   check("seed paper itself not in results", !list.some((t) => SEED_TITLE.test(t)))
   const firstTitle = list[0]
 
-  // Study-card chips and the design filter
+  // Subtopic names: real terms from the titles, or a numbered group
+  check(
+    "group names are terms or numbered groups",
+    headings.every((h) => !/ \/ /.test(h) && h.trim().length > 0),
+    headings.join(" | ")
+  )
+
+  // Study-card chips (shown only when detected)
   const chips = await page.evaluate(
     () => [...document.querySelectorAll("span[title^='Diseño detectado']")].length
   )
   check("cards show a detected study design", chips >= 3, chips + " chips")
-  const designSelect = await page.evaluate(() => {
-    const select = [...document.querySelectorAll("select")].find((s) => (s.closest("label")?.title ?? "").startsWith("Diseño detectado"))
-    return select ? [...select.options].map((o) => o.textContent) : null
+
+  // Sorting flattens the subtopic groups into one list
+  const groupsBefore = headings.length
+  await page.evaluate(() => {
+    const select = [...document.querySelectorAll("select")].find((s) => [...s.options].some((o) => o.value === "citations"))
+    const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value").set
+    setter.call(select, "citations")
+    select.dispatchEvent(new Event("change", { bubbles: true }))
   })
-  check("design filter lists the designs found", !!designSelect && designSelect.length >= 3, (designSelect || []).join(" | "))
-  if (designSelect && designSelect.length >= 3) {
-    const before = await page.evaluate(() => document.querySelectorAll("[data-paper-id]").length)
-    await page.evaluate(() => {
-      const select = [...document.querySelectorAll("select")].find((s) => (s.closest("label")?.title ?? "").startsWith("Diseño detectado"))
-      const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value").set
-      setter.call(select, select.options[1].value)
-      select.dispatchEvent(new Event("change", { bubbles: true }))
-    })
-    await sleep(400)
-    const after = await page.evaluate(() => document.querySelectorAll("[data-paper-id]").length)
-    const picked = await page.evaluate(() => {
-      const select = [...document.querySelectorAll("select")].find((s) => (s.closest("label")?.title ?? "").startsWith("Diseño detectado"))
-      return select.options[select.selectedIndex].textContent
-    })
-    check("choosing a design narrows the list", after > 0 && after < before, `${picked}: ${before} -> ${after} cards`)
-    await page.evaluate(() => {
-      const select = [...document.querySelectorAll("select")].find((s) => (s.closest("label")?.title ?? "").startsWith("Diseño detectado"))
-      const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value").set
-      setter.call(select, "all")
-      select.dispatchEvent(new Event("change", { bubbles: true }))
-    })
-    await sleep(400)
-    check(
-      "Todos restores the full list",
-      (await page.evaluate(() => document.querySelectorAll("[data-paper-id]").length)) === before
-    )
-  }
+  await sleep(400)
+  const flat = await page.evaluate(() => [...document.querySelectorAll("section h3")].length)
+  check("sorting by citations gives one list", flat === 1, groupsBefore + " groups -> " + flat)
+  await page.evaluate(() => {
+    const select = [...document.querySelectorAll("select")].find((s) => [...s.options].some((o) => o.value === "citations"))
+    const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value").set
+    setter.call(select, "relevance")
+    select.dispatchEvent(new Event("change", { bubbles: true }))
+  })
+  await sleep(400)
+  check("relevance restores the groups", (await page.evaluate(() => document.querySelectorAll("section h3").length)) === groupsBefore)
 
   // Timeline by subtopic
   await clickButton(page, "Cronología", false)

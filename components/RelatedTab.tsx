@@ -1,19 +1,16 @@
 import { useMemo, useState, type ReactNode } from "react"
 
 import { CitationBar } from "~components/CitationButtons"
-import { CitedBy } from "~components/CitedBy"
 import { groupLabel, Hint, useT } from "~components/i18n"
 import {
   IconAlert,
   IconArrowLeft,
   IconChart,
   IconFile,
-  IconFilter,
   IconFlag,
   IconNetwork
 } from "~components/icons"
 import type { RenderCard } from "~components/PaperCard"
-import { RangeFilters } from "~components/RangeFilters"
 import { SearchField } from "~components/SearchField"
 import { Timeline } from "~components/Timeline"
 import {
@@ -28,35 +25,18 @@ import type { TKey } from "~lib/i18n"
 import type { JobState, Step } from "~lib/job"
 import { ALL_GROUP, type AnalysisResult, type PickKind } from "~lib/pipeline"
 import { buildTimeline } from "~lib/timeline"
-import {
-  applyView,
-  designOptions,
-  FILTERS,
-  isRangeActive,
-  NO_RANGE,
-  SORTS,
-  type DesignFilter,
-  type Filter,
-  type Range,
-  type Sort
-} from "~lib/view"
+import { applyView, FILTERS, SORTS, type Filter, type Sort } from "~lib/view"
 
-export interface ViewState extends Range {
+export interface ViewState {
   filter: Filter
   sort: Sort
-  design: DesignFilter
   timeline: boolean
-  // The panel with the year and citation filters is open.
-  moreFilters: boolean
 }
 
 export const DEFAULT_VIEW: ViewState = {
   filter: "all",
   sort: "relevance",
-  design: "all",
-  timeline: false,
-  moreFilters: false,
-  ...NO_RANGE
+  timeline: false
 }
 
 const PICK_LABEL: Record<PickKind, TKey> = {
@@ -199,21 +179,9 @@ export function RelatedTab({
   const [queryInput, setQueryInput] = useState("")
   const activeRef = current ? current.ref : pageRef
 
-  const designs = useMemo(
-    () => (result ? designOptions(result.groups) : []),
-    [result]
-  )
-  // Same guard as the collection filter: a design the new results don't have
-  // must not leave the list stuck on an empty filter.
-  const activeDesign = designs.some((d) => d.id === view.design)
-    ? view.design
-    : "all"
   const groups = useMemo(
-    () =>
-      result
-        ? applyView(result.groups, view.filter, view.sort, activeDesign, view)
-        : [],
-    [result, view, activeDesign]
+    () => (result ? applyView(result.groups, view.filter, view.sort) : []),
+    [result, view.filter, view.sort]
   )
   const visible = useMemo(() => {
     const seen = new Map<string, (typeof groups)[number]["papers"][number]>()
@@ -231,11 +199,7 @@ export function RelatedTab({
     [visible]
   )
   const showPicks =
-    !!result?.picks.length &&
-    view.filter === "all" &&
-    view.sort === "relevance" &&
-    activeDesign === "all" &&
-    !isRangeActive(view)
+    !!result?.picks.length && view.filter === "all" && view.sort === "relevance"
 
   // Subtopic colors follow the group order, so a heading and its timeline lane
   // match; the flattened list of a re-sorted view has no subtopic.
@@ -283,10 +247,6 @@ export function RelatedTab({
       />
 
       {context}
-
-      {result && activeRef && !activeRef.startsWith("QUERY:") && (
-        <CitedBy key={activeRef} paperRef={activeRef} />
-      )}
 
       {!current && pageRef === undefined && (
         <p className="text-sm text-muted">{t("detecting")}</p>
@@ -375,46 +335,7 @@ export function RelatedTab({
                 ))}
               </select>
             </label>
-
-            {designs.length >= 2 && (
-              <label
-                className="flex items-center gap-1.5 text-xs text-muted"
-                title={t("design.hint")}>
-                {t("design.label")}
-                <Hint text={t("design.hint")} />
-                <select
-                  value={activeDesign}
-                  onChange={(e) =>
-                    onView({ design: e.target.value as DesignFilter })
-                  }
-                  className={`${selectClass} w-[6rem]`}>
-                  <option value="all">{t("design.all")}</option>
-                  {designs.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {t(`design.${d.id}` as TKey)} ({d.count})
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-
-            <button
-              onClick={() => onView({ moreFilters: !view.moreFilters })}
-              aria-expanded={view.moreFilters}
-              aria-label={t("filters.more")}
-              title={t("filters.more")}
-              className={`${pillClass(view.moreFilters || isRangeActive(view))} ml-auto`}>
-              <IconFilter size={14} />
-              {isRangeActive(view) && (
-                <span className="tabular-nums">
-                  {Number(view.yearFrom !== null || view.yearTo !== null) +
-                    Number(view.minCitations > 0)}
-                </span>
-              )}
-            </button>
           </div>
-
-          {view.moreFilters && <RangeFilters range={view} onChange={onView} />}
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="flex items-center gap-2">
