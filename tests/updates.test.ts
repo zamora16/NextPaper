@@ -55,8 +55,6 @@ const library = (...ids: string[]) =>
     Object.fromEntries(ids.map((id, i) => [id, saved(id, 100 - i)]))
   )
 
-const stored = () => chrome.data.get(UPDATES_KEY) as any
-
 // Fresh papers found for each saved paper, by its id.
 function recommend(map: Record<string, string[] | null>) {
   recommended.mockImplementation(async (id) => map[id] ?? [])

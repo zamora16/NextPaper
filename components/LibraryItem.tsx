@@ -4,7 +4,8 @@ import { Hint, useT } from "~components/i18n"
 import { IconPencil, IconX } from "~components/icons"
 import { inputClass } from "~components/ui"
 import type { TKey } from "~lib/i18n"
-import { STATUSES, updateSaved, type SavedPaper } from "~lib/library"
+import { updateSaved } from "~lib/library"
+import { STATUSES, type SavedPaper } from "~lib/model"
 
 const STATUS_LABEL: Record<(typeof STATUSES)[number], TKey> = {
   unread: "status.unread",

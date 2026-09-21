@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react"
 
 import { getCachedResult } from "~lib/cache"
 import { jobKey, type JobState } from "~lib/job"
-import type { AnalysisResult } from "~lib/pipeline"
+import { type AnalysisResult } from "~lib/model"
 
 // How often a still-"loading" job is re-requested (rule 10).
 export const WATCHDOG_MS = 25_000

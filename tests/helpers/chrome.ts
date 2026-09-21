@@ -1,5 +1,3 @@
-import { vi } from "vitest"
-
 // An in-memory stand-in for the parts of chrome.* the extension uses, so the
 // storage-bound modules (cache, library, alerts) can be unit-tested without a
 // browser. Values are cloned on the way in and out, as the real API does.

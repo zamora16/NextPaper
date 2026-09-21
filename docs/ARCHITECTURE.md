@@ -107,7 +107,8 @@ the translated message and a *Retry* button; nothing is cached.
 | `lib/api-key.ts` | `authHeaders()`: the user's key as `x-api-key`, or nothing (the slower anonymous pool). Read from storage on each request, so a key added or removed applies at once. |
 | `lib/url.ts`, `lib/ref.ts` | `httpUrl` (only http(s) may become an href: API data and imported files are untrusted); `isPlausibleRef` (bounded, no control characters; the worker ignores anything else). |
 | `components/KeySetup.tsx` | First-run screen (explains why and how to get the free key in 3 steps, checks the key before saving, "continue without a key") and the settings screen (masked key, remove, credits, license, version). The popup shows it before anything else and **starts no analysis behind it**. |
-| `lib/pipeline.ts` | See §2. Also `QUERY_PREFIX`, `PickKind`, `ScoredPaper`, `AnalysisResult`. |
+| `lib/model.ts` | The shared data types and sentinels (`ScoredPaper`, `PaperGroup`, `Pick`, `AnalysisResult`, `SavedPaper`, `ReadStatus`/`STATUSES`, `RELATED_GROUP` / `ALL_GROUP` / `OTHER_GROUP`). Types and constants only, so nothing has to import the pipeline or the storage code to name them; `npm run check:cycles` keeps the module graph acyclic. |
+| `lib/pipeline.ts` | See §2. Also `QUERY_PREFIX`. |
 | `lib/clustering.ts` | `clusterAuto` (average-linkage hierarchical on cosine distance, k by silhouette), `mergeSmallClusters`, `silhouetteScore`. The retired k-means lives in `scripts/audit/kmeans-baseline.ts` as the baseline of the stability audit. |
 | `lib/vector-math.ts` | dot, norm, cosine, normalize, euclidean, mean. |
 | `lib/keywords.ts` | `labelClusters(titles[][]) → (string \| null)[]`: c-TF-IDF-style subtopic names with coverage and contrast rules (see step 8). Titles only: abstracts share the whole topic's vocabulary and add filler words (measured on real groups). EN/ES stopwords plus study jargon. |

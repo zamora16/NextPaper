@@ -162,7 +162,7 @@ export function Timeline({
       </svg>
 
       <div className="flex flex-col gap-0.5">
-        {data.lanes.map((lane, index) => (
+        {data.lanes.map((lane) => (
           <span
             key={lane.label}
             className="flex items-center gap-1.5 text-[11px] text-muted">

@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { getCachedResult } from "~lib/cache"
 import type { Step } from "~lib/job"
-import { analyze, RELATED_GROUP } from "~lib/pipeline"
+import { RELATED_GROUP } from "~lib/model"
+import { analyze } from "~lib/pipeline"
 import { RateLimitedError } from "~lib/s2-fetch"
 import {
   collectCandidates,

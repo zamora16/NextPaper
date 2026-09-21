@@ -27,6 +27,7 @@
     "build": "plasmo build",
     "package": "plasmo package",
     "typecheck": "tsc --noEmit",
+    "check:cycles": "npx --yes madge@8.0.0 --circular --extensions ts,tsx --ts-config tsconfig.json popup.tsx background.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "format:check": "prettier --check \"{lib,components,tests}/**/*.{ts,tsx}\" popup.tsx background.ts vitest.config.ts",

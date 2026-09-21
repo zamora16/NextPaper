@@ -1,4 +1,4 @@
-import type { ReadStatus, SavedPaper } from "~lib/library"
+import { STATUSES, type SavedPaper } from "~lib/model"
 import { httpUrl } from "~lib/url"
 
 // Pure logic for library backups (no chrome.* here, so it is unit-tested).
@@ -17,8 +17,6 @@ export const buildBackup = (library: SavedPaper[]): Backup => ({
   exportedAt: new Date().toISOString(),
   library
 })
-
-const STATUS_VALUES: ReadStatus[] = ["unread", "reading", "read"]
 
 // Limits keep a crafted or corrupt file from filling the storage quota.
 const MAX_ITEMS = 5000
@@ -113,7 +111,7 @@ export function normalizeSaved(raw: any): SavedPaper | null {
     approximate: false,
     relation: null,
     savedAt: count(raw.savedAt) ?? Date.now(),
-    status: STATUS_VALUES.includes(raw.status) ? raw.status : "unread",
+    status: STATUSES.includes(raw.status) ? raw.status : "unread",
     note: text(raw.note, MAX_TEXT) ?? "",
     collections: strings(raw.collections, MAX_COLLECTIONS, MAX_COLLECTION_NAME)
   }

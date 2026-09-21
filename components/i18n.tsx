@@ -13,7 +13,7 @@ import {
   type Params,
   type TKey
 } from "~lib/i18n"
-import { ALL_GROUP, OTHER_GROUP, RELATED_GROUP } from "~lib/pipeline"
+import { ALL_GROUP, OTHER_GROUP, RELATED_GROUP } from "~lib/model"
 
 export type Translate = (key: TKey, params?: Params) => string
 

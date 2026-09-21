@@ -1,7 +1,7 @@
 import { errorCode, NoDataError, type ErrorCode } from "~lib/errors"
 import { getLibrary } from "~lib/library"
+import { type ScoredPaper } from "~lib/model"
 import { plainPaper } from "~lib/paper-utils"
-import type { ScoredPaper } from "~lib/pipeline"
 import { createQueue } from "~lib/queue"
 import { getPapers, getRecommendedIds } from "~lib/semantic-scholar"
 

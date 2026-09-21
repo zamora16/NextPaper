@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useAnalysis, WATCHDOG_MS } from "~components/useAnalysis"
 import { jobKey } from "~lib/job"
-import type { AnalysisResult } from "~lib/pipeline"
+import { type AnalysisResult } from "~lib/model"
 
 import { installChrome, type FakeChrome } from "./helpers/chrome"
 

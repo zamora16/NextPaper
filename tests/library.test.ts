@@ -10,7 +10,7 @@ import {
   toggleSaved,
   updateSaved
 } from "~lib/library"
-import type { ScoredPaper } from "~lib/pipeline"
+import { type ScoredPaper } from "~lib/model"
 
 import { installChrome, type FakeChrome } from "./helpers/chrome"
 

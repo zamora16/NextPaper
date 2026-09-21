@@ -18,7 +18,6 @@ import {
   silhouetteScore
 } from "~lib/clustering"
 import { labelClusters } from "~lib/keywords"
-import { cosineSimilarity } from "~lib/vector-math"
 
 import { kMeans } from "./kmeans-baseline"
 import {
@@ -70,53 +69,6 @@ function hierarchicalAuto(vectors: number[][], maxK: number): Grouping {
   const assign = clusterAuto(vectors, 2, maxK)
   return { assign, score: silhouetteScore(vectors, assign) }
 }
-
-const withFloor =
-  (
-    method: (v: number[][], k: number, titles: string[]) => Grouping,
-    floor: number
-  ) =>
-  (vectors: number[][], maxK: number, titles: string[]): Grouping => {
-    const grouping = method(vectors, maxK, titles)
-    return grouping.score < floor
-      ? { assign: vectors.map(() => 0), score: -1 }
-      : grouping
-  }
-
-// The extension would check itself: regroup B times without a tenth of the
-// papers and keep the groups only if they survive (mean adjusted Rand index
-// above tau). Deterministic: the drops come from a fixed seed.
-const withGate =
-  (
-    method: (v: number[][], k: number, titles: string[]) => Grouping,
-    tau: number,
-    runs = 20
-  ) =>
-  (vectors: number[][], maxK: number, titles: string[]): Grouping => {
-    const original = method(vectors, maxK, titles)
-    if (Math.max(...original.assign) < 1) return original
-    const random = seededRandom(99)
-    const n = vectors.length
-    const drop = Math.max(1, Math.round(n * 0.1))
-    let total = 0
-    for (let r = 0; r < runs; r++) {
-      const out = new Set<number>()
-      while (out.size < drop) out.add(Math.floor(random() * n))
-      const kept = [...Array(n).keys()].filter((i) => !out.has(i))
-      const again = method(
-        kept.map((i) => vectors[i]),
-        maxK,
-        kept.map((i) => titles[i])
-      ).assign
-      total += adjustedRandIndex(
-        kept.map((i) => original.assign[i]),
-        again
-      )
-    }
-    return total / runs >= tau
-      ? original
-      : { assign: vectors.map(() => 0), score: -1 }
-  }
 
 // Show only the groups an honest name was found for; everything else goes
 // together into one "other" group. No nameable group at all: a single list.

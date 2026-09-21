@@ -5,7 +5,7 @@ import { CITATION_STYLES } from "~lib/citation"
 import { isLangPreference, resolveLang, richParts, translate } from "~lib/i18n"
 import { en } from "~lib/i18n/en"
 import { es } from "~lib/i18n/es"
-import { OTHER_GROUP } from "~lib/pipeline"
+import { OTHER_GROUP } from "~lib/model"
 import { DESIGNS } from "~lib/study"
 
 const keys = Object.keys(en) as (keyof typeof en)[]

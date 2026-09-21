@@ -11,7 +11,7 @@ import { CROSSREF_PREFIX } from "~lib/crossref"
 import { StorageFullError } from "~lib/errors"
 import { JOB_PREFIX } from "~lib/job"
 import { LIBRARY_KEY } from "~lib/library"
-import type { AnalysisResult } from "~lib/pipeline"
+import { type AnalysisResult } from "~lib/model"
 import { UPDATES_KEY } from "~lib/updates"
 
 import { installChrome, type FakeChrome } from "./helpers/chrome"

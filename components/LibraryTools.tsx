@@ -11,7 +11,8 @@ import {
   resolveReferences,
   type ImportStep
 } from "~lib/import"
-import { addPapers, restoreItems, type SavedPaper } from "~lib/library"
+import { addPapers, restoreItems } from "~lib/library"
+import { type SavedPaper } from "~lib/model"
 
 const stepText = (t: Translate, step: ImportStep) =>
   step.code === "dois"

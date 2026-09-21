@@ -1,5 +1,5 @@
+import { ALL_GROUP, type PaperGroup, type ScoredPaper } from "~lib/model"
 import { isReview } from "~lib/paper-utils"
-import { ALL_GROUP, type PaperGroup, type ScoredPaper } from "~lib/pipeline"
 
 export type Filter = "all" | "reference" | "citation" | "open" | "review"
 export type Sort = "relevance" | "citations" | "year"

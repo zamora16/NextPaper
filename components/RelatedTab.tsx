@@ -29,7 +29,7 @@ import {
   RELATED_GROUP,
   type AnalysisResult,
   type PickKind
-} from "~lib/pipeline"
+} from "~lib/model"
 import { buildTimeline } from "~lib/timeline"
 import { applyView, FILTERS, SORTS, type Filter, type Sort } from "~lib/view"
 

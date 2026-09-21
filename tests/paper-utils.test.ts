@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
+import { type ScoredPaper } from "~lib/model"
 import { isReview, plainPaper } from "~lib/paper-utils"
-import type { ScoredPaper } from "~lib/pipeline"
 import type { RecommendedPaper } from "~lib/semantic-scholar"
 
 const paper = (over: Partial<RecommendedPaper>): RecommendedPaper => ({

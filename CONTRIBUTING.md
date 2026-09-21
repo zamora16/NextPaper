@@ -20,7 +20,8 @@ Read these before changing anything non-trivial:
 ```bash
 npm install
 npm run dev                # then load build/chrome-mv3-dev via chrome://extensions
-npx tsc --noEmit           # typecheck, `strict` on (Parcel does NOT typecheck; run this every change)
+npx tsc --noEmit           # typecheck, `strict` + no unused locals/params (Parcel does NOT typecheck; run this every change)
+npm run check:cycles       # no circular imports between modules (CI runs it)
 npm run format             # prettier over lib/components/tests/popup/background (CI runs format:check)
 npx plasmo build           # production build -> build/chrome-mv3-prod
 npm test                   # vitest (~490 tests; `npm run test:coverage` enforces floors on lib/, ~98% lines): every module in lib/ —
@@ -164,6 +165,7 @@ popup.tsx            UI shell: tabs, search, trail (Explorar), filters/sort, sav
 background.ts        service worker: runs analyses, daily alerts alarm, badge, keep-alive
 components/          PaperCard, LibraryItem (status, note, collections), LibraryTools (backup/import),
                      RelatedTab, SavedTab, UpdatesTab, SearchField, icons, CitationButtons + useCopyAction (copy/export with progress), Timeline (SVG)
+lib/model.ts         shared types and sentinels (ScoredPaper, AnalysisResult, SavedPaper, *_GROUP): types only, no imports of logic
 lib/pipeline.ts      THE core: candidates -> embeddings -> ranking -> clusters -> picks
 lib/semantic-scholar.ts   API client (seed, candidates, batch papers, search, recent)
 lib/s2-fetch.ts, rate-limit.ts, api-key.ts   HTTP discipline (see rule 1-2); the key comes from lib/settings.ts (per user)

@@ -7,7 +7,8 @@ import {
   parseBackup
 } from "~lib/backup"
 import { parseReferences, similarTitles } from "~lib/import"
-import { collectionCounts, type SavedPaper } from "~lib/library"
+import { collectionCounts } from "~lib/library"
+import { type SavedPaper } from "~lib/model"
 
 describe("parseReferences: BibTeX", () => {
   const bib = `

@@ -10,13 +10,8 @@ import { SearchField } from "~components/SearchField"
 import { pillClass } from "~components/ui"
 import type { CitationStyle } from "~lib/citation"
 import type { TKey } from "~lib/i18n"
-import {
-  collectionCounts,
-  deleteCollection,
-  STATUSES,
-  type ReadStatus,
-  type SavedPaper
-} from "~lib/library"
+import { collectionCounts, deleteCollection } from "~lib/library"
+import { STATUSES, type ReadStatus, type SavedPaper } from "~lib/model"
 import { searchLibrary } from "~lib/view"
 
 const STATUS_LABEL: Record<ReadStatus, TKey> = {

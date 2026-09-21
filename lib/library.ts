@@ -1,23 +1,10 @@
 import { mergeItems } from "~lib/backup"
+import type { SavedPaper, ScoredPaper } from "~lib/model"
 import { plainPaper } from "~lib/paper-utils"
-import type { ScoredPaper } from "~lib/pipeline"
 import { createQueue } from "~lib/queue"
 import type { RecommendedPaper } from "~lib/semantic-scholar"
 
 export const LIBRARY_KEY = "nextpaper_library"
-
-export type ReadStatus = "unread" | "reading" | "read"
-
-export const STATUSES: ReadStatus[] = ["unread", "reading", "read"]
-
-export type SavedPaper = ScoredPaper & {
-  savedAt: number
-  status: ReadStatus
-  note: string
-  // User-defined groups ("Tesis cap. 2", "Para revisar"...). A paper can be
-  // in several. Items saved by older versions have none.
-  collections: string[]
-}
 
 async function read(): Promise<Record<string, SavedPaper>> {
   const stored = await chrome.storage.local.get([LIBRARY_KEY])

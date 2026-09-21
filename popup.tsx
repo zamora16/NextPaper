@@ -33,12 +33,8 @@ import { useStorageValue } from "~components/useStorageValue"
 import type { CitationStyle } from "~lib/citation"
 import { extractPaperRef } from "~lib/extract-ref"
 import { resolveLang } from "~lib/i18n"
-import {
-  getLibrary,
-  LIBRARY_KEY,
-  toggleSaved,
-  type SavedPaper
-} from "~lib/library"
+import { getLibrary, LIBRARY_KEY, toggleSaved } from "~lib/library"
+import { type SavedPaper } from "~lib/model"
 import { getSettings, SETTINGS_KEY, type Settings } from "~lib/settings"
 import {
   getUpdates,

@@ -1,13 +1,12 @@
 import { describe, expect, it } from "vitest"
 
+import { OTHER_GROUP, RELATED_GROUP } from "~lib/model"
 import {
   assemble,
   choosePicks,
   dedupe,
   makeStrip,
-  normalizeTitle,
-  OTHER_GROUP,
-  RELATED_GROUP
+  normalizeTitle
 } from "~lib/pipeline"
 import type { CandidateSource, PaperWithEmbedding } from "~lib/semantic-scholar"
 

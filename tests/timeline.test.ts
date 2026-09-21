@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import type { PaperGroup, ScoredPaper } from "~lib/pipeline"
+import { type PaperGroup, type ScoredPaper } from "~lib/model"
 import { buildTimeline } from "~lib/timeline"
 
 const paper = (

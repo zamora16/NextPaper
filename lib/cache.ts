@@ -7,7 +7,7 @@ import {
 } from "~lib/crossref"
 import { StorageFullError } from "~lib/errors"
 import { JOB_PREFIX } from "~lib/job"
-import type { AnalysisResult } from "~lib/pipeline"
+import { type AnalysisResult } from "~lib/model"
 
 // A week: a paper's related literature changes slowly, and a repeat analysis
 // is the most expensive thing the extension does (alerts cover what is new).

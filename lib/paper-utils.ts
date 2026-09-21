@@ -1,4 +1,4 @@
-import type { ScoredPaper } from "~lib/pipeline"
+import { type ScoredPaper } from "~lib/model"
 import type { RecommendedPaper } from "~lib/semantic-scholar"
 import { studyOf, type DesignId } from "~lib/study"
 

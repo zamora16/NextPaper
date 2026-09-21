@@ -1,4 +1,4 @@
-import type { PaperGroup } from "~lib/pipeline"
+import { type PaperGroup } from "~lib/model"
 
 // Data for the timeline chart: one lane per subtopic group, papers placed by
 // publication year. It answers what a list cannot show at a glance: which

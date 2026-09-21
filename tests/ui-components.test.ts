@@ -7,8 +7,12 @@ import { DEFAULT_VIEW, RelatedTab } from "~components/RelatedTab"
 import { SavedTab } from "~components/SavedTab"
 import { UpdatesTab } from "~components/UpdatesTab"
 import type { JobState } from "~lib/job"
-import { updateSaved, type SavedPaper } from "~lib/library"
-import type { AnalysisResult, ScoredPaper } from "~lib/pipeline"
+import { updateSaved } from "~lib/library"
+import {
+  type AnalysisResult,
+  type SavedPaper,
+  type ScoredPaper
+} from "~lib/model"
 import { getUpdates, UPDATES_KEY, type UpdatesState } from "~lib/updates"
 
 import { installChrome, type FakeChrome } from "./helpers/chrome"

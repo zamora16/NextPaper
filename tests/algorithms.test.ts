@@ -6,7 +6,7 @@ import {
   silhouetteScore
 } from "~lib/clustering"
 import { labelClusters } from "~lib/keywords"
-import { ALL_GROUP, type PaperGroup, type ScoredPaper } from "~lib/pipeline"
+import { ALL_GROUP, type PaperGroup, type ScoredPaper } from "~lib/model"
 import {
   cosineSimilarity,
   euclideanDistance,
