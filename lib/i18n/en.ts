@@ -86,6 +86,8 @@ export const en = {
   "sort.year": "Most recent",
   citeAs: "Cite as",
   "citeAs.hint": "The citation style used when you copy or export citations",
+  "citeMenu.hint":
+    "Citation style, and copy the citations of every paper shown",
   count: "{shown} of {total} papers",
   "timeline.label": "Timeline",
   "timeline.hint":
@@ -158,6 +160,9 @@ export const en = {
     "A free legal copy on a repository or publisher page (Unpaywall found no direct PDF)",
   "card.pdf.searching": "Searching...",
   "card.pdf.retry": "Retry PDF",
+  "card.pdf.limit": "Daily limit",
+  "card.pdf.limit.hint":
+    "You have used today's {n} PDF searches. They reset tomorrow; copies already found stay available.",
   "card.pdf.none": "No free PDF",
   "card.pdf.none.hint": "Unpaywall knows no free legal copy of this paper",
   "card.inText": "In text",

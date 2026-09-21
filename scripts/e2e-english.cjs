@@ -28,7 +28,14 @@ const SPANISH = /Guardados|Novedades|Relacionados|Buscar art|Ver cronolog|Empiez
       label: h.getAttribute("aria-label")
     }))
   )
-  check("hover hints are present and labelled", hints.length >= 2 && hints.every((h) => h.title && h.title === h.label), String(hints.length))
+  check("hover hints are present and labelled", hints.length >= 1 && hints.every((h) => h.title && h.title === h.label), String(hints.length))
+  // controls in the toolbar explain themselves with a title instead of an icon
+  const toolbar = await page.evaluate(() => ({
+    timeline: [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "Timeline")?.title,
+    sort: document.querySelector("select[aria-label='Sort']")?.title,
+    cite: [...document.querySelectorAll("button")].find((b) => /^Cite as:/.test(b.getAttribute("aria-label") || ""))?.title
+  }))
+  check("the timeline, order and citation controls have hover explanations", !!toolbar.timeline && !!toolbar.sort && !!toolbar.cite, JSON.stringify(toolbar).slice(0, 80))
 
   await clickButton(page, "Timeline", false)
   await sleep(500)

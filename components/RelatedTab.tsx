@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react"
 
-import { CitationBar } from "~components/CitationButtons"
+import { CitationMenu } from "~components/CitationButtons"
 import { groupLabel, Hint, useT } from "~components/i18n"
 import {
   IconAlert,
@@ -332,24 +332,6 @@ export function RelatedTab({
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <label
-              className="flex items-center gap-1.5 text-xs text-muted"
-              title={t("sort.hint")}>
-              {t("sort.label")}
-              <select
-                value={view.sort}
-                onChange={(e) => onView({ sort: e.target.value as Sort })}
-                className={selectClass}>
-                {SORTS.map((s) => (
-                  <option key={s} value={s}>
-                    {t(`sort.${s}` as TKey)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="flex items-center gap-2">
               <span className="text-xs tabular-nums text-muted">
@@ -367,15 +349,28 @@ export function RelatedTab({
                   {t("timeline.label")}
                 </button>
               )}
-              {timeline && <Hint text={t("timeline.hint")} />}
             </span>
-            {visible.length > 0 && (
-              <CitationBar
-                papers={visible}
-                style={citationStyle}
-                onStyleChange={onStyleChange}
-              />
-            )}
+            <span className="flex items-center gap-1.5">
+              <select
+                value={view.sort}
+                onChange={(e) => onView({ sort: e.target.value as Sort })}
+                title={t("sort.hint")}
+                aria-label={t("sort.label")}
+                className={selectClass}>
+                {SORTS.map((s) => (
+                  <option key={s} value={s}>
+                    {t(`sort.${s}` as TKey)}
+                  </option>
+                ))}
+              </select>
+              {visible.length > 0 && (
+                <CitationMenu
+                  papers={visible}
+                  style={citationStyle}
+                  onStyleChange={onStyleChange}
+                />
+              )}
+            </span>
           </div>
 
           {view.timeline && timeline && (

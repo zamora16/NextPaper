@@ -17,6 +17,7 @@ import type { TKey } from "~lib/i18n"
 import { type ReadStatus, type ScoredPaper } from "~lib/model"
 import { isReview } from "~lib/paper-utils"
 import { studyOf } from "~lib/study"
+import { UNPAYWALL_DAILY_LIMIT } from "~lib/unpaywall"
 import { httpUrl } from "~lib/url"
 
 // What a tab adds to a card: the library's controls, a label, or the short form.
@@ -294,6 +295,13 @@ export function PaperCard({
               <IconFile size={14} />
               {t("card.pdf.page")}
             </a>
+          )}
+          {!compact && !pdfUrl && doi && lookup.phase === "limit" && (
+            <span
+              title={t("card.pdf.limit.hint", { n: UNPAYWALL_DAILY_LIMIT })}
+              className="text-xs text-muted">
+              {t("card.pdf.limit")}
+            </span>
           )}
           {!compact && !pdfUrl && doi && lookup.phase === "none" && (
             <span

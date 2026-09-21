@@ -1,7 +1,13 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { useT } from "~components/i18n"
-import { IconCheck, IconCopy, IconDownload } from "~components/icons"
+import {
+  IconCheck,
+  IconChevronDown,
+  IconCopy,
+  IconDownload,
+  IconQuote
+} from "~components/icons"
 import { buttonClass, selectClass } from "~components/ui"
 import { useCopyAction } from "~components/useCopyAction"
 import {
@@ -89,8 +95,97 @@ function ExportButton({
   )
 }
 
-// Everything about getting citations out: the style, copying them, and (for
-// the library) downloading them for a reference manager.
+// The citation style: it decides what every card's Cite and In text copy.
+function StyleSelect({
+  style,
+  onChange,
+  className = ""
+}: {
+  style: CitationStyle
+  onChange: (style: CitationStyle) => void
+  className?: string
+}) {
+  const t = useT()
+  return (
+    <select
+      value={style}
+      onChange={(e) => onChange(e.target.value as CitationStyle)}
+      title={t("citeAs.hint")}
+      aria-label={t("citeAs")}
+      className={`${selectClass} ${className}`}>
+      {CITATION_STYLES.map((option) => (
+        <option key={option} value={option}>
+          {t(`style.${option}` as TKey)}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+// One small button that shows the current style and opens what is rarely
+// needed: choosing another style and copying every paper shown. (Copying one
+// paper is on its card.)
+export function CitationMenu({
+  papers,
+  style,
+  onStyleChange
+}: {
+  papers: Citable[]
+  style: CitationStyle
+  onStyleChange: (style: CitationStyle) => void
+}) {
+  const t = useT()
+  const [open, setOpen] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const away = (event: MouseEvent) => {
+      if (!box.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false)
+    }
+    document.addEventListener("mousedown", away)
+    document.addEventListener("keydown", escape)
+    return () => {
+      document.removeEventListener("mousedown", away)
+      document.removeEventListener("keydown", escape)
+    }
+  }, [open])
+
+  return (
+    <div ref={box} className="relative">
+      <button
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        aria-haspopup="true"
+        aria-label={`${t("citeAs")}: ${t(`style.${style}` as TKey)}`}
+        title={t("citeMenu.hint")}
+        className={buttonClass}>
+        <IconQuote size={14} />
+        {t(`style.${style}` as TKey)}
+        <IconChevronDown size={12} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-20 mt-1.5 flex w-64 flex-col gap-2.5 rounded-xl border border-line bg-surface p-3 shadow-pop">
+          <label className="flex flex-col gap-1 text-xs text-muted">
+            {t("citeAs")}
+            <StyleSelect
+              style={style}
+              onChange={onStyleChange}
+              className="w-full"
+            />
+          </label>
+          <CopyCitationsButton papers={papers} style={style} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Everything about getting citations out of the library: the style, copying
+// them, and downloading them for a reference manager.
 export function CitationBar({
   papers,
   style,
@@ -102,23 +197,15 @@ export function CitationBar({
   onStyleChange: (style: CitationStyle) => void
   exports?: boolean
 }) {
-  const t = useT()
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="inline-flex">
         <CopyCitationsButton papers={papers} style={style} joined />
-        <select
-          value={style}
-          onChange={(e) => onStyleChange(e.target.value as CitationStyle)}
-          title={t("citeAs.hint")}
-          aria-label={t("citeAs")}
-          className={`${selectClass} -ml-px w-[5.5rem] rounded-l-none`}>
-          {CITATION_STYLES.map((option) => (
-            <option key={option} value={option}>
-              {t(`style.${option}` as TKey)}
-            </option>
-          ))}
-        </select>
+        <StyleSelect
+          style={style}
+          onChange={onStyleChange}
+          className="-ml-px w-[5.5rem] rounded-l-none"
+        />
       </div>
       {exports && (
         <div className="flex gap-1.5">

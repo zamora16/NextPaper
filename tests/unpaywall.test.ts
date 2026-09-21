@@ -2,9 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   findOpenCopy,
+  LIMIT_REACHED,
   openCopyOf,
   peekOpenCopy,
-  UNPAYWALL_PREFIX
+  UNPAYWALL_DAILY_LIMIT,
+  UNPAYWALL_PREFIX,
+  UNPAYWALL_QUOTA_KEY
 } from "~lib/unpaywall"
 
 import { installChrome, type FakeChrome } from "./helpers/chrome"
@@ -207,6 +210,83 @@ describe("findOpenCopy", () => {
     expect(fetchMock).not.toHaveBeenCalled() // 29 days: still fresh
     await run("10.1/miss")
     expect(fetchMock).toHaveBeenCalledTimes(1) // 8 days: retried
+  })
+})
+
+describe("the daily limit", () => {
+  let chrome: FakeChrome
+  let fetchMock: ReturnType<typeof vi.fn>
+  const found = () =>
+    new Response(
+      JSON.stringify({
+        is_oa: true,
+        best_oa_location: { url_for_pdf: "https://repo.org/a.pdf" }
+      })
+    )
+  const quota = () => chrome.data.get(UNPAYWALL_QUOTA_KEY) as any
+
+  beforeEach(() => {
+    chrome = installChrome()
+    fetchMock = vi.fn().mockImplementation(async () => found())
+    vi.stubGlobal("fetch", fetchMock)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  it("counts what is asked, not what comes from the cache", async () => {
+    await findOpenCopy("10.1/a")
+    await findOpenCopy("10.1/a")
+    await findOpenCopy("10.1/b")
+    expect(quota().n).toBe(2)
+    expect(quota().day).toBe(new Date().toLocaleDateString("en-CA"))
+  })
+
+  it("stops asking Unpaywall after the daily limit, and says so", async () => {
+    chrome.data.set(UNPAYWALL_QUOTA_KEY, {
+      day: new Date().toLocaleDateString("en-CA"),
+      n: UNPAYWALL_DAILY_LIMIT - 1
+    })
+    expect(await findOpenCopy("10.1/last")).toEqual({
+      url: "https://repo.org/a.pdf",
+      pdf: true
+    })
+    expect(await findOpenCopy("10.1/over")).toBe(LIMIT_REACHED)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("still serves what was already found once the limit is reached", async () => {
+    await findOpenCopy("10.1/known")
+    chrome.data.set(UNPAYWALL_QUOTA_KEY, {
+      day: new Date().toLocaleDateString("en-CA"),
+      n: UNPAYWALL_DAILY_LIMIT
+    })
+    expect(await findOpenCopy("10.1/known")).toEqual({
+      url: "https://repo.org/a.pdf",
+      pdf: true
+    })
+    expect(await findOpenCopy("10.1/new")).toBe(LIMIT_REACHED)
+  })
+
+  it("starts again the next day", async () => {
+    chrome.data.set(UNPAYWALL_QUOTA_KEY, { day: "2000-01-01", n: 500 })
+    expect(await findOpenCopy("10.1/today")).not.toBe(LIMIT_REACHED)
+    expect(quota().n).toBe(1)
+  })
+
+  it("counts clicks that overlap without losing any", async () => {
+    await Promise.all(
+      Array.from({ length: 10 }, (_, i) => findOpenCopy(`10.1/p${i}`))
+    )
+    expect(quota().n).toBe(10)
+  })
+
+  it("survives a corrupt counter", async () => {
+    chrome.data.set(UNPAYWALL_QUOTA_KEY, { day: 5, n: "many" })
+    expect(await findOpenCopy("10.1/x")).not.toBe(LIMIT_REACHED)
+    chrome.data.set(UNPAYWALL_QUOTA_KEY, null)
+    expect(await findOpenCopy("10.1/y")).not.toBe(LIMIT_REACHED)
   })
 })
 

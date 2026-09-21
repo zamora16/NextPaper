@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { createElement, type ReactNode } from "react"
+import { act } from "react-dom/test-utils"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { PaperCard, type RenderCard } from "~components/PaperCard"
@@ -152,6 +153,18 @@ describe("PaperCard", () => {
       bench = mountBench("en")
       await bench.render(card(noPdf()))
       expect(bench.text()).toContain("No free PDF")
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it("says when today's searches are used up, without asking Unpaywall", async () => {
+      chrome.data.set("nextpaper_unpaywall_quota", {
+        day: new Date().toLocaleDateString("en-CA"),
+        n: 100
+      })
+      await bench.render(card(noPdf()))
+      await bench.click("Find PDF")
+      expect(bench.text()).toContain("Daily limit")
+      expect(bench.button("Find PDF")).toBeUndefined()
       expect(fetchMock).not.toHaveBeenCalled()
     })
 
@@ -401,7 +414,7 @@ describe("RelatedTab", () => {
     expect(bench.text()).not.toContain("Start here")
   })
 
-  it("explains the timeline with an info icon", async () => {
+  it("explains the timeline on its own button", async () => {
     const dated = ["a", "b", "c", "d", "e"].map((id, i) =>
       paper({
         paperId: id,
@@ -417,11 +430,129 @@ describe("RelatedTab", () => {
         })
       )
     )
-    const hints = [...bench.container.querySelectorAll('[role="img"]')].map(
-      (el) => el.getAttribute("aria-label") ?? ""
+    expect(bench.button("Timeline")?.getAttribute("title")).toMatch(
+      /^A chart with one row/
     )
-    expect(hints.some((h) => h.startsWith("A chart with one row"))).toBe(true)
-    expect(bench.button("Timeline")).toBeTruthy()
+  })
+
+  describe("the toolbar", () => {
+    const open = () => bench.click("Cite as: APA 7")
+    const onStyleChange = vi.fn()
+    beforeEach(() => onStyleChange.mockClear())
+
+    it("keeps count, timeline, order and citations in one compact row", async () => {
+      // the timeline needs at least a few dated papers
+      const dated = ["a", "b", "c", "d", "e"].map((id, i) =>
+        paper({ paperId: id, year: 2015 + i, title: `Paper ${id}` })
+      )
+      await bench.render(
+        createElement(
+          RelatedTab,
+          relatedProps({
+            onStyleChange,
+            result: result({ groups: [{ label: "@related", papers: dated }] })
+          })
+        )
+      )
+      const sort = bench.container.querySelector(
+        "select[aria-label='Sort']"
+      ) as HTMLSelectElement
+      expect(sort.value).toBe("relevance")
+      expect(sort.getAttribute("title")).toMatch(/^Order of the results/)
+      // one row: they share a parent
+      const row = bench.button("Timeline")!.closest("div")!
+      expect(row.contains(sort)).toBe(true)
+      expect(row.contains(bench.button("Cite as: APA 7")!)).toBe(true)
+      expect(row.textContent).toContain("5 papers")
+    })
+
+    it("hides copying every citation until the citation menu is opened", async () => {
+      await bench.render(
+        createElement(RelatedTab, relatedProps({ onStyleChange }))
+      )
+      expect(bench.text()).not.toContain("Copy 2 citations")
+      expect(bench.button("Cite as: APA 7")?.textContent).toContain("APA 7")
+      expect(
+        bench.button("Cite as: APA 7")?.getAttribute("aria-expanded")
+      ).toBe("false")
+
+      await open()
+      expect(bench.text()).toContain("Copy 2 citations")
+      expect(
+        bench.button("Cite as: APA 7")?.getAttribute("aria-expanded")
+      ).toBe("true")
+    })
+
+    it("changes the style from the menu", async () => {
+      await bench.render(
+        createElement(RelatedTab, relatedProps({ onStyleChange }))
+      )
+      await open()
+      const style = bench.container.querySelector(
+        "select[aria-label='Cite as']"
+      ) as HTMLSelectElement
+      await bench.select(style, "mla")
+      expect(onStyleChange).toHaveBeenCalledWith("mla")
+    })
+
+    it("closes with Escape and when the user clicks elsewhere", async () => {
+      await bench.render(
+        createElement(RelatedTab, relatedProps({ onStyleChange }))
+      )
+      await open()
+      await act(async () => {
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
+      })
+      expect(bench.text()).not.toContain("Copy 2 citations")
+
+      await open()
+      await act(async () => {
+        document.body.dispatchEvent(
+          new MouseEvent("mousedown", { bubbles: true })
+        )
+      })
+      expect(bench.text()).not.toContain("Copy 2 citations")
+
+      // a click inside the menu does not close it
+      await open()
+      await act(async () => {
+        bench.container
+          .querySelector("select[aria-label='Cite as']")!
+          .dispatchEvent(new MouseEvent("mousedown", { bubbles: true }))
+      })
+      expect(bench.text()).toContain("Copy 2 citations")
+    })
+
+    it("copies the citations of every paper shown", async () => {
+      const written: string[] = []
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(new Response("", { status: 404 }))
+      )
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: async (text: string) => void written.push(text)
+        }
+      })
+      await bench.render(
+        createElement(RelatedTab, relatedProps({ onStyleChange }))
+      )
+      await open()
+      await bench.click("Copy 2 citations")
+      expect(written).toHaveLength(1)
+      expect(written[0]).toContain("Attention in neural models")
+      vi.unstubAllGlobals()
+    })
+
+    it("offers no citation menu when nothing is shown", async () => {
+      await bench.render(
+        createElement(
+          RelatedTab,
+          relatedProps({ view: { ...DEFAULT_VIEW, filter: "review" } })
+        )
+      )
+      expect(bench.button("Cite as: APA 7")).toBeUndefined()
+    })
   })
 
   it("lists every paper, with the count", async () => {

@@ -84,6 +84,8 @@ export const es: Record<Key, string> = {
   "sort.year": "Más recientes",
   citeAs: "Citar como",
   "citeAs.hint": "El estilo de cita que se usa al copiar o exportar citas",
+  "citeMenu.hint":
+    "Estilo de cita, y copiar las citas de todos los papers mostrados",
   count: "{shown} de {total} papers",
   "timeline.label": "Cronología",
   "timeline.hint":
@@ -156,6 +158,9 @@ export const es: Record<Key, string> = {
     "Una copia legal gratuita en una página de repositorio o editorial (Unpaywall no encontró un PDF directo)",
   "card.pdf.searching": "Buscando...",
   "card.pdf.retry": "Reintentar PDF",
+  "card.pdf.limit": "Límite diario",
+  "card.pdf.limit.hint":
+    "Has usado las {n} búsquedas de PDF de hoy. Se renuevan mañana; las copias ya encontradas siguen disponibles.",
   "card.pdf.none": "Sin PDF libre",
   "card.pdf.none.hint":
     "Unpaywall no conoce ninguna copia legal gratuita de este paper",

@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react"
 
-import { findOpenCopy, peekOpenCopy, type OpenCopy } from "~lib/unpaywall"
+import {
+  findOpenCopy,
+  LIMIT_REACHED,
+  peekOpenCopy,
+  type OpenCopy,
+  type OpenLookup
+} from "~lib/unpaywall"
 
-export type PdfPhase = "idle" | "busy" | "found" | "none" | "error"
+export type PdfPhase = "idle" | "busy" | "found" | "none" | "error" | "limit"
 
 // The "Find PDF" button of a card: asks Unpaywall for a free copy when the user
 // clicks, and remembers the answer. `doi` is undefined when there is nothing to
@@ -12,11 +18,13 @@ export function useOpenPdf(doi: string | undefined) {
     phase: "idle"
   })
 
-  const apply = (answer: OpenCopy | null | undefined) =>
+  const apply = (answer: OpenLookup) =>
     setState(
-      answer
-        ? { phase: "found", copy: answer }
-        : { phase: answer === null ? "none" : "error" }
+      answer === LIMIT_REACHED
+        ? { phase: "limit" }
+        : answer
+          ? { phase: "found", copy: answer }
+          : { phase: answer === null ? "none" : "error" }
     )
 
   // An earlier answer shows at once, with no request.

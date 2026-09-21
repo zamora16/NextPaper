@@ -1,3 +1,4 @@
+import { createQueue } from "~lib/queue"
 import { httpUrl } from "~lib/url"
 
 // Unpaywall (free, keyless) knows legal open-access copies by DOI: repository
@@ -10,6 +11,13 @@ export const UNPAYWALL_TTL_MS = 30 * 24 * 60 * 60 * 1000
 // A miss is remembered for less: embargoes end and repositories catch up.
 export const UNPAYWALL_MISS_TTL_MS = 7 * 24 * 60 * 60 * 1000
 export const UNPAYWALL_MAX_ENTRIES = 500
+
+// Each user may ask Unpaywall this many times a day (cached answers do not
+// count). Unpaywall asks its callers to stay well under 100,000 requests a day
+// in total; this keeps any one browser from adding much, however the extension
+// grows. The count lives in one small key (CONTRIBUTING rule 8).
+export const UNPAYWALL_DAILY_LIMIT = 100
+export const UNPAYWALL_QUOTA_KEY = "nextpaper_unpaywall_quota"
 
 // Unpaywall requires a contact address on every request. It is the
 // maintainer's, never the user's (see docs/PRIVACY.md).
@@ -30,6 +38,10 @@ interface StoredEntry {
   at: number
 }
 
+// What a lookup answers besides a copy, none, or "could not ask".
+export const LIMIT_REACHED = "limit" as const
+export type OpenLookup = OpenCopy | null | undefined | typeof LIMIT_REACHED
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export function openCopyOf(data: any): OpenCopy | null {
@@ -48,6 +60,29 @@ export function openCopyOf(data: any): OpenCopy | null {
 }
 
 const keyOf = (doi: string) => UNPAYWALL_PREFIX + doi.toLowerCase()
+
+// The counter is read and written by clicks that can overlap.
+const inOrder = createQueue()
+const today = () => new Date().toLocaleDateString("en-CA") // local YYYY-MM-DD
+
+// Uses one of today's lookups; false when they are all used.
+const takeLookup = () =>
+  inOrder(async () => {
+    const stored = (await chrome.storage.local.get([UNPAYWALL_QUOTA_KEY]))[
+      UNPAYWALL_QUOTA_KEY
+    ] as { day?: string; n?: number } | undefined
+    const used =
+      stored?.day === today() && Number.isFinite(stored.n) ? stored.n! : 0
+    if (used >= UNPAYWALL_DAILY_LIMIT) return false
+    try {
+      await chrome.storage.local.set({
+        [UNPAYWALL_QUOTA_KEY]: { day: today(), n: used + 1 }
+      })
+    } catch {
+      // Not being able to count only makes the limit looser.
+    }
+    return true
+  })
 
 async function fetchCopy(doi: string): Promise<OpenCopy | null | undefined> {
   const url = `https://api.unpaywall.org/v2/${encodeURIComponent(doi)}?email=${encodeURIComponent(CONTACT)}`
@@ -83,12 +118,11 @@ export async function peekOpenCopy(
 }
 
 // A free copy, null when there is none, undefined when Unpaywall could not be
-// reached.
-export async function findOpenCopy(
-  doi: string
-): Promise<OpenCopy | null | undefined> {
+// reached, LIMIT_REACHED when today's lookups are used up.
+export async function findOpenCopy(doi: string): Promise<OpenLookup> {
   const known = await peekOpenCopy(doi)
   if (known !== undefined) return known
+  if (!(await takeLookup())) return LIMIT_REACHED
 
   const copy = await fetchCopy(doi)
   if (copy === undefined) return undefined
