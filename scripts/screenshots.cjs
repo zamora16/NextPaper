@@ -47,7 +47,7 @@ const SCALE = Number(process.env.SCALE || 1)
   await page.evaluate(async () => {
     const lib = Object.values((await chrome.storage.local.get("nextpaper_library")).nextpaper_library ?? {})
     const items = lib.slice(0, 2).map((p) => ({
-      paper: { ...p, relation: null },
+      paper: { ...p, similarity: null, relation: null },
       because: lib[2]?.title ?? p.title,
       foundAt: Date.now(),
       viewed: false

@@ -79,8 +79,6 @@ export const es: Record<Key, string> = {
   "sort.label": "Ordenar",
   "sort.hint":
     "Orden de los resultados. Relevancia: primero lo más cercano en contenido al paper abierto (el orden propio de Semantic Scholar en una búsqueda por tema).",
-  "context.approximate":
-    "Este paper no tiene abstract indexado, así que el orden es una aproximación.",
   "sort.relevance": "Relevancia",
   "sort.citations": "Más citados",
   "sort.year": "Más recientes",
@@ -128,6 +126,11 @@ export const es: Record<Key, string> = {
   "card.citations_other": "{n} citas",
   "card.citations.hint": "Cuántos papers citan a este",
   "card.influential": "{n} citas influyentes",
+  "card.similar": "{n}% similar",
+  "card.similar.hint":
+    "Cuánto se parece su contenido al paper que lees (similitud coseno entre embeddings SPECTER2)",
+  "card.similar.approx.hint":
+    "Aproximada: el paper que lees no tiene embedding, se compara con sus vecinos más probables",
   "card.relation.reference": "Referencia",
   "card.relation.reference.hint": "El paper que lees cita a este",
   "card.relation.citation": "Lo cita",

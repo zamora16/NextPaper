@@ -81,8 +81,6 @@ export const en = {
   "sort.label": "Sort",
   "sort.hint":
     "Order of the results. Relevance: closest in content to the open paper first (Semantic Scholar's own order for a topic search).",
-  "context.approximate":
-    "This paper has no abstract indexed, so the order is an approximation.",
   "sort.relevance": "Relevance",
   "sort.citations": "Most cited",
   "sort.year": "Most recent",
@@ -130,6 +128,11 @@ export const en = {
   "card.citations_other": "{n} citations",
   "card.citations.hint": "How many papers cite this one",
   "card.influential": "{n} influential citations",
+  "card.similar": "{n}% similar",
+  "card.similar.hint":
+    "How close its content is to the paper you are reading (cosine similarity between SPECTER2 embeddings)",
+  "card.similar.approx.hint":
+    "Approximate: the paper you are reading has no embedding, so it is compared with its most likely neighbors",
   "card.relation.reference": "Reference",
   "card.relation.reference.hint": "The paper you are reading cites this one",
   "card.relation.citation": "Cites it",

@@ -12,7 +12,7 @@ you need to triage, save and cite it — all local, free, no account, no AI call
 |---|---|
 | "I found one good paper — what else should I read?" | Analyzes the open paper and returns the 18 most related papers, ranked by SPECTER2 embedding similarity, from its references, its citing papers, title search and Semantic Scholar recommendations. |
 | "Where do I even start?" | **Empieza por aquí**: a classic (most cited older prior work), the most relevant review, and the most recent work. |
-| "Is this worth my time?" | One-sentence tl;dr (from Semantic Scholar), abstract on demand, citation count (tooltip: influential citations), tags *Referencia* / *Lo cita* / *Revisión*, and a free-PDF button. |
+| "Is this worth my time?" | One-sentence tl;dr (from Semantic Scholar), abstract on demand, citation count (tooltip: influential citations), `% similar` (closeness of its content to the open paper), tags *Referencia* / *Lo cita* / *Revisión*, and a free-PDF button. |
 | "What kind of study is this?" | Each card shows the **study design** (e.g. *Ensayo aleatorizado*, *Transversal / encuesta*, *Metaanálisis*) and the **sample size** (`n = 245`, or `24 estudios` for reviews), read from the title and abstract with plain rules. Shown only when detected — never guessed — so it is absent on roughly half of the papers (design) and most (sample size). |
 | "There are too many results" | Subtopic groups (hierarchical clustering) shown only when they can be named, the rest under *Otros relacionados*; filters (Referencias, Lo citan, Revisiones, PDF libre); sort by relevance / most cited / most recent; **Ver cronología**: one lane per subtopic with the papers placed by year (size = citations, dashed line = the paper you are reading; click a dot to jump to its card) — shows which lines of work are classic vs recent and where the heavily cited papers sit. |
 | "I want to follow the trail" | **Explorar** on any card runs the same analysis on that paper (snowballing) with a breadcrumb and instant *Volver*. |
@@ -45,8 +45,8 @@ you need to triage, save and cite it — all local, free, no account, no AI call
 
 - **Key:** without a personal key everything works but is slower (a first analysis ~20 s instead of ~5 s in our tests) and fails more often; the setup screen says so.
 - **Speed:** a first analysis of a paper takes ~4–9 s (Semantic Scholar answers ~30% of requests with a temporary 429 that is retried); repeats are instant for 7 days.
-- **Coverage:** papers without an indexed abstract have no embedding → the order is an
-  approximation (the popup says so). Some old papers have no reference list.
+- **Coverage:** papers without an indexed abstract have no embedding → the `% similar` is
+  approximate (`~`), or missing in topic search. Some old papers have no reference list.
 - **Citations sample:** only the 60 most cited + 40 most recent citing papers are
   considered per paper.
 - **Citation formatting:** styles are hand-implemented (common rules, unit-tested) and not

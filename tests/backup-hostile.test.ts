@@ -112,7 +112,7 @@ describe("normalizeSaved never lets a wrong type reach the interface", () => {
     expect(paper.evil).toBeUndefined()
     expect(paper.sharedTerms).toBeUndefined()
     expect(paper.embedding).toBeUndefined()
-    expect(paper.similarity).toBeUndefined()
+    expect(paper.similarity).toBeNull()
     expect(paper.relation).toBeNull()
     expect(({} as any).polluted).toBeUndefined()
   })

@@ -113,7 +113,13 @@ describe("analyzing a paper", () => {
     )!
     expect(aGroup.papers.every((p) => p.paperId.startsWith("a"))).toBe(true)
     expect(result.groups[0]).toBe(aGroup) // best-matching group first
-    expect(result.approximate).toBeUndefined()
+    expect(papers.find((p) => p.paperId === "a1")!.similarity!).toBeGreaterThan(
+      0.99
+    )
+    expect(papers.find((p) => p.paperId === "b1")!.similarity!).toBeLessThan(
+      0.1
+    )
+    expect(papers.every((p) => !p.approximate)).toBe(true)
     expect(result.seedYear).toBe(YEAR - 1)
     expect(result.seedTitle).toBe("Body image in virtual reality")
 
@@ -138,7 +144,7 @@ describe("analyzing a paper", () => {
     realisticSet()
     const result = await analyze("DOI:10.1/x")
     expect(JSON.stringify(result)).not.toContain("embedding")
-    const cached = chrome.data.get("nextpaper_cache_v13_DOI:10.1/x") as {
+    const cached = chrome.data.get("nextpaper_cache_v14_DOI:10.1/x") as {
       z: string
     }
     expect(cached.z.length).toBeLessThan(3000)
@@ -274,11 +280,12 @@ describe("analyzing a paper", () => {
         })
       )
       seedRequest.mockResolvedValue(seed({ embedding: null }) as any)
-      const result = await analyze("R")
-      expect(result.approximate).toBe(true)
-      const order = result.groups.flatMap((g) => g.papers.map((p) => p.paperId))
+      const papers = (await analyze("R")).groups.flatMap((g) => g.papers)
+      expect(papers.every((p) => p.approximate)).toBe(true)
+      const sim = (id: string) =>
+        papers.find((p) => p.paperId === id)!.similarity!
       // the multi-source papers define the reference, so topic A ranks above B
-      expect(order.indexOf("a1")).toBeLessThan(order.indexOf("b1"))
+      expect(sim("a1")).toBeGreaterThan(sim("b1"))
     })
   })
 
@@ -301,6 +308,9 @@ describe("analyzing a paper", () => {
         "x2",
         "x1"
       ])
+      expect(result.groups[0].papers.every((p) => p.similarity === null)).toBe(
+        true
+      )
       expect(result.picks).toEqual([])
     })
 
@@ -380,6 +390,8 @@ describe("analyzing a topic", () => {
     expect(result.groups.length).toBeGreaterThanOrEqual(2)
     const papers = result.groups.flatMap((g) => g.papers)
     expect(papers).toHaveLength(8)
+    // every result contains the query words: no "% similar"
+    expect(papers.every((p) => p.similarity === null)).toBe(true)
     expect(papers.every((p) => p.relation === null)).toBe(true)
     expect(result.seedYear).toBeUndefined()
   })

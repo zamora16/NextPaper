@@ -18,10 +18,11 @@ import { cosineSimilarity, meanVector } from "~lib/vector-math"
 
 export type Relation = "reference" | "citation" | null
 
-// The similarity itself is not kept: on the 18 papers shown it varies by about
-// 0.03, so a "% similar" told the cards apart no better than their order does
-// (docs/EVALUATION.md).
 export interface ScoredPaper extends RecommendedPaper {
+  similarity: number | null
+  // True when the seed paper has no embedding and similarity was measured
+  // against the centroid of its likely-relevant neighbors instead.
+  approximate: boolean
   relation: Relation
 }
 
@@ -55,9 +56,6 @@ export interface AnalysisResult {
   seedTitle?: string
   // "A, B, C +2": the first three authors and how many more there are.
   seedByline?: string
-  // The open paper has no embedding, so the order comes from an approximation
-  // (the centroid of its likely-relevant neighbours).
-  approximate?: boolean
 }
 
 type Embedded = PaperWithEmbedding & { embedding: number[] }
@@ -177,10 +175,21 @@ export function dedupe(
 }
 
 // Vectors are dropped so they never reach storage.
-export function makeStrip(sources: Map<string, Set<CandidateSource>>) {
-  return (paper: PaperWithEmbedding): ScoredPaper => {
+export function makeStrip(
+  sources: Map<string, Set<CandidateSource>>,
+  approximate: boolean
+) {
+  return (
+    paper: PaperWithEmbedding,
+    similarity: number | null
+  ): ScoredPaper => {
     const { embedding: _embedding, ...rest } = paper
-    return { ...rest, relation: relationOf(sources.get(paper.paperId)) }
+    return {
+      ...rest,
+      similarity,
+      approximate,
+      relation: relationOf(sources.get(paper.paperId))
+    }
   }
 }
 
@@ -197,7 +206,7 @@ function flatFallback(
         papers: [...papers]
           .sort((a, b) => b.citationCount - a.citationCount)
           .slice(0, topN)
-          .map(strip)
+          .map((p) => strip(p, null))
       }
     ]
   }
@@ -219,10 +228,12 @@ export function assemble(
   options: {
     topN: number
     maxClusters: number
+    showScore: boolean
   }
 ): AnalysisResult {
   const shortlist = ranked.slice(0, SHORTLIST)
-  const toScored = (e: Entry) => strip(e.paper)
+  const toScored = (e: Entry) =>
+    strip(e.paper, options.showScore ? e.score : null)
   const top = [...shortlist]
     .sort((a, b) => blended(b) - blended(a))
     .slice(0, options.topN)
@@ -304,7 +315,7 @@ async function analyzePaper(
     (p) => normalizeTitle(p.title) !== seedTitle
   )
 
-  const strip = makeStrip(sources)
+  const strip = makeStrip(sources, seed.embedding === null)
   const embedded = papers
     .filter((p): p is Embedded => !!p.embedding)
     .map((paper) => ({
@@ -325,9 +336,12 @@ async function analyzePaper(
       }))
       .sort((a, b) => b.score - a.score)
 
-    result = assemble(ranked, strip, { topN: TOP_N, maxClusters: 4 })
+    result = assemble(ranked, strip, {
+      topN: TOP_N,
+      maxClusters: 4,
+      showScore: true
+    })
   }
-  if (seed.embedding === null) result.approximate = true
   result.seedYear = seed.year
   result.seedTitle = seed.title
   if (seed.authors?.length) result.seedByline = byline(seed.authors)
@@ -365,7 +379,7 @@ async function analyzeQuery(
     ids.map((id) => [id, new Set<CandidateSource>(["search"])])
   )
   const papers = dedupe(fetched, sources)
-  const strip = makeStrip(sources)
+  const strip = makeStrip(sources, false)
 
   const rank = new Map(ids.map((id, i) => [id, i]))
   const embedded: Entry[] = papers
@@ -382,7 +396,11 @@ async function analyzeQuery(
   const result =
     embedded.length < 2
       ? flatFallback(papers, strip, QUERY_TOP_N)
-      : assemble(embedded, strip, { topN: QUERY_TOP_N, maxClusters: 5 })
+      : assemble(embedded, strip, {
+          topN: QUERY_TOP_N,
+          maxClusters: 5,
+          showScore: false
+        })
 
   await setCachedResult(ref, result)
   return result

@@ -261,10 +261,6 @@ export function RelatedTab({
 
       {context}
 
-      {result?.approximate && !current?.ref.startsWith("QUERY:") && (
-        <p className="text-xs text-muted">{t("context.approximate")}</p>
-      )}
-
       {!current && pageRef === undefined && (
         <p className="text-sm text-muted">{t("detecting")}</p>
       )}

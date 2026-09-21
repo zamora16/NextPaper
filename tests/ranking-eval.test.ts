@@ -61,9 +61,10 @@ describe("the evaluation models the real product", () => {
         score: cosineSimilarity(seed, paper.embedding)
       }))
       .sort((a, b) => b.score - a.score)
-    const real = assemble(ranked, makeStrip(sources), {
+    const real = assemble(ranked, makeStrip(sources, false), {
       topN: 18,
-      maxClusters: 4
+      maxClusters: 4,
+      showScore: true
     })
     const realIds = real.groups.flatMap((g) => g.papers.map((p) => p.paperId))
 

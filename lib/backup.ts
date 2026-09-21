@@ -109,6 +109,8 @@ export function normalizeSaved(raw: any): SavedPaper | null {
     publicationTypes: strings(raw.publicationTypes, 20, MAX_SHORT),
     influentialCitationCount: count(raw.influentialCitationCount) ?? null,
     // Context of the analysis it was saved from: meaningless here.
+    similarity: null,
+    approximate: false,
     relation: null,
     savedAt: count(raw.savedAt) ?? Date.now(),
     status: STATUS_VALUES.includes(raw.status) ? raw.status : "unread",

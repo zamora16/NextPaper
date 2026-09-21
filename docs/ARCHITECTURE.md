@@ -55,7 +55,7 @@ State as of 2026-09-20. Verified against the code and by real-browser e2e runs
    any candidate whose title equals the seed's (another version of the same paper).
 6. Ranking: cosine similarity to the seed embedding. If the seed has no embedding (usually
    no abstract), `fallbackReference` = centroid of multi-source or citation-neighborhood
-   candidates, and `AnalysisResult.approximate` is set (the UI says the order is an approximation). No similarity number is stored or shown: on the 18 papers shown it varies by ~0.03 (docs/EVALUATION.md).
+   candidates, and results are marked `approximate` (UI shows `~NN% similar`). The cosine is shown as "NN% similar": it does not tell the top 18 apart (they span ~0.03) but it does say how close they are compared with the rest of the candidates and across analyses (docs/EVALUATION.md).
 7. `assemble()`: shortlist = top 40 by cosine; `blended = cosine + 0.02·log10(1+citations)`
    breaks near-ties toward established work; keep top 18 (`TOP_N`).
 8. Clustering: `clusterAuto` (`lib/clustering.ts`) is average-linkage agglomerative clustering on cosine distance; for every state with 2..min(4, ⌊n/2⌋) groups it merges groups smaller than 2 and keeps the one with the best **silhouette score** (deterministic; fewer than 4 papers = one group). It replaced k-means because regrouping after dropping 10% of the papers kept the same groups far better (ARI 0.75 vs 0.44, docs/EVALUATION.md). Labels come from
@@ -63,7 +63,7 @@ State as of 2026-09-20. Verified against the code and by real-browser e2e runs
 9. `choosePicks` ("Empieza por aquí"): *foundational* = most cited older-than-2-years paper
    (prefers ones the seed references), *review* = best blended paper where `isReview`,
    *recent* = best blended from the last 2 years; all distinct.
-10. `strip()` removes embeddings and adds `relation` (`reference` | `citation` | null).
+10. `strip()` removes embeddings and adds `similarity`, `approximate`, `relation` (`reference` | `citation` | null).
 11. **Timeline data**: `AnalysisResult.seedYear` (the open paper's year) is stored; the chart itself is
     derived in the popup by `buildTimeline(groups, seedYear)` (`lib/timeline.ts`) from data every
     `ScoredPaper` already has (year, citations, group) — nothing extra is stored per paper.
@@ -94,7 +94,7 @@ the translated message and a *Retry* button; nothing is cached.
 | `components/useAnalysis.ts` | `useAnalysis(ref)` → `{job, result, retry}`: asks the worker to analyze `ref`, follows its `JobState`, re-asks every 25 s while "loading" (watchdog, rule 10), reads the finished result from the cache and re-analyzes once when a "done" job has no cached result (self-healing). After a retry the next start does not re-read the stale stored state (it used to flash the old error for a moment). Unit-tested in jsdom (`tests/use-analysis.test.ts`). |
 | `components/useStorageValue.ts`, `components/ui.ts` | Hook that mirrors a `chrome.storage.local` key (read + re-read on change); shared class strings (`buttonClass`, `pillClass`, `inputClass`...) and `groupColor`. |
 | `background.ts` | Message handler (`analyze`, `check-updates`), `inFlight` dedupe, `syncKeepAlive`, alarm `nextpaper-updates` (first after 5 min, then 24 h), badge refresh on start. |
-| `components/PaperCard.tsx` | Card: serif title link, bookmark, byline, citations + relation/review/design/sample chips + reading status, tl;dr, abstract toggle, actions (Explore, Free PDF, In text, Cite). `compact` is the short form used by *Start here*; `badge`/`footer` let a tab add a label or the library controls (`RenderCard`/`CardExtra`). |
+| `components/PaperCard.tsx` | Card: serif title link, bookmark, byline, a *similarity bar* + citations + relation/review/design/sample chips + reading status, tl;dr, abstract toggle, actions (Explore, Free PDF, In text, Cite). `compact` is the short form used by *Start here*; `badge`/`footer` let a tab add a label or the library controls (`RenderCard`/`CardExtra`). |
 | `components/Timeline.tsx` | SVG chart of `buildTimeline`: one lane per subtopic, dots by year (radius = log citations), dashed line = the open paper's year, filtered-out papers dimmed, click → `selectPaper` (highlights + scrolls to the card via `data-paper-id`). |
 | `components/LibraryItem.tsx` | The library controls at the bottom of a saved card: reading status (segmented), collection chips + add box, note textarea (saved on blur). |
 | `components/LibraryTools.tsx` | `useLibraryTools`: backup and import (one picker: NextPaper backup or BibTeX/RIS/DOI list) as `{controls, status}`; icon-only next to the search box, with labels in the empty-library state. |
@@ -125,7 +125,7 @@ the translated message and a *Retry* button; nothing is cached.
 | `lib/view.ts` | Filters (`reference`, `citation`, `review`, `open`), sorts (`relevance` keeps groups; `citations`/`year` flatten) and `searchLibrary` (text search over the library). |
 | `lib/paper-utils.ts` | `isReview`: title patterns or a review design declared in the text (`studyOf`); Semantic Scholar's `Review` type is **not trusted** (it tagged 109 of 430 papers whose text declares a trial, cohort or survey; `MetaAnalysis` is consistent and kept through `study.ts`). `plainPaper`: a paper with no analysis context and no embedding. |
 | `lib/extract-ref.ts` | Self-contained page extractor (see Rules in `CONTRIBUTING.md`). |
-| `lib/cache.ts` | Compressed result cache (`v13`, 7-day TTL), `pruneStorage` (expiry, 40-entry cap, legacy keys, orphan jobs; runs after each analysis and at worker start) and a clear-and-retry on write failure. |
+| `lib/cache.ts` | Compressed result cache (`v14`, 7-day TTL), `pruneStorage` (expiry, 40-entry cap, legacy keys, orphan jobs; runs after each analysis and at worker start) and a clear-and-retry on write failure. |
 | `lib/compress.ts` | `compressJson` / `decompressJson`: native gzip (`CompressionStream`) + base64. |
 | `lib/job.ts` | `JobState` (`loading` \| `done` \| `error`; **no result inside**), `JOB_PREFIX`, `jobKey`. |
 
@@ -134,7 +134,7 @@ the translated message and a *Retry* button; nothing is cached.
 | Key | Value | Lifetime / bound |
 |---|---|---|
 | `nextpaper_job_<ref>` | `JobState`: `{phase:"loading",step?}` | `{phase:"done"}` | `{phase:"error",error: ErrorCode}` (a few bytes, language-neutral) | Pruned when its cache entry disappears |
-| `nextpaper_cache_v13_<ref>` | `{z, cachedAt}` where `z` = base64(gzip(JSON of `AnalysisResult`)) | 7-day TTL **and** newest 40 entries only; removed by `pruneStorage` |
+| `nextpaper_cache_v14_<ref>` | `{z, cachedAt}` where `z` = base64(gzip(JSON of `AnalysisResult`)) | 7-day TTL **and** newest 40 entries only; removed by `pruneStorage` |
 | `nextpaper_library` | `Record<paperId, SavedPaper>` (`ScoredPaper` + `savedAt`, `status`, `note`, `collections`) | permanent, never pruned |
 | `nextpaper_crossref_v1_<doi>` | `{m: CrossrefMeta \| null, at}` (`null` = Crossref has no record, e.g. arXiv DOIs) | 30 d hit / 7 d miss, newest 500 kept (`pruneStorage`) |
 | `nextpaper_updates` | `{running, checkedAt, lastError, seen[≤600], items[≤40]}` | permanent, bounded |
@@ -199,7 +199,7 @@ deleted.
 | One batched embeddings request | Per-paper GETs cost 13+ requests and tripped the rate limit constantly. |
 | From-scratch hierarchical clustering + silhouette (replaced k-means) | n ≤ 24 vectors; explainable, dependency-free, the ML the user wants to show in a portfolio. Chosen by measurement: k-means regrouped too easily (ARI 0.44 under 10% drops), hierarchical 0.75 (docs/EVALUATION.md). |
 | Show only nameable groups; the rest "Other related" or one plain list | Among the papers closest to one paper the silhouette is low (median 0.078): often there is no real subtopic structure, and a partition nobody can name would only look like knowledge. |
-| No "% similar" on cards | The cosine of the 18 shown spans ~0.03: the number told cards apart no better than their order, and read as a probability it is not. |
+| Keep "% similar" on cards (briefly removed, restored the same day) | Among the 18 shown the cosine spans only ~0.03, so it does not rank them, but it is the closeness to the open paper against everything that did not make the list, and it differs between analyses (a result at 97% and one at 80% say different things). Users read it as a trust signal. It is a cosine, not a probability of relevance; a calibrated indicator would need human labels (docs/EVALUATION.md). |
 | Timeline by subtopic instead of a semantic scatter map | The PCA scatter (built first) was **removed after review as low-value**: dots are unlabeled, the axes mean nothing readable, and the only thing it showed (which papers share a topic) the groups already say. A per-subtopic timeline answers real questions from data we already have: which lines of work are classic vs recent, where the heavily cited papers sit, how the open paper sits in time relative to each line. A semantic map could earn its place only in a large, labelled, zoomable view (workspace page, ROADMAP F3.4) — `lib/projection.ts` is kept for that. |
 | Embeddings not stored | 768 floats × N would blow the storage quota. |
 | Result stored once, gzip-compressed, in a bounded cache | It used to be stored twice (job + cache) uncompressed: ≈112 KB per analysis ⇒ the 10 MB quota would fill after ~93 analyses and then even library saves would fail. Now ≈14.6 KB, capped at 40 entries, plus `unlimitedStorage` as a safety net. |

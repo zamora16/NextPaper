@@ -79,7 +79,7 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
    outside the function body.
 6. **Never store embeddings** (768 floats each). `strip()` in `lib/pipeline.ts` drops
    them; cached results and library items must stay small.
-7. **Bump the cache prefix** (`KEY_PREFIX` in `lib/cache.ts`, currently `v13`) whenever the
+7. **Bump the cache prefix** (`KEY_PREFIX` in `lib/cache.ts`, currently `v14`) whenever the
    `AnalysisResult` shape or the retrieval/ranking strategy changes, or users get stale
    results from the old strategy. Also add the old prefix to `LEGACY_KEYS` so it gets
    cleaned up. Library items (`nextpaper_library`) persist forever: schema changes there

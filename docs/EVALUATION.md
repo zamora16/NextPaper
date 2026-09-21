@@ -146,7 +146,7 @@ intervals over seeds.
 With the last variant 85% of the groups shown in paper mode had a name (65% in topic mode), there were about 2.2
 groups per result, and the largest held about 72% of the papers (89% in topic mode).
 
-**Decision.** Three changes, all shipped:
+**Decision.** Two changes shipped, and one considered and not made:
 
 1. **Hierarchical clustering replaces k-means** (`lib/clustering.ts`; the old k-means is kept in
    `scripts/audit/kmeans-baseline.ts` as the baseline of this audit). It is more stable and it has no random
@@ -154,10 +154,11 @@ groups per result, and the largest held about 72% of the papers (89% in topic mo
 2. **Only groups that can be named are shown.** `labelClusters` decides; the papers of the other groups go
    together into "Other related", last. When no group can be named the result is one plain list with no headings:
    a partition nobody can describe would only look like knowledge (rule 17). The old "Group N" is gone.
-3. **The "% similar" number and bar are gone.** On the 18 shown, the cosine varies by about 0.03 between the
-   first and the last card: the number told cards apart no better than their order does, and "91% similar" read
-   as a probability it is not. The order itself (closest in content first) is unchanged; papers without an
-   indexed abstract still get an "approximate order" note.
+3. **The "% similar" stays.** On the 18 shown the cosine varies by only about 0.03 between the first and the
+   last card, so it does not tell those cards apart (the order does). It was taken out and put back the same day:
+   it is the closeness to the open paper against everything that did not make the list, and it differs between
+   analyses, which readers use as a signal of trust. What it is not is a probability of relevance; turning it
+   into one (levels such as "very close" with a measured share of relevant papers) needs human labels.
 
 **Limits.** Stability is not correctness: a stable grouping can still be a wrong one, and the names are checked
 only by the rules in `labelClusters` and by reading them (rule 17). Dropping papers at random is a mild
