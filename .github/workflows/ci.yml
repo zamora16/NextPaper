@@ -19,3 +19,20 @@ jobs:
       - run: npm run format:check
       - run: npm run test:coverage
       - run: npx plasmo build
+
+  # The real extension in a real browser, talking to a local imitation of the
+  # APIs (no network, no key): scripts/e2e-offline.cjs.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx plasmo build
+      - run: npm i --no-save puppeteer-core
+      - name: Install Chrome for Testing (branded Chrome ignores --load-extension)
+        run: echo "BROWSER_PATH=$(npx --yes @puppeteer/browsers install chrome@stable --path "$RUNNER_TEMP/browsers" --format '{{path}}')" >> "$GITHUB_ENV"
+      - run: node scripts/e2e-offline.cjs

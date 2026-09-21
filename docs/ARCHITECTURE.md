@@ -27,7 +27,7 @@ State as of 2026-09-20. Verified against the code and by real-browser e2e runs
   (used by *Explorar*), or `QUERY:<lowercased text>` (topic search).
 - **Manifest** (declared in the `manifest` block of `package.json`, Plasmo generates the
   file): permissions `activeTab`, `alarms`, `scripting`, `storage`, `unlimitedStorage`; host permissions
-  `https://api.semanticscholar.org/*` and `https://api.crossref.org/*`. No content scripts.
+  `https://api.semanticscholar.org/*`, `https://api.crossref.org/*` and `https://api.unpaywall.org/*`. No content scripts.
 
 ## 2. The analysis pipeline (`lib/pipeline.ts`)
 
@@ -116,6 +116,7 @@ the translated message and a *Retry* button; nothing is cached.
 | `lib/study.ts` | **Pure** study-card heuristics: `extractStudy` → `{design, sample}`; `studyOf` memoizes per paper object (WeakMap); **derived at render time, not stored** (no cache bump, works on old saved papers). **Precision over coverage.** Design: `DESIGNS` is ordered (first match wins: protocol → meta → systematic → rct → trial → psychometric → experimental → review → case-control → cohort → mixed → cross-sectional → qualitative → case); a pattern matches the **title** or an abstract sentence that talks about the study itself (`SELF` cues) and is not about earlier work (`BACKGROUND`); `titlePattern` is title-only; text beats `publicationTypes`; conflicting pairs (cohort vs cross-sectional, qualitative vs survey words) give no design; Unicode hyphens are normalized. Sample: a figure is reported only if it is the single figure, or the one introduced as the whole sample (`TOTAL_CUE`) with no other figure above half of it; group sizes (`n =`, "in each group", joined figures), invited pools, shares ("(80%)"), repeated measurements, spelled-out counts and "aged 18 and 65" ranges make it return nothing; reviews use only the studies *included* and give nothing when two counts conflict. Regressions in `tests/study.test.ts`, all from real abstracts. |
 | `lib/citation.ts` | **Pure** formatter (`formatCitation(paper, style, meta?)`, `inTextCitation`): APA 7, MLA 9, Chicago author-date, Harvard (Cite Them Right), IEEE, Vancouver, AMA, BibTeX, RIS. `toRef` normalizes Semantic Scholar + optional Crossref data (Crossref wins); without Crossref, author names are parsed heuristically (last word = family). `citationKey` = author+year+first title word. Unit-tested (`tests/citation.test.ts`). |
 | `lib/crossref.ts` | Crossref client: `getCrossref(doi)` → structured authors, issue, article number, month, ISO/NLM journal abbreviation. Own 300 ms queue; cache `nextpaper_crossref_v1_<doi>` (30 d hit / 7 d miss, ≤500 entries). Optional `PLASMO_PUBLIC_CROSSREF_MAILTO` for the polite pool (never set by default). |
+| `lib/unpaywall.ts` | Free-PDF lookup by DOI (`findOpenPdf`, `peekOpenPdf`): a real `url_for_pdf` is a PDF, an open page without one is offered as *Texto libre* and never called a PDF; asked on click (`components/useOpenPdf.ts`, the *Buscar PDF* button of `PaperCard`); cache `nextpaper_unpaywall_v1_<doi>` (30 d hit / 7 d miss, ≤500 entries). Unpaywall requires an `email` parameter: it is the maintainer's contact address, disclosed in docs/PRIVACY.md. |
 | `lib/cite.ts` | Async layer: `citeOne`, `inTextOne`, `citeMany` (sequential, progress callback) = Crossref lookup + formatter. |
 | `lib/export.ts` | `downloadFile` (Blob + `<a download>`). |
 | `lib/backup.ts` | **Pure**: backup file format, `parseBackup`/`normalizeSaved` (**whitelist**: every field is rebuilt with its expected type, so a wrong type cannot reach React and blank the popup; http(s)-only URLs; length/count caps; ≤5000 items; analysis context dropped), `mergeItems` (adds new papers, keeps the user's status/note, unions collections). |
@@ -137,6 +138,7 @@ the translated message and a *Retry* button; nothing is cached.
 | `nextpaper_job_<ref>` | `JobState`: `{phase:"loading",step?}` | `{phase:"done"}` | `{phase:"error",error: ErrorCode}` (a few bytes, language-neutral) | Pruned when its cache entry disappears |
 | `nextpaper_cache_v14_<ref>` | `{z, cachedAt}` where `z` = base64(gzip(JSON of `AnalysisResult`)) | 7-day TTL **and** newest 40 entries only; removed by `pruneStorage` |
 | `nextpaper_library` | `Record<paperId, SavedPaper>` (`ScoredPaper` + `savedAt`, `status`, `note`, `collections`) | permanent, never pruned |
+| `nextpaper_unpaywall_v1_<doi>` | `{u: string \| null, p?: boolean, at}` (`null` = no free copy; `p` false = an open page, not a PDF) | 30 d hit / 7 d miss, newest 500 kept (`pruneStorage`, the same table as Crossref) |
 | `nextpaper_crossref_v1_<doi>` | `{m: CrossrefMeta \| null, at}` (`null` = Crossref has no record, e.g. arXiv DOIs) | 30 d hit / 7 d miss, newest 500 kept (`pruneStorage`) |
 | `nextpaper_updates` | `{running, checkedAt, lastError, seen[≤600], items[≤40]}` | permanent, bounded |
 
@@ -224,7 +226,7 @@ deleted.
 
 1. ~~Storage growth with no eviction~~ — fixed 2026-09-19 (see §4).
 2. Unit tests (~535, `lib/` at ~98% line coverage, floors enforced by `npm run test:coverage`) cover every module in `lib/`: storage-bound ones against an in-memory `chrome.storage` (`tests/helpers/chrome.ts`, with a simulated quota), network-bound ones against a mocked `fetch`/module. Only the UI (popup, components, worker) and real request behavior rely on the e2e scripts.
-3. ~~Not under version control~~ — git + CI since 2026-09-20 (no remote yet).
+3. ~~Not under version control~~ — git + CI since 2026-09-20. Since 2026-09-21 CI also runs `scripts/e2e-offline.cjs` (the built extension in a real browser against `scripts/e2e-offline/world.cjs`, a local imitation of the three APIs) and a nightly `scripts/api-contract.cjs` checks the real APIs against the same shape definitions (`scripts/api-contract/shapes.cjs`). The two share those definitions, so the imitation cannot drift from the real APIs unnoticed.
 4. ~~`checkForUpdates` failures swallowed~~ — recorded in `lastError` and shown in the panel (2026-09-20).
    `strict` TypeScript is on (2026-09-20); `npm run typecheck`, `format:check` and coverage run in CI.
 5. ~~`popup.tsx` is large~~ — split into `RelatedTab`, `SavedTab`, `UpdatesTab`, `KeySetup` and `useAnalysis` (2026-09-20).

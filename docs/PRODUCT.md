@@ -12,7 +12,7 @@ you need to triage, save and cite it — all local, free, no account, no AI call
 |---|---|
 | "I found one good paper — what else should I read?" | Analyzes the open paper and returns the 18 most related papers, ranked by SPECTER2 embedding similarity, from its references, its citing papers, title search and Semantic Scholar recommendations. |
 | "Where do I even start?" | **Empieza por aquí**: a classic (most cited older prior work), the most relevant review, and the most recent work. |
-| "Is this worth my time?" | One-sentence tl;dr (from Semantic Scholar), abstract on demand, citation count (tooltip: influential citations), `% similar` (closeness of its content to the open paper), tags *Referencia* / *Lo cita* / *Revisión*, and a free-PDF button. |
+| "Is this worth my time?" | One-sentence tl;dr (from Semantic Scholar), abstract on demand, citation count (tooltip: influential citations), `% similar` (closeness of its content to the open paper), tags *Referencia* / *Lo cita* / *Revisión*, and a free-PDF button (when Semantic Scholar has no PDF, *Buscar PDF* asks Unpaywall for a legal free copy, only on click; a free page without a PDF shows as *Texto libre*). |
 | "What kind of study is this?" | Each card shows the **study design** (e.g. *Ensayo aleatorizado*, *Transversal / encuesta*, *Metaanálisis*) and the **sample size** (`n = 245`, or `24 estudios` for reviews), read from the title and abstract with plain rules. Shown only when detected — never guessed — so it is absent on roughly half of the papers (design) and most (sample size). |
 | "There are too many results" | Subtopic groups (hierarchical clustering) shown only when they can be named, the rest under *Otros relacionados*; filters (Referencias, Lo citan, Revisiones, PDF libre); sort by relevance / most cited / most recent; **Ver cronología**: one lane per subtopic with the papers placed by year (size = citations, dashed line = the paper you are reading; click a dot to jump to its card) — shows which lines of work are classic vs recent and where the heavily cited papers sit. |
 | "I want to follow the trail" | **Explorar** on any card runs the same analysis on that paper (snowballing) with a breadcrumb and instant *Volver*. |
@@ -39,7 +39,7 @@ you need to triage, save and cite it — all local, free, no account, no AI call
   contain paper ids, the paper title (for search) or the topic text the user types. No
   analytics, no accounts, no tracking. The API key is bundled in the extension build.
 - **Permissions:** `activeTab`, `scripting` (read the open page's metadata on click),
-  `storage` and `unlimitedStorage` (local library and cache), `alarms` (daily alert check), and the hosts `api.semanticscholar.org` (papers) and `api.crossref.org` (citation metadata).
+  `storage` and `unlimitedStorage` (local library and cache), `alarms` (daily alert check), and the hosts `api.semanticscholar.org` (papers) `api.crossref.org` (citation metadata) and `api.unpaywall.org` (free PDFs, on click).
 
 ## Known limits (be honest with users about these)
 

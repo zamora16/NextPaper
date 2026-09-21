@@ -14,8 +14,9 @@ Uninstalling the extension deletes all of it. You can also back up your library 
 |---|---|---|
 | Semantic Scholar (`api.semanticscholar.org`) | The identifier (DOI, arXiv, PubMed or Semantic Scholar id) of the paper you are analyzing; its title (for a related-title search); the topic text you type in the search box; identifiers of papers found or saved; the DOIs or titles listed in a file you import; your own API key as a request header | When you open the popup on a paper, search a topic, explore a result, import references, or when the daily alert check runs |
 | Crossref (`api.crossref.org`) | The DOI of a paper | Only when you copy or export a citation |
+| Unpaywall (`api.unpaywall.org`) | The DOI of a paper, and the maintainer's contact address, which Unpaywall requires on every request (never yours) | Only when you click *Find PDF* on a paper Semantic Scholar has no free PDF for |
 
-Nothing else is sent, and nothing is sent to any server run by the maintainers (there is none). Requests go straight from your browser to those two services, which apply their own privacy policies.
+Nothing else is sent, and nothing is sent to any server run by the maintainers (there is none). Requests go straight from your browser to those services, which apply their own privacy policies.
 
 ## What the extension reads
 
@@ -33,7 +34,7 @@ Each person uses their own free Semantic Scholar key. It is stored only in this 
 | `activeTab`, `scripting` | Read the paper identifier from the page you have open, when you open the popup |
 | `storage`, `unlimitedStorage` | Keep your library and cached analyses locally |
 | `alarms` | Run the once-a-day check for new related papers |
-| Access to `api.semanticscholar.org` and `api.crossref.org` | Query those two services from the extension |
+| Access to `api.semanticscholar.org`, `api.crossref.org` and `api.unpaywall.org` | Query those three services from the extension |
 
 ## Contact
 

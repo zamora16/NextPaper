@@ -8,6 +8,9 @@
 // Build first:    npx plasmo build
 // Env overrides:  BROWSER_PATH (default: Edge on Windows)
 //
+// e2e-offline.cjs reuses launch() with a copy of the build that talks to a local
+// test server (extDir), a fixed key (apiKey) and extra browser flags (args).
+//
 // Branded Chrome 137+ ignores --load-extension, which is why Edge is used.
 const fs = require("fs")
 const path = require("path")
@@ -50,8 +53,8 @@ function testApiKey() {
 }
 
 // `lang` sets the browser UI language, which the "automatic" setting follows.
-async function launch({ seedSettings = true, lang = "es" } = {}) {
-  if (!fs.existsSync(path.join(EXT, "manifest.json"))) {
+async function launch({ seedSettings = true, lang = "es", extDir = EXT, apiKey, args = [] } = {}) {
+  if (!fs.existsSync(path.join(extDir, "manifest.json"))) {
     console.error("Build not found. Run: npx plasmo build")
     process.exit(1)
   }
@@ -61,10 +64,11 @@ async function launch({ seedSettings = true, lang = "es" } = {}) {
     headless: "new",
     ignoreDefaultArgs: ["--disable-extensions"],
     args: [
-      `--disable-extensions-except=${EXT}`,
-      `--load-extension=${EXT}`,
+      `--disable-extensions-except=${extDir}`,
+      `--load-extension=${extDir}`,
       `--lang=${lang}`,
-      "--no-sandbox"
+      "--no-sandbox",
+      ...args
     ],
     defaultViewport: { width: 440, height: 1000 }
   })
@@ -75,7 +79,7 @@ async function launch({ seedSettings = true, lang = "es" } = {}) {
   const extId = new URL(worker.url()).host
 
   if (seedSettings) {
-    const key = testApiKey()
+    const key = apiKey !== undefined ? apiKey : testApiKey()
     const page = await browser.newPage()
     await page.goto(`chrome-extension://${extId}/popup.html`)
     await page.evaluate(

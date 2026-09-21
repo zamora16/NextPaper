@@ -14,7 +14,7 @@ The interface is available in **English and Spanish** (it follows your browser l
 
 - **Related papers** for the article you have open (from its references, its citing papers, title search and Semantic Scholar's recommendations), ranked by SPECTER2 embedding similarity and, where the groups can be given an honest name, grouped into subtopics (hierarchical clustering written from scratch, the number of groups chosen by silhouette score).
 - **Where to start**: a classic, the most relevant review and the most recent work.
-- **Triage**: one-sentence summary, abstract, citation counts, study design and sample size read from the abstract, a timeline of the subtopics, and free-PDF links.
+- **Triage**: one-sentence summary, abstract, citation counts, study design and sample size read from the abstract, a timeline of the subtopics, and free-PDF links (Semantic Scholar's, or a legal free copy found on request through Unpaywall).
 - **Snowballing**: *Explorar* runs the same analysis on any result; the search box analyzes a free-text topic.
 - **Library**: save papers with a reading status, notes and collections; search inside it; back up and restore; import from BibTeX, RIS or a list of DOIs.
 - **Citations** in APA 7, MLA 9, Chicago, Harvard, IEEE, Vancouver, AMA, BibTeX and RIS (plus in-text), enriched with Crossref; export `.bib` / `.ris` for Zotero or Mendeley.
@@ -48,7 +48,7 @@ You can also continue without a key and add it later from *Ajustes*.
 
 ## Privacy
 
-Everything is stored locally in your browser (`chrome.storage`). NextPaper sends paper identifiers, the title of the paper you are reading (for a related-title search) and the topics you type to Semantic Scholar, and DOIs to Crossref when you copy or export a citation. There are no accounts, no analytics and no other servers. See [docs/PRIVACY.md](docs/PRIVACY.md).
+Everything is stored locally in your browser (`chrome.storage`). NextPaper sends paper identifiers, the title of the paper you are reading (for a related-title search) and the topics you type to Semantic Scholar, DOIs to Crossref when you copy or export a citation, and a DOI to Unpaywall when you click *Find PDF*. There are no accounts, no analytics and no other servers. See [docs/PRIVACY.md](docs/PRIVACY.md).
 
 ## How it works
 
@@ -72,4 +72,4 @@ Real-browser end-to-end scripts (they load the built extension in Edge and use a
 
 ## Credits and license
 
-Data from [Semantic Scholar](https://www.semanticscholar.org) (Allen Institute for AI) and [Crossref](https://www.crossref.org). NextPaper is free software under the [MIT license](LICENSE).
+Data from [Semantic Scholar](https://www.semanticscholar.org) (Allen Institute for AI) [Crossref](https://www.crossref.org) and [Unpaywall](https://unpaywall.org). NextPaper is free software under the [MIT license](LICENSE).

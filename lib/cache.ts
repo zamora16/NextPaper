@@ -8,6 +8,12 @@ import {
 import { StorageFullError } from "~lib/errors"
 import { JOB_PREFIX } from "~lib/job"
 import { type AnalysisResult } from "~lib/model"
+import {
+  UNPAYWALL_MAX_ENTRIES,
+  UNPAYWALL_MISS_TTL_MS,
+  UNPAYWALL_PREFIX,
+  UNPAYWALL_TTL_MS
+} from "~lib/unpaywall"
 
 // A week: a paper's related literature changes slowly, and a repeat analysis
 // is the most expensive thing the extension does (alerts cover what is new).
@@ -21,6 +27,26 @@ export const KEY_PREFIX = "nextpaper_cache_v14_"
 // raw recommendation lists). Removed on sight so they don't eat the quota.
 const LEGACY_KEYS =
   /^nextpaper_(cache_v([1-9]|1[0-3])|emb_v1|rec_v1|citing_v1)_/
+
+// Per-DOI lookups (citation metadata, free PDF links): each entry is a hit or a
+// miss with its own lifetime, and each cache keeps only its newest entries.
+// Crossref entries keep their metadata in `m`, Unpaywall ones the link in `u`.
+type LookupEntry = { m?: unknown; u?: unknown }
+
+const LOOKUP_CACHES = [
+  {
+    prefix: CROSSREF_PREFIX,
+    max: CROSSREF_MAX_ENTRIES,
+    ttl: (entry: LookupEntry) =>
+      entry?.m ? CROSSREF_TTL_MS : CROSSREF_MISS_TTL_MS
+  },
+  {
+    prefix: UNPAYWALL_PREFIX,
+    max: UNPAYWALL_MAX_ENTRIES,
+    ttl: (entry: LookupEntry) =>
+      entry?.u ? UNPAYWALL_TTL_MS : UNPAYWALL_MISS_TTL_MS
+  }
+]
 
 interface CacheEntry {
   z: string // gzip + base64 of the AnalysisResult JSON
@@ -43,8 +69,8 @@ export async function getCachedResult(
   }
 }
 
-// Removes expired entries, anything beyond the newest MAX_ENTRIES, legacy
-// keys, and job states that no longer have a cached result (unless their
+// Removes expired entries, anything beyond the newest MAX_ENTRIES (and the
+// per-DOI lookup caches beyond theirs), legacy keys, and job states that no longer have a cached result (unless their
 // analysis is still running). Library and alerts are never touched.
 export async function pruneStorage(
   runningRefs: Iterable<string> = []
@@ -52,16 +78,19 @@ export async function pruneStorage(
   const all = await chrome.storage.local.get()
   const remove: string[] = []
   const live: { key: string; ref: string; cachedAt: number }[] = []
-  const crossref: { key: string; at: number }[] = []
+  const lookups = LOOKUP_CACHES.map(() => [] as { key: string; at: number }[])
 
   for (const [key, value] of Object.entries(all)) {
     if (LEGACY_KEYS.test(key)) {
       remove.push(key)
-    } else if (key.startsWith(CROSSREF_PREFIX)) {
-      const entry = value as { m: unknown; at: number }
-      const ttl = entry?.m ? CROSSREF_TTL_MS : CROSSREF_MISS_TTL_MS
-      if (Date.now() - (entry?.at ?? 0) > ttl) remove.push(key)
-      else crossref.push({ key, at: entry.at })
+    } else if (LOOKUP_CACHES.some((cache) => key.startsWith(cache.prefix))) {
+      const index = LOOKUP_CACHES.findIndex((cache) =>
+        key.startsWith(cache.prefix)
+      )
+      const entry = value as LookupEntry & { at: number }
+      if (Date.now() - (entry?.at ?? 0) > LOOKUP_CACHES[index].ttl(entry)) {
+        remove.push(key)
+      } else lookups[index].push({ key, at: entry.at })
     } else if (key.startsWith(KEY_PREFIX)) {
       const cachedAt = (value as CacheEntry)?.cachedAt ?? 0
       if (Date.now() - cachedAt > TTL_MS) remove.push(key)
@@ -69,10 +98,12 @@ export async function pruneStorage(
     }
   }
 
-  crossref.sort((a, b) => b.at - a.at)
-  crossref
-    .slice(CROSSREF_MAX_ENTRIES)
-    .forEach((entry) => remove.push(entry.key))
+  lookups.forEach((entries, index) => {
+    entries.sort((a, b) => b.at - a.at)
+    entries
+      .slice(LOOKUP_CACHES[index].max)
+      .forEach((entry) => remove.push(entry.key))
+  })
 
   live.sort((a, b) => b.cachedAt - a.cachedAt)
   live.slice(MAX_ENTRIES).forEach((entry) => remove.push(entry.key))

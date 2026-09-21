@@ -12,6 +12,7 @@ import { StorageFullError } from "~lib/errors"
 import { JOB_PREFIX } from "~lib/job"
 import { LIBRARY_KEY } from "~lib/library"
 import { type AnalysisResult } from "~lib/model"
+import { UNPAYWALL_PREFIX } from "~lib/unpaywall"
 import { UPDATES_KEY } from "~lib/updates"
 
 import { installChrome, type FakeChrome } from "./helpers/chrome"
@@ -206,6 +207,48 @@ describe("pruneStorage", () => {
       expect(left).toHaveLength(500)
       expect(left).toContain(CROSSREF_PREFIX + "0")
       expect(left).not.toContain(CROSSREF_PREFIX + "509")
+    })
+
+    it("does the same for free-PDF lookups, each cache within its own bound", async () => {
+      const at = (days: number) => Date.now() - days * DAY
+      chrome.data.set(UNPAYWALL_PREFIX + "hit-ok", {
+        u: "https://a/x.pdf",
+        at: at(29)
+      })
+      chrome.data.set(UNPAYWALL_PREFIX + "hit-old", {
+        u: "https://a/y.pdf",
+        at: at(31)
+      })
+      chrome.data.set(UNPAYWALL_PREFIX + "miss-ok", { u: null, at: at(6) })
+      chrome.data.set(UNPAYWALL_PREFIX + "miss-old", { u: null, at: at(8) })
+      for (let i = 0; i < 300; i++) {
+        chrome.data.set(CROSSREF_PREFIX + i, {
+          m: { authors: [] },
+          at: Date.now() - i * 1000
+        })
+      }
+      await pruneStorage()
+      expect(keys().filter((k) => k.startsWith(UNPAYWALL_PREFIX))).toEqual([
+        UNPAYWALL_PREFIX + "hit-ok",
+        UNPAYWALL_PREFIX + "miss-ok"
+      ])
+      // 300 Crossref entries do not count against the Unpaywall bound
+      expect(keys().filter((k) => k.startsWith(CROSSREF_PREFIX))).toHaveLength(
+        300
+      )
+    })
+
+    it("keeps only the 500 newest free-PDF entries", async () => {
+      for (let i = 0; i < 510; i++) {
+        chrome.data.set(UNPAYWALL_PREFIX + i, {
+          u: null,
+          at: Date.now() - i * 1000
+        })
+      }
+      await pruneStorage()
+      const left = keys().filter((k) => k.startsWith(UNPAYWALL_PREFIX))
+      expect(left).toHaveLength(500)
+      expect(left).not.toContain(UNPAYWALL_PREFIX + "509")
     })
 
     it("tolerates a malformed entry", async () => {

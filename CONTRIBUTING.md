@@ -22,6 +22,8 @@ npm install
 npm run dev                # then load build/chrome-mv3-dev via chrome://extensions
 npx tsc --noEmit           # typecheck, `strict` + no unused locals/params (Parcel does NOT typecheck; run this every change)
 npm run check:cycles       # no circular imports between modules (CI runs it)
+npm run test:e2e           # offline e2e: the built extension in a real browser against a local imitation of the APIs (CI runs it; no key, no network)
+npm run check:api          # the real APIs still answer the way lib/ expects (a nightly workflow runs it; S2_API_KEY optional)
 npm run format             # prettier over lib/components/tests/popup/background (CI runs format:check)
 npx plasmo build           # production build -> build/chrome-mv3-prod
 npm test                   # vitest (~490 tests; `npm run test:coverage` enforces floors on lib/, ~98% lines): every module in lib/ —
@@ -67,8 +69,8 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
    directly. **Do not add fixed delays between requests** and do not remove the parallelism: the API's
    429s are random (25–45% at any pace), so pauses only made analyses 3–4x slower. Read
    `docs/PERFORMANCE.md` before touching this, and re-measure with `node scripts/trace-network.cjs`.
-2. **Keep `host_permissions` for `https://api.semanticscholar.org/*` and
-   `https://api.crossref.org/*`** in the `manifest` block of `package.json`. Without it the browser applies CORS: the API's 429 responses
+2. **Keep `host_permissions` for `https://api.semanticscholar.org/*`,
+   `https://api.crossref.org/*` and `https://api.unpaywall.org/*`** in the `manifest` block of `package.json`. Without it the browser applies CORS: the API's 429 responses
    carry no CORS headers (they surface as "Failed to fetch") and the batch endpoint
    rejects cross-origin POST. Never move API calls into a page/content script.
 3. **Guard every array from the API**: `?.data?.map(...) ?? []`. S2 returns
@@ -90,7 +92,7 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
    write must stay bounded: `pruneStorage` runs after each analysis and at worker start
    (expiry, 40-entry cap, legacy keys, orphan jobs) and must never touch
    `nextpaper_library` or `nextpaper_updates`. A new persistent key needs a bound or a
-   pruning rule (the Crossref cache is bounded to 500 entries / 30 days in
+   pruning rule (the Crossref and Unpaywall caches are bounded to 500 entries each, 30 days, in
    `pruneStorage`). Re-check with `node scripts/e2e-storage.cjs`.
 9. **Library writes go through the promise queue** (`createQueue` in `lib/queue.ts`, used by `lib/library.ts`). Concurrent
    read-modify-write on one storage key lost saves once.
@@ -151,6 +153,10 @@ simulated (the popup accepts `?ref=DOI:...` for tests — keep that param).
   `scripting`).
 - Developed on Node 22 / Windows / Git Bash. When writing files from a shell, avoid heredocs with
   quotes or backticks — they silently break the whole command. Use the editor tools.
+- When you change what `lib/` asks an API for (a field, an endpoint) or reads from an answer, update
+  `scripts/api-contract/` (`requests.cjs`, `shapes.cjs`) and the imitation in `scripts/e2e-offline/world.cjs`:
+  `tests/api-contract.test.ts` fails if `lib/` and the nightly check disagree, and validates the
+  imitation's answers with the same shapes.
 - CI (`.github/workflows/ci.yml`) runs `typecheck`, `format:check`, `test:coverage` (floors on
   `lib/`) and `plasmo build`. Commit small, working steps.
 - Tests of storage-bound modules use the in-memory `chrome` in `tests/helpers/chrome.ts`. **Do not generate

@@ -10,6 +10,7 @@ import {
 } from "~components/icons"
 import { accentButtonClass, buttonClass, iconButtonClass } from "~components/ui"
 import { useCopyAction } from "~components/useCopyAction"
+import { useOpenPdf } from "~components/useOpenPdf"
 import { supportsInText, type CitationStyle } from "~lib/citation"
 import { citeOne, inTextOne } from "~lib/cite"
 import type { TKey } from "~lib/i18n"
@@ -108,7 +109,13 @@ export function PaperCard({
   const extraCount = paper.authors.length - authors.length
   const influential = paper.influentialCitationCount ?? 0
   const study = studyOf(paper)
-  const pdfUrl = httpUrl(paper.openAccessPdf?.url)
+  const ownPdf = httpUrl(paper.openAccessPdf?.url)
+  const doi = paper.externalIds?.DOI
+  // Semantic Scholar has no PDF for it: the button asks Unpaywall.
+  const lookup = useOpenPdf(compact || ownPdf ? undefined : doi)
+  // Unpaywall may know only a repository page, which is a free text, not a PDF.
+  const pdfUrl = ownPdf ?? (lookup.copy?.pdf ? lookup.copy.url : undefined)
+  const freeText = pdfUrl || !lookup.copy ? undefined : lookup.copy.url
   const similarity =
     paper.similarity !== null ? Math.round(paper.similarity * 100) : null
 
@@ -277,6 +284,46 @@ export function PaperCard({
               {t("card.pdf")}
             </a>
           )}
+          {!compact && freeText && (
+            <a
+              href={freeText}
+              target="_blank"
+              rel="noreferrer"
+              title={t("card.pdf.page.hint")}
+              className={`${buttonClass} border-ok/30 text-ok hover:border-ok/60 hover:text-ok`}>
+              <IconFile size={14} />
+              {t("card.pdf.page")}
+            </a>
+          )}
+          {!compact && !pdfUrl && doi && lookup.phase === "none" && (
+            <span
+              title={t("card.pdf.none.hint")}
+              className="text-xs text-muted">
+              {t("card.pdf.none")}
+            </span>
+          )}
+          {!compact &&
+            !pdfUrl &&
+            !freeText &&
+            doi &&
+            (lookup.phase === "idle" ||
+              lookup.phase === "busy" ||
+              lookup.phase === "error") && (
+              <button
+                onClick={lookup.find}
+                disabled={lookup.phase === "busy"}
+                title={t("card.pdf.find.hint")}
+                className={buttonClass}>
+                <IconFile size={14} />
+                {t(
+                  lookup.phase === "busy"
+                    ? "card.pdf.searching"
+                    : lookup.phase === "error"
+                      ? "card.pdf.retry"
+                      : "card.pdf.find"
+                )}
+              </button>
+            )}
           {!compact && supportsInText(citationStyle) && (
             <button
               onClick={inText.run}

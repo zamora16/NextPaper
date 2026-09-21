@@ -150,6 +150,16 @@ export const en = {
     "Analyze this paper the same way: see its references, citations and similar papers",
   "card.pdf": "Free PDF",
   "card.pdf.hint": "Open the free full text",
+  "card.pdf.find": "Find PDF",
+  "card.pdf.find.hint":
+    "Look for a legal free copy on Unpaywall (sends this paper's DOI to Unpaywall)",
+  "card.pdf.page": "Free text",
+  "card.pdf.page.hint":
+    "A free legal copy on a repository or publisher page (Unpaywall found no direct PDF)",
+  "card.pdf.searching": "Searching...",
+  "card.pdf.retry": "Retry PDF",
+  "card.pdf.none": "No free PDF",
+  "card.pdf.none.hint": "Unpaywall knows no free legal copy of this paper",
   "card.inText": "In text",
   "card.inText.hint": "Copy the in-text citation, e.g. (Author, 2020)",
   "card.cite": "Cite",

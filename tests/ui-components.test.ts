@@ -81,6 +81,102 @@ describe("PaperCard", () => {
     expect(bench.text()).not.toContain("similar")
   })
 
+  describe("free PDF lookup", () => {
+    const noPdf = (over: Partial<ScoredPaper> = {}) =>
+      paper({
+        openAccessPdf: null,
+        externalIds: { DOI: "10.1/abc" },
+        ...over
+      })
+    let fetchMock: ReturnType<typeof vi.fn>
+    beforeEach(() => {
+      fetchMock = vi.fn()
+      vi.stubGlobal("fetch", fetchMock)
+    })
+    afterEach(() => vi.unstubAllGlobals())
+
+    it("offers to look for a PDF when Semantic Scholar has none, and shows the link it finds", async () => {
+      fetchMock.mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            is_oa: true,
+            best_oa_location: { url_for_pdf: "https://repo.org/a.pdf" }
+          })
+        )
+      )
+      await bench.render(card(noPdf()))
+      expect(bench.button("Find PDF")).toBeDefined()
+      expect(fetchMock).not.toHaveBeenCalled() // nothing is sent until the click
+      await bench.click("Find PDF")
+      const link = bench.container.querySelector(
+        "a[href='https://repo.org/a.pdf']"
+      )
+      expect(link?.textContent).toContain("Free PDF")
+      expect(bench.button("Find PDF")).toBeUndefined()
+    })
+
+    it("offers a free page as free text when Unpaywall knows no direct PDF", async () => {
+      fetchMock.mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            is_oa: true,
+            best_oa_location: {
+              url: "https://repo.org/record",
+              url_for_pdf: null
+            }
+          })
+        )
+      )
+      await bench.render(card(noPdf()))
+      await bench.click("Find PDF")
+      const link = bench.container.querySelector(
+        "a[href='https://repo.org/record']"
+      )
+      expect(link?.textContent).toContain("Free text")
+      expect(link?.textContent).not.toContain("PDF")
+      expect(bench.text()).not.toContain("No free PDF")
+    })
+
+    it("says so when there is no free copy, and remembers it", async () => {
+      fetchMock.mockResolvedValue(
+        new Response(JSON.stringify({ is_oa: false }))
+      )
+      await bench.render(card(noPdf()))
+      await bench.click("Find PDF")
+      expect(bench.text()).toContain("No free PDF")
+      expect(bench.button("Find PDF")).toBeUndefined()
+
+      // a new card for the same paper shows the stored answer with no request
+      fetchMock.mockClear()
+      await bench.unmount()
+      bench = mountBench("en")
+      await bench.render(card(noPdf()))
+      expect(bench.text()).toContain("No free PDF")
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it("lets the user retry when Unpaywall could not be reached", async () => {
+      vi.useFakeTimers()
+      fetchMock.mockResolvedValue(new Response("", { status: 503 }))
+      await bench.render(card(noPdf()))
+      const click = bench.click("Find PDF")
+      await vi.runAllTimersAsync()
+      await click
+      vi.useRealTimers()
+      expect(bench.button("Retry PDF")).toBeDefined()
+    })
+
+    it("does not offer it when there is a PDF already, no DOI, or the card is compact", async () => {
+      await bench.render(card(paper({ externalIds: { DOI: "10.1/abc" } })))
+      expect(bench.button("Find PDF")).toBeUndefined()
+      await bench.render(card(noPdf({ externalIds: {} })))
+      expect(bench.button("Find PDF")).toBeUndefined()
+      await bench.render(card(noPdf(), { compact: true }))
+      expect(bench.button("Find PDF")).toBeUndefined()
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+  })
+
   it("the compact form keeps the essentials and drops the rest", async () => {
     await bench.render(card(paper(), { compact: true, onExplore: () => {} }))
     const text = bench.text()

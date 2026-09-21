@@ -28,6 +28,8 @@
     "package": "plasmo package",
     "typecheck": "tsc --noEmit",
     "check:cycles": "npx --yes madge@8.0.0 --circular --extensions ts,tsx --ts-config tsconfig.json popup.tsx background.ts",
+    "test:e2e": "node scripts/e2e-offline.cjs",
+    "check:api": "node scripts/api-contract.cjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "format:check": "prettier --check \"{lib,components,tests}/**/*.{ts,tsx}\" popup.tsx background.ts vitest.config.ts",
@@ -56,7 +58,8 @@
   "manifest": {
     "host_permissions": [
       "https://api.semanticscholar.org/*",
-      "https://api.crossref.org/*"
+      "https://api.crossref.org/*",
+      "https://api.unpaywall.org/*"
     ],
     "permissions": [
       "activeTab",

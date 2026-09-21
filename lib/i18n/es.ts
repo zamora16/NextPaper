@@ -148,6 +148,17 @@ export const es: Record<Key, string> = {
     "Analizar este paper: ver sus referencias, citas y papers similares",
   "card.pdf": "PDF gratis",
   "card.pdf.hint": "Abrir el texto completo gratuito",
+  "card.pdf.find": "Buscar PDF",
+  "card.pdf.find.hint":
+    "Busca una copia legal gratuita en Unpaywall (envía el DOI de este paper a Unpaywall)",
+  "card.pdf.page": "Texto libre",
+  "card.pdf.page.hint":
+    "Una copia legal gratuita en una página de repositorio o editorial (Unpaywall no encontró un PDF directo)",
+  "card.pdf.searching": "Buscando...",
+  "card.pdf.retry": "Reintentar PDF",
+  "card.pdf.none": "Sin PDF libre",
+  "card.pdf.none.hint":
+    "Unpaywall no conoce ninguna copia legal gratuita de este paper",
   "card.inText": "En texto",
   "card.inText.hint": "Copiar la cita en el texto, p. ej. (Autor, 2020)",
   "card.cite": "Citar",

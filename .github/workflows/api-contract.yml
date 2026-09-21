@@ -1,0 +1,22 @@
+name: API contract
+# The extension depends on three public APIs it does not control. Every night
+# this asks them the questions the extension asks and checks that the answers
+# still have the shape lib/ reads. A failure means an API changed: fix it before
+# users hit it. Rate limiting is reported as inconclusive, not as a failure.
+on:
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: node scripts/api-contract.cjs
+        env:
+          # Optional: without a key the shared anonymous pool rate limits more.
+          S2_API_KEY: ${{ secrets.S2_API_KEY }}
